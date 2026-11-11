@@ -56,6 +56,7 @@ import wave
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import result  # noqa: E402
 import srt  # noqa: E402
 
 DIARIZATION_MODEL = "pyannote/speaker-diarization-3.1"
@@ -247,8 +248,7 @@ def run(video: Path, work: Path, config: Path | None, sync_check: bool) -> dict:
     token = load_token(config)
     if not token:
         where = config or DEFAULT_CONFIG
-        print(json.dumps({"skipped": "token missing", "fix": f'uv run "{Path(__file__).resolve()}" setup --config "{where}"'}))
-        raise SystemExit(TOKEN_MISSING)
+        return {"skipped": "token missing", "fix": f'uv run "{Path(__file__).resolve()}" setup --config "{where}"'}
     cues, _ = srt.parse(work / "timing.srt")
     speakers_file = work / "speakers.json"
     speakers = json.loads(speakers_file.read_text(encoding="utf-8")) if speakers_file.exists() else {}
@@ -287,11 +287,16 @@ def main(argv: list[str] | None = None) -> None:
     r.add_argument("--work", type=Path, required=True)
     r.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     r.add_argument("--no-sync-check", action="store_true")
+    result.add_argument(p)
     a = p.parse_args(argv)
+    result.clear(a.result)
     if a.cmd == "setup":
         setup(a.config)
     else:
-        print(json.dumps(run(a.video, a.work, a.config, not a.no_sync_check), indent=1))
+        out = run(a.video, a.work, a.config, not a.no_sync_check)
+        result.emit(out, a.result)
+        if out.get("skipped") == "token missing":
+            raise SystemExit(TOKEN_MISSING)
 
 
 if __name__ == "__main__":

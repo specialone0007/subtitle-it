@@ -25,6 +25,7 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import result  # noqa: E402
 import srt  # noqa: E402
 
 WORD_RE = re.compile(r"\w+|[^\w\s]", re.UNICODE)
@@ -96,14 +97,16 @@ def main(argv: list[str] | None = None) -> None:
     for name in ("diff", "done"):
         s = sub.add_parser(name)
         s.add_argument("--work", type=Path, required=True)
+    result.add_argument(p)
     a = p.parse_args(argv)
+    result.clear(a.result)
     if a.cmd == "scan":
-        print(json.dumps(scan(a.data), ensure_ascii=False, indent=1))
+        result.emit(scan(a.data), a.result)
     elif a.cmd == "diff":
-        print(json.dumps(diff(a.work), ensure_ascii=False, indent=1))
+        result.emit(diff(a.work), a.result)
     else:
         mark_learned(a.work)
-        print("marked as learned")
+        result.emit({"marked": "learned"}, a.result)
 
 
 if __name__ == "__main__":

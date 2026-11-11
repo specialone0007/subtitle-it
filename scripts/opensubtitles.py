@@ -30,6 +30,9 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import result  # noqa: E402
+
 API = "https://api.opensubtitles.com/api/v1"
 USER_AGENT = "TurkishSubtitles v0.1"
 TOKEN_MAX_AGE = 20 * 3600  # tokens last 24 h; renew a bit early
@@ -257,21 +260,23 @@ def main(argv: list[str] | None = None) -> None:
             s.add_argument("--file-id", type=int, required=True)
             s.add_argument("--out", type=Path, required=True)
             s.add_argument("--cache", type=Path, required=True)
+    result.add_argument(p)
     a = p.parse_args(argv)
+    result.clear(a.result)
     if a.cmd == "setup":
         setup(a.config)
         return
     if a.cmd == "status":
-        result = status(a.config)
+        out = status(a.config)
     elif a.cmd == "search":
         if not (a.video or a.query or a.imdb):
             raise SystemExit("give --video, --query or --imdb")
-        result = search(a.config, a.video, a.query, a.imdb, a.year, a.languages)
+        out = search(a.config, a.video, a.query, a.imdb, a.year, a.languages)
     elif a.cmd == "hash":
-        result = moviehash(a.video)
+        out = moviehash(a.video)
     else:
-        result = download(a.config, a.file_id, a.out, a.cache)
-    print(json.dumps(result, ensure_ascii=False, indent=1))
+        out = download(a.config, a.file_id, a.out, a.cache)
+    result.emit(out, a.result)
 
 
 if __name__ == "__main__":
