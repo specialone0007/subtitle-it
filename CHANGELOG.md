@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- A polish run is faster. The polish fixer and the whole-film reviewer now
+  work at the same time on one film instead of one after the other, and
+  the audio step's sync check transcribes five 3-minute stretches instead
+  of the whole film (about 30 seconds instead of 2.5 minutes on a GPU).
+  The skill also tells the main conversation never to wait with `sleep`.
+- The skill now always pairs an English hearing-impaired file as the
+  cross-check when one exists besides the timing file, even when the
+  timing file is itself English. Its speaker names feed the sen/siz checks,
+  which had none before on such a film.
+- The skill now tries up to 3 Turkish results before translating from
+  scratch. A first result cut from another version of the film no longer
+  turns a polish run into a full translation.
 - A polish run now also lists the cues around a wrong sen or siz. When the
   address check finds the wrong form on one cue, the other cues of that
   scene that use the same form go to the fixer too, if the bible cannot say

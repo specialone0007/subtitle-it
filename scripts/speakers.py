@@ -39,8 +39,9 @@ overlaps it most (V1, V2, ... in order of first appearance). A cue with
 two dash lines holds two speakers, so it gets no voice. Progress goes to
 stderr. It writes `voice` into
 W/speakers.json and keeps every `label` and `name` already there. Unless
---no-sync-check is given, faster-whisper finds where speech starts and the
-script reports how far the subtitles sit from the audio. The first run
+--no-sync-check is given, faster-whisper finds where speech starts in five
+3-minute stretches spread over the film, and the script reports how far the
+subtitles sit from the audio. The first run
 downloads the models (a few GB). Without a token it prints
 {"skipped": "token missing"} and exits with code 3.
 """
@@ -284,16 +285,51 @@ def read_wav(wav: Path):
     return samples
 
 
+# The sync check transcribes this many windows of this many seconds, spread
+# over the film, not the whole film: a file's offset is the same all
+# through, and a whole feature film took about 2.5 minutes on a GPU.
+SYNC_WINDOWS = 5
+SYNC_WINDOW_S = 180
+SAMPLE_RATE = 16000
+# Speech starts this close to a window's edge are left out: a sentence cut
+# by the edge looks like one starting there, and a cue just outside the
+# window would match it.
+EDGE_MS = 2000
+
+
+def sync_windows(n_samples: int, count: int = SYNC_WINDOWS, seconds: int = SYNC_WINDOW_S) -> list[tuple[int, int]]:
+    """Sample ranges to transcribe: `count` windows centred at even steps
+    through the audio, or the whole audio when the windows would cover most
+    of it anyway."""
+    size = seconds * SAMPLE_RATE
+    if count * size * 2 >= n_samples:
+        return [(0, n_samples)]
+    out = []
+    for i in range(count):
+        mid = n_samples * (2 * i + 1) // (2 * count)
+        out.append((mid - size // 2, mid + size // 2))
+    return out
+
+
 def speech_starts(wav: Path) -> list[int]:
     from faster_whisper import WhisperModel
 
     audio = read_wav(wav)
+    windows = sync_windows(len(audio))
 
     def transcribe(device: str) -> list[int]:
         model = WhisperModel(WHISPER_MODEL, device=device, compute_type="float16" if device == "cuda" else "int8")
-        segments, _ = model.transcribe(audio, vad_filter=True, word_timestamps=False)
-        # segments is lazy: CUDA library errors surface here, inside the try.
-        return [int(s.start * 1000) for s in segments]
+        starts = []
+        for a, b in windows:
+            part = audio if (a, b) == (0, len(audio)) else audio[a:b]
+            segments, _ = model.transcribe(part, vad_filter=True, word_timestamps=False)
+            # segments is lazy: CUDA library errors surface here, inside the try.
+            at = [int(s.start * 1000) for s in segments]
+            if len(windows) > 1:
+                end_ms = (b - a) * 1000 // SAMPLE_RATE
+                at = [ms for ms in at if EDGE_MS <= ms <= end_ms - EDGE_MS]
+            starts += [a * 1000 // SAMPLE_RATE + ms for ms in at]
+        return starts
 
     device = _device()
     if device == "cpu":

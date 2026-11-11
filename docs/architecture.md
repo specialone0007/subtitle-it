@@ -63,7 +63,8 @@ The numbers match the steps in `SKILL.md`.
   subtitle. When one passes `srt.py fit`, the run is a polish run (see
   steps 6–7).
 - **3. Speaker hints** (optional). `speakers.py` finds who speaks each line
-  from the audio and checks the subtitles are in sync with it. Subtitles
+  from the audio and checks the subtitles are in sync with it, from five
+  3-minute stretches spread over the film. Subtitles
   more than 300 ms off are shifted with `srt.py shift` and the voices are
   matched again. Everything runs on your machine. It runs in the
   background while the bible is written, since it takes several minutes.
@@ -86,7 +87,9 @@ The numbers match the steps in `SKILL.md`.
   translators: `polish.py seed` puts the Turkish file's text on the timing
   file's cues, `polish.py flags` lists the cues to fix (check fails, lines
   left in English, crude lines the Turkish tones down, lines that may sit
-  on the wrong cue), and one polish fixer subagent changes only those.
+  on the wrong cue), and one polish fixer subagent changes only those. The
+  step 10 reviewer starts in the same message and reads the film while the
+  fixer works; where both change a flagged cue, the fixer's version wins.
 - **8–9. Assemble and check.** `assemble.py check` joins the chunks and checks
   every cue. Hard fails are missing, extra or empty cues, italics or
   dialogue dashes that differ from the source, and too many lines; they go
