@@ -54,6 +54,9 @@ whole film, and saves `Anatomy of a Fall.tr.srt` next to the video.
 
    Or for one session only: `claude --plugin-dir ./turkish-subtitles`.
 
+   Claude Code loads plugins when a session starts, so start a new session after
+   installing; a session that is already open does not see the plugin.
+
 ## Where files go
 
 - `~/.config/turkish-subtitles/` (on Windows `C:\Users\<you>\.config\turkish-subtitles\`):

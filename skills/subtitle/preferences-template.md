@@ -28,7 +28,10 @@ match the source
 
 ## Titles
 
-Bayan Voyter / Bay Hartley
+How people are addressed by title. Default: Bay/Bayan + surname ("Bayan Kaya").
+Or write first name + Bey/Hanım ("Ayşe Hanım").
+
+Bay/Bayan + surname
 
 ## Learned rules
 
