@@ -94,6 +94,52 @@ def test_compare_agrees_on_same_answers_and_case(work):
     assert out["agreed"] == 3 and out["to_judge"] == 0
 
 
+CAST = [{"name": "Sam", "aliases": ["Sammy"]}, {"name": "Nora"}, {"name": "Harlan Pike"}]
+
+
+@pytest.mark.parametrize(
+    ("a", "b"),
+    [
+        ("Harlan Pike", "Uncle Harlan Pike"),
+        ("Sam", "Sammy, on the phone; a few background lines in 25-26"),
+        ("Nora", "Nora (also a background voice in 40-42, and Sam once)"),
+        ("shop clerk", "Shop clerk (the tall one)"),
+    ],
+)
+def test_voice_answers_agree_when_they_name_the_same_character(a, b):
+    assert bible.agree("voice", a, b, CAST)
+    assert bible.agree("voice", b, a, CAST)
+
+
+@pytest.mark.parametrize(
+    ("a", "b"),
+    [
+        ("Sam", "Nora (talking Sam into the trip)"),
+        ("bus driver", "Mabel, the woman driving the bus"),
+        ("the guard", "The guard captain"),
+        ("Sam", "Samuel"),
+    ],
+)
+def test_voice_answers_differ_when_they_name_someone_else(a, b):
+    assert not bible.agree("voice", a, b, CAST)
+
+
+def test_tolerant_matching_is_only_for_voices():
+    assert not bible.agree("term", "koçum", "koçum (friendly)", CAST)
+
+
+def test_compare_agrees_on_a_voice_described_two_ways(work):
+    write_second(
+        work,
+        [
+            ans("address:Sam>Nora", [{"from_cue": 1, "form": "siz"}]),
+            ans("voice:V1", "SAM (on the phone)"),
+            ans("term:sport", "koçum"),
+        ],
+    )
+    assert bible.compare(work)["agreed"] == 3
+
+
 def test_compare_sends_disagreements_missing_answers_and_extras_to_the_judge(work):
     write_second(
         work,

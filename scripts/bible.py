@@ -188,15 +188,46 @@ def _steps(answer: list[dict]) -> list[tuple[int, str]]:
     return out
 
 
-def agree(kind: str, a, b) -> bool:
+def _head(s: str) -> str:
+    """An answer up to its first bracket, semicolon or comma: "Leo (Sam's
+    friend)" -> "leo"."""
+    return _norm(re.split(r"[(;,]", s, maxsplit=1)[0])
+
+
+def _first_character(s: str, characters: list[dict]) -> str | None:
+    """The character an answer names first, by name or alias as whole words,
+    or None when it names none."""
+    best: tuple[int, str] | None = None
+    text = s.casefold()
+    for c in characters:
+        for word in [c["name"], *c.get("aliases", [])]:
+            if not word.strip():
+                continue
+            m = re.search(rf"(?<!\w){re.escape(word.casefold())}(?!\w)", text)
+            if m and (best is None or m.start() < best[0]):
+                best = (m.start(), c["name"])
+    return best[1] if best else None
+
+
+def agree(kind: str, a, b, characters: list[dict] | None = None) -> bool:
     """Same answer. Address answers agree when they give the same forms in
-    the same order, each switch within ADDRESS_TOLERANCE cues of the other."""
+    the same order, each switch within ADDRESS_TOLERANCE cues of the other.
+    Voice answers agree when they name the same character first, or read the
+    same up to a bracket: "Harlan Pike" and "Uncle Harlan Pike" agree,
+    "Edwin Van Dorn" and "Ruth Calloway (talking Sam into the trip)" do not."""
     if a is None or b is None:
         return False
     if kind == "address":
         sa, sb = _steps(a), _steps(b)
         return [f for _, f in sa] == [f for _, f in sb] and all(abs(x - y) <= ADDRESS_TOLERANCE for (x, _), (y, _) in zip(sa, sb))
-    return _norm(a) == _norm(b)
+    if _norm(a) == _norm(b):
+        return True
+    if kind == "voice":
+        if _head(a) and _head(a) == _head(b):
+            return True
+        who_a = _first_character(a, characters or [])
+        return who_a is not None and who_a == _first_character(b, characters or [])
+    return False
 
 
 def _side(d: dict) -> dict:
@@ -231,7 +262,7 @@ def compare(work: Path) -> dict:
     agreed, to_judge = [], []
     for d in data["decisions"]:
         s = second_by_id.get(d["id"])
-        if s is not None and agree(d["kind"], d["answer"], s.get("answer")):
+        if s is not None and agree(d["kind"], d["answer"], s.get("answer"), data["characters"]):
             agreed.append(d["id"])
             continue
         item = {k: d[k] for k in QUESTION_FIELDS if k in d}
