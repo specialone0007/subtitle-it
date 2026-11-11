@@ -1,3 +1,11 @@
+---
+name: voice-mapper
+description: Matches each voice from the audio to a film character, for the turkish-subtitles skill. Started by that skill only.
+tools: Read, Write, Glob, Grep
+model: inherit
+omitClaudeMd: true
+---
+
 # Brief: voice mapper
 
 The film bible is written. It was written while the audio step was still

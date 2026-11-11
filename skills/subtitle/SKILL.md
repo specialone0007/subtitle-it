@@ -7,8 +7,12 @@ argument-hint: "<film name | video path | .srt path>  or  learn <film>"
 # Turkish subtitles
 
 You run this whole skill in the user's conversation. You start the
-translators, the bible writer and the reviewer as subagents with the Agent
-tool; they write files and reply with short summaries. Keep your own
+bible writer, the bible checkers, the translators and the reviewer as
+subagents with the Agent tool; they write files and reply with short
+summaries. Each has its own agent type in this plugin, named below
+(`turkish-subtitles:translator` and so on): its instructions and tools come
+with the type, so your prompt to it holds only the paths and facts listed
+for that step. Never paste instructions of your own into it. Keep your own
 context small: never read a whole subtitle file, chunk file or
 `sidebyside.tsv` yourself. Read the scripts' result files (below), `bible.md`
 and `review.md`.
@@ -28,7 +32,7 @@ after watching.
 ## Fixed paths
 
 - Scripts: `${CLAUDE_PLUGIN_ROOT}/scripts` (call it SCRIPTS below)
-- Skill files: `${CLAUDE_SKILL_DIR}` (pack, briefs, preferences template)
+- Skill files: `${CLAUDE_SKILL_DIR}` (language pack, preferences template)
 - Data: `${CLAUDE_PLUGIN_DATA}`; each film's work folder is `${CLAUDE_PLUGIN_DATA}/films/<slug>` (WORK below)
 - User config: `$HOME/.config/turkish-subtitles` (CONFIG below): `preferences.md`, `credentials.json`, `backups/`
 
@@ -39,7 +43,10 @@ also prints the same JSON, but some shells shorten what a command prints
 (an output filter can turn a successful `uv run` into "ok"), so trust
 the file. A script that fails, a usage error included, leaves no result
 file; read its error output instead. `--result` always comes before the
-command. The step texts below leave it out for brevity. Never read, print or edit `CONFIG/credentials.json`; only
+command. The step texts below leave it out for brevity. When two or more script
+commands follow each other with no decision between them (`prepare.py build`
+then `chunks`), run them in one Bash call joined with `&&`: every call you
+make re-sends this whole conversation. Never read, print or edit `CONFIG/credentials.json`; only
 `opensubtitles.py` and `speakers.py` touch it.
 
 Arguments: $ARGUMENTS
@@ -115,9 +122,8 @@ line that it downloads a few GB of models.
    `--result` file as usual. Add `--no-sync-check` when the timing file came
    from the audio (`transcribe.py`): its times are the audio's own, so
    there is nothing to check.
-2. Right away, without waiting for it, start the bible writer: one
-   subagent whose prompt is the text of `${CLAUDE_SKILL_DIR}/briefs/bible.md`,
-   then the paths (WORK, the preferences file), the film facts (title,
+2. Right away, without waiting for it, start one
+   `turkish-subtitles:bible-writer` subagent. Its prompt: the paths (WORK, the preferences file), the film facts (title,
    year, original language, IMDb id), and, when audio hints are running,
    the line `Voices: added later.` It writes `WORK/bible.md`,
    `WORK/glossary.json` and `WORK/decisions.json`.
@@ -138,8 +144,8 @@ line that it downloads a few GB of models.
      the check failed): note it for the report and go on; the voices were
      saved either way.
 4. With voices: run `prepare.py chunks --work WORK` again so the chunks
-   show the voices. Then start one subagent with
-   `${CLAUDE_SKILL_DIR}/briefs/voices.md`, then the paths (WORK). It writes
+   show the voices. Then start one `turkish-subtitles:voice-mapper`
+   subagent with the path WORK. It writes
    `WORK/voices.json`. Run `bible.py voices --work WORK`: it adds the voice
    decisions to `decisions.json` and the `## Voices` section to `bible.md`.
    If it refuses `voices.json`, start the voice mapper once more with the
@@ -154,13 +160,13 @@ questions without seeing the bible, and a judge settles any difference
 from the cited cues.
 
 1. Run `bible.py questions --work WORK`. It writes `WORK/questions.json`.
-2. Start one subagent with `${CLAUDE_SKILL_DIR}/briefs/second-reader.md`, then the paths (WORK, `WORK/questions.json`) and the film facts. It writes `WORK/second.json`.
+2. Start one `turkish-subtitles:second-reader` subagent with the paths (WORK, `WORK/questions.json`) and the film facts. It writes `WORK/second.json`.
 3. Run `bible.py compare --work WORK`. It writes `WORK/compare.json`.
-4. If `to_judge` is above 0, start one subagent with `${CLAUDE_SKILL_DIR}/briefs/judge.md`, then the paths (WORK, `WORK/compare.json`) and this command for reading cues, with the paths filled in: `uv run "SCRIPTS/bible.py" --result "${CLAUDE_PLUGIN_DATA}/results/bible-cues.json" cues --work "WORK" --cues <numbers>`, and the note that it must read the result file, not the printed output. It writes `WORK/judged.json` and updates `bible.md`.
+4. If `to_judge` is above 0, start one `turkish-subtitles:bible-judge` subagent with the paths (WORK, `WORK/compare.json`) and this command for reading cues, with the paths filled in: `uv run "SCRIPTS/bible.py" --result "${CLAUDE_PLUGIN_DATA}/results/bible-cues.json" cues --work "WORK" --cues <numbers>`, and the note that it must read the result file, not the printed output. It writes `WORK/judged.json` and updates `bible.md`.
 5. Run `bible.py apply --work WORK`. Keep its `ties` for the report.
 
 When `questions`, `compare` or `apply` refuses a file it reads, start one
-subagent with the brief that wrote the file and the error, asking it to
+subagent of the type that wrote the file, with the error, asking it to
 fix only that file, then run the command again. Once only: if it still
 fails, say so in one line and go on with the writer's bible as it is; the
 address-form check then reports nothing for this film.
@@ -170,10 +176,10 @@ agreed on, how many the judge settled, and how many were ties.
 
 ## 6–7. Translate in parallel
 
-Read `WORK/chunks.json`. In ONE message, start one subagent per chunk. Use
-the model from the preferences' "Translator model" (`session` means do not
-set a model). Each prompt is the text of
-`${CLAUDE_SKILL_DIR}/briefs/translator.md` followed by:
+Read `WORK/chunks.json`. In ONE message, start one
+`turkish-subtitles:translator` subagent per chunk. Use the model from the
+preferences' "Translator model" (`session` means do not set a model). Each
+prompt is:
 
 ```
 Language pack: ${CLAUDE_SKILL_DIR}/pack-tr.md
@@ -197,15 +203,15 @@ Wait for all of them.
 Run `assemble.py check --work WORK`. Its result has counts and the first hard
 fails.
 
-- Hard fails: group the failing cues by chunk. For each affected chunk start one subagent with the translator brief plus: "Fix only these cues: <numbers and the failed check>. Write only those cues to WORK/out/fix_r<round>_<NN>.txt." Then run `check` again. At most 2 rounds.
+- Hard fails: group the failing cues by chunk. For each affected chunk start one `turkish-subtitles:translator` subagent with the first five lines of that chunk's prompt from step 6 (language pack, bible, preferences, chunk, neighbour chunks), never its two `Write` lines, plus: "Fix only these cues: <numbers and the failed check>. Write only those cues to WORK/out/fix_r<round>_<NN>.txt. Write flags to WORK/out/flags_r<round>_<NN>.txt." The chunk's first output and flags stay as they are. Then run `check` again. At most 2 rounds.
 - Still failing after 2 rounds: one more round the same way, with the model set to `opus`.
 - Still failing after that: go on. Step 11 delivers with `--force` and lists the failing cues in the report. If `check` wrote no draft (a cue is missing or a file is malformed), there is nothing to deliver: stop and tell the user which cues are missing.
 - Warnings never block. They go to the reviewer.
 
 ## 10. Whole-film review
 
-Run `assemble.py sidebyside --work WORK`. Start one subagent with
-`${CLAUDE_SKILL_DIR}/briefs/reviewer.md` and the paths: pack, bible,
+Run `assemble.py sidebyside --work WORK`. Start one
+`turkish-subtitles:reviewer` subagent with the paths: pack, bible,
 `WORK/sidebyside.tsv`, `WORK/checks.json`, `WORK/out/`. It writes
 `WORK/out/fix_review.txt` and `WORK/review.md`. Run `check` again; a new
 hard fail gets one fix round as in step 9, written to

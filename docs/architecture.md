@@ -8,9 +8,12 @@ your conversation. The work is split two ways:
   translation and writing the file. They are plain Python, tested, and
   print a JSON result.
 - **Subagents** do the language work: the film bible, the second reader,
-  the judge, one translator per chunk and one reviewer. Each one gets a
-  brief from `skills/subtitle/briefs/` and the paths it needs, writes its
-  files and replies with a short summary.
+  the judge, the voice mapper, one translator per chunk and one reviewer.
+  Each runs as its own agent type from `agents/`: the file holds its
+  instructions and the few tools it may use, and leaves out the general
+  Claude Code instructions and your CLAUDE.md files, which it does not
+  need. The skill passes only the paths. Each one writes its files and
+  replies with a short summary.
 
 The main conversation never reads a whole subtitle file. It reads the
 scripts' results, the bible and the review, so a full film fits in one
