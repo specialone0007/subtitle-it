@@ -42,8 +42,9 @@ The numbers match the steps in `SKILL.md`.
   and a listed folder that is not there, such as an unplugged drive, is
   named when nothing is found.
 - **2. Source subtitles.** `sources.py local` reads text tracks inside the
-  video and files next to it; `opensubtitles.py` searches by the video's
-  hash, then by IMDb id or title. The timing file is the one whose timing
+  video, files next to it, and files in a `Subs` or `Subtitles` folder
+  beside it; `opensubtitles.py` searches by the video's hash, then by IMDb
+  id or title. The timing file is the one whose timing
   is most certain to fit this exact video. Other files are paired onto it
   by time with `srt.py compare` only when they line up. Then
   `prepare.py build` writes the work folder: `cues.json` (every cue with

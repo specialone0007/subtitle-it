@@ -65,13 +65,13 @@ Set SLUG to the `slug` field of `sources.py slug "<film title>"` and WORK to `${
 Find the film's title, year, original language and IMDb id with one web
 search if you do not know them. Then collect candidates:
 
-1. If the input is a video: `sources.py local --video V --work WORK`. It extracts text tracks and finds files next to the video, and validates each.
+1. If the input is a video: `sources.py local --video V --work WORK`. It extracts text tracks, finds files next to the video and in a `Subs` or `Subtitles` folder beside it (up to two levels down), and validates each.
 2. If there is no usable candidate in the original language and none in English, or only uncertain ones: `opensubtitles.py search --config CONFIG --video V --languages <orig>,en` (add `--imdb ID` when the video gives no hash match). Results are sorted best first; `moviehash_match: true` means the timing fits this exact video. Download at most 3 files with `opensubtitles.py download --config CONFIG --file-id N --out WORK/sources/os_<lang>.srt --cache "${CLAUDE_PLUGIN_DATA}/cache"`, then run `sources.py validate --file F --duration-ms D` on each. If the script says credentials are missing, give the user the setup command it printed and stop: this is one-time setup.
 3. If the input is an `.srt` alone, that file is the timing file (confidence "as the user says").
 
 Pick the timing file: the candidate with the best timing confidence that
 passes validation: built-in text track (certain) > OpenSubtitles hash match
-(certain) > file next to the video (likely) > OpenSubtitles by name or IMDb
+(certain) > file next to the video or in its subtitle folder (likely) > OpenSubtitles by name or IMDb
 (uncertain). Skip forced-only and image tracks, and anything in Turkish.
 
 Pick the text to translate from: the timing file itself when it is in the
