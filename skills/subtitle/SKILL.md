@@ -82,9 +82,13 @@ English (hearing-impaired preferred) as the cross-check when it is not
 already the timing file.
 
 Before pairing another file onto the timing file, run
-`srt.py compare TIMING OTHER`. Pair only when `paired_share` is above 0.8 and
-`median_start_diff_ms` is within ±500. Otherwise leave that file out and
-say so.
+`srt.py fit TIMING OTHER`. It finds the one constant shift that lines the
+files up (editions often differ by a logo or intro of several seconds) and
+ignores sound descriptions and songs. Pair only when `fits` is true. When
+`offset_ms` is not 0, first run
+`srt.py shift "OTHER" "WORK/sources/<name>_fit.srt" --ms <offset_ms>` and
+pair the shifted file. When `fits` is false, leave that file out and say
+why in one line, from its `reason`.
 
 Then: `prepare.py build --work WORK --timing T [--source S] [--en E]` and
 `prepare.py chunks --work WORK`. Tell the user in 2–3 lines which files you

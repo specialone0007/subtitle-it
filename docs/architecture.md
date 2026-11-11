@@ -49,8 +49,10 @@ The numbers match the steps in `SKILL.md`.
   id or title. With nothing usable from either, `transcribe.py` writes
   subtitles from the film's own speech with Whisper, the last resort. The
   timing file is the one whose timing is most certain to fit this exact
-  video. Other files are paired onto it by time with `srt.py compare` only
-  when they line up. Then
+  video. Other files are paired onto it by time only
+  when `srt.py fit` says they line up after one constant shift (it ignores
+  sound descriptions and songs); a shifted file is written with
+  `srt.py shift` first. Then
   `prepare.py build` writes the work folder: `cues.json` (every cue with
   its source and English text) and `chunks.json` (about 250 cues each, cut
   at the longest pause).
