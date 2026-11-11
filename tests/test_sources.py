@@ -78,6 +78,21 @@ def test_remember_skips_a_film_already_inside_a_listed_folder(tmp_path: Path):
     assert prefs.read_text(encoding="utf-8") == before
 
 
+def test_a_media_folder_written_with_a_tilde_means_the_home_folder(monkeypatch, tmp_path: Path):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    prefs = tmp_path / "preferences.md"
+    prefs.write_text(TEMPLATE.replace("\n-\n", "\n- ~/Films\n"), encoding="utf-8")
+    film = tmp_path / "Films" / "Anatomy of a Fall (2023)" / "Anatomy.of.a.Fall.2023.mkv"
+    film.parent.mkdir(parents=True)
+    film.write_bytes(b"x")
+    before = prefs.read_text(encoding="utf-8")
+    assert sources.remember(film, prefs) == {"added": None, "covered_by": "~/Films", "too_broad": None}
+    assert prefs.read_text(encoding="utf-8") == before
+    out = sources.find("anatomy", [Path("~/Films")])
+    assert out["missing_folders"] == [] and len(out["matches"]) == 1
+
+
 def test_remember_creates_the_section_when_preferences_lack_it(tmp_path: Path):
     prefs = tmp_path / "preferences.md"
     prefs.write_text("# Turkish subtitles preferences\n", encoding="utf-8")

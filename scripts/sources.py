@@ -117,9 +117,10 @@ def find(query: str, dirs: list[Path]) -> dict:
     words = norm(query).split()
     hits = []
     missing = []
-    for d in dirs:
+    for listed in dirs:
+        d = listed.expanduser()
         if not d.is_dir():
-            missing.append(str(d))
+            missing.append(str(listed))
             continue
         for p in d.rglob("*"):
             ext = p.suffix.lower()
@@ -156,7 +157,7 @@ def media_folders(prefs: Path) -> list[str]:
 
 
 def _key(p: Path) -> str:
-    return os.path.normcase(str(p.resolve()))
+    return os.path.normcase(str(p.expanduser().resolve()))
 
 
 def _inside(path: Path, folder: Path) -> bool:
