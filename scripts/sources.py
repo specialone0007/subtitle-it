@@ -27,6 +27,7 @@ import unicodedata
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import result  # noqa: E402
 import srt  # noqa: E402
 
 VIDEO_EXT = {".mkv", ".mp4", ".m4v", ".avi", ".mov", ".webm", ".ts", ".wmv"}
@@ -269,16 +270,18 @@ def main(argv: list[str] | None = None) -> None:
     v.add_argument("--duration-ms", type=int)
     s = sub.add_parser("slug")
     s.add_argument("name")
+    result.add_argument(p)
     a = p.parse_args(argv)
+    result.clear(a.result)
     if a.cmd == "find":
-        result = find(a.query, a.dirs)
+        out = find(a.query, a.dirs)
     elif a.cmd == "local":
-        result = local(a.video, a.work)
+        out = local(a.video, a.work)
     elif a.cmd == "validate":
-        result = validate(a.file, a.duration_ms)
+        out = validate(a.file, a.duration_ms)
     else:
-        result = slug(a.name)
-    print(json.dumps(result, ensure_ascii=False, indent=1))
+        out = {"slug": slug(a.name)}
+    result.emit(out, a.result)
 
 
 if __name__ == "__main__":
