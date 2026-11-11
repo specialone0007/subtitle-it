@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import srt
@@ -119,3 +120,74 @@ def test_shift_command_writes_the_moved_file(tmp_path: Path):
     dest = tmp_path / "out.srt"
     srt.main(["shift", str(src), str(dest), "--ms", "-500"])
     assert srt.parse(dest)[0][0].ts == "00:00:00,500 --> 00:00:01,500"
+
+
+def _film(minutes=25):
+    """A film's worth of spoken cues with uneven lengths and pauses, as in a
+    real film; evenly spaced cues would fit at many offsets."""
+    cues, t, i = [], 1000, 0
+    while t < minutes * 60_000:
+        i += 1
+        length = 1200 + (i * 7919) % 2300
+        cues.append(_cue(i, t, t + length, f"line {i}"))
+        t += length + 300 + (i * 104_729) % 3100
+    return cues
+
+
+def test_is_sound_spots_descriptions_labels_and_songs():
+    assert srt.is_sound(_cue(1, 0, 1, "[door creaks]"))
+    assert srt.is_sound(_cue(1, 0, 1, "(SIGHS)"))
+    assert srt.is_sound(_cue(1, 0, 1, "JOHN:"))
+    assert srt.is_sound(_cue(1, 0, 1, "♪ Coming back for me ♪"))
+    assert not srt.is_sound(_cue(1, 0, 1, "[sighs] Fine."))
+    assert not srt.is_sound(_cue(1, 0, 1, "- Who? - Me."))
+    assert not srt.is_sound(_cue(1, 0, 1, "Tamam."))
+
+
+def test_fit_finds_a_constant_lead_in_despite_merged_lines_and_sound_cues():
+    timing = _film()
+    # Another edition: 15.3 s later, every third pair of lines merged into
+    # one cue, and a hearing-impaired description between every few cues.
+    other = []
+    for k, (a, b) in enumerate(zip(timing[::2], timing[1::2])):
+        if k % 3 == 0:
+            other.append(_cue(k, a.start + 15_300, b.end + 15_300, "merged"))
+        else:
+            other += [_cue(k, c.start + 15_300, c.end + 15_300) for c in (a, b)]
+    other += [_cue(1000 + i, c.end + 15_400, c.end + 16_000, "[thud]") for i, c in enumerate(timing[::5])]
+    other.sort(key=lambda c: c.start)
+    assert srt.offset_check(timing, other)["paired_share"] < 0.8  # the old gate refuses it
+    r = srt.fit(timing, other)
+    assert r["fits"], r["reason"]
+    assert abs(r["offset_ms"] + 15_300) <= 50
+    assert r["covered"] >= 0.99 and r["sound_cues"][1] > 0
+
+
+def test_fit_leaves_a_file_that_already_fits_in_place():
+    timing = _film()
+    assert srt.fit(timing, timing)["offset_ms"] == 0
+
+
+def test_fit_refuses_a_different_cut():
+    timing = _film()
+    # Ten minutes in, the other file loses 20 s: everything after is late.
+    other = [c if c.start < 600_000 else _cue(c.n, c.start + 20_000, c.end + 20_000) for c in timing]
+    r = srt.fit(timing, other)
+    assert not r["fits"]
+    assert "different cut" in r["reason"] or "covers" in r["reason"]
+
+
+def test_fit_refuses_a_file_with_lines_missing():
+    timing = _film()
+    other = [c for i, c in enumerate(timing) if i % 4]  # a quarter of the lines left out
+    r = srt.fit(timing, other)
+    assert not r["fits"] and "covers 75%" in r["reason"]
+
+
+def test_fit_command_writes_the_result(tmp_path: Path):
+    a = tmp_path / "a.srt"
+    srt.write(a, _film(minutes=3))
+    path = tmp_path / "fit.json"
+    srt.main(["--result", str(path), "fit", str(a), str(a)])
+    out = json.loads(path.read_text(encoding="utf-8"))
+    assert out["fits"] is True and out["offset_ms"] == 0

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Another subtitle file is now paired onto the timing file when
+  `srt.py fit` says it lines up after one constant shift, found by searching
+  ±60 s. It ignores sound descriptions and songs, and allows lines that are
+  split differently. The old check (`paired_share` above 0.8) refused 5 of
+  7 files that fit in a test on real films, mostly because of a different
+  intro length or hearing-impaired sound cues.
 - The audio step now runs in the background while the bible writer works
   from the text. A voice mapper then matches each voice to a character, and
   `bible.py voices` adds those answers to the bible before it is checked.
