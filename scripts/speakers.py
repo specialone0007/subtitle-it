@@ -122,7 +122,7 @@ Turn = tuple[int, int, str]  # start ms, end ms, speaker id from the diarizer
 
 def two_speakers(c: srt.Cue) -> bool:
     """A cue with two or more lines starting with a dash ("- Who?" / "- Me.")."""
-    return sum(1 for ln in c.lines if srt.strip_tags(ln).lstrip().startswith("-")) >= 2
+    return srt.dash_lines(c.lines) >= 2
 
 
 def assign_voices(cues: list[srt.Cue], turns: list[Turn], min_share: float = MIN_SHARE, margin: float = MARGIN) -> dict[int, str]:
@@ -308,7 +308,9 @@ def speech_starts(wav: Path) -> list[int]:
         return transcribe("cpu")
 
 
-CUDA_WORDS = ("cuda", "cudnn", "cublas", "nvrtc")
+# Words in a GPU library error. "float16": older cards (GTX 10 series and
+# before) refuse the float16 compute type, and the CPU uses int8 instead.
+CUDA_WORDS = ("cuda", "cudnn", "cublas", "nvrtc", "float16")
 
 DEFAULT_CONFIG = Path.home() / ".config" / "turkish-subtitles"
 

@@ -17,6 +17,11 @@ Bye.
 """
 
 
+def test_dash_lines_counts_turns_through_tags_and_spaces():
+    assert srt.dash_lines(["- Who?", "  <i>- Me.</i>", "Not a dash - here"]) == 2
+    assert not srt.is_dash_line("Word - word")
+
+
 def test_parse_basic():
     cues = srt.parse_text(SAMPLE)
     assert [c.n for c in cues] == [1, 2, 3]

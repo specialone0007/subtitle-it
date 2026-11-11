@@ -62,10 +62,6 @@ def load_translation(work: Path) -> tuple[dict[int, list[str]], list[str]]:
     return texts, problems
 
 
-def _dashes(lines: list[str]) -> int:
-    return sum(1 for ln in lines if srt.strip_tags(ln).lstrip().startswith("-"))
-
-
 def _cps(text: str, ms: int) -> float:
     return len(text) / (ms / 1000)
 
@@ -103,8 +99,8 @@ def run_checks(work: Path) -> dict:
         ref = rows[c.n]["en"] or rows[c.n]["source"] or src
         if bool(ITALIC_RE.search("".join(src))) != bool(ITALIC_RE.search("".join(tr))):
             h(c.n, "italic tags", "source and Turkish differ")
-        if _dashes(src) != _dashes(tr):
-            h(c.n, "dialogue dashes", f"source {_dashes(src)}, Turkish {_dashes(tr)}")
+        if srt.dash_lines(src) != srt.dash_lines(tr):
+            h(c.n, "dialogue dashes", f"source {srt.dash_lines(src)}, Turkish {srt.dash_lines(tr)}")
         if len(tr) > max(2, len(src)):
             h(c.n, "lines per cue", f"{len(tr)} lines")
         for ln in tr:
