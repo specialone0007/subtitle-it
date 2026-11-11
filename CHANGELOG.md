@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- A polish run is faster. The polish fixer and the whole-film reviewer now
+  work at the same time on one film instead of one after the other, and
+  the audio step's sync check transcribes five 3-minute stretches instead
+  of the whole film (about 30 seconds instead of 2.5 minutes on a GPU).
+  The skill also tells the main conversation never to wait with `sleep`.
 - A polish run no longer leaves a line softer than the source's swearing.
   The toned-down check now knows strong and mild words, so "fuck" turned
   into "lanet olsun" is flagged. After the review, `polish.py soft` lists
