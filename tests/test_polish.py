@@ -110,6 +110,11 @@ def test_match_form_leaves_mixed_italics_alone():
     assert polish.match_form(src, tr) == (tr, False)
 
 
+def test_match_form_copies_italics_line_by_line():
+    src = ["<i>Voice.</i>", "Real."]
+    assert polish.match_form(src, ["Ses.", "Gerçek."]) == (["<i>Ses.</i>", "Gerçek."], True)
+
+
 def test_match_form_drops_italics_the_source_does_not_have():
     assert polish.match_form(["Plain."], ["<i>Düz.</i>"]) == (["Düz."], True)
 
@@ -206,3 +211,11 @@ def test_sidebyside_marks_no_joins_in_a_seeded_run(work: Path, tmp_path: Path):
     polish.seed(work, tmp_path / "tr.srt")
     assemble.sidebyside(work)
     assert "chunk join" not in (work / "sidebyside.tsv").read_text(encoding="utf-8")
+
+
+def test_flags_skip_a_fixed_cue_the_timing_file_does_not_have(work: Path, tmp_path: Path):
+    polish.seed(work, tmp_path / "tr.srt")
+    (work / "out" / "fix_polish.txt").write_text("99\nFazladan.\n", encoding="utf-8")
+    out = polish.flags(work)
+    assert "#99 " not in (work / polish.FLAG_FILE).read_text(encoding="utf-8")
+    assert out["flagged"] >= 1

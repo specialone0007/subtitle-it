@@ -180,7 +180,9 @@ def flags(work: Path) -> dict:
     texts, _ = assemble.load_translation(work)
     reasons: dict[int, list[str]] = {}
     for item in checks["hard"] + [w for w in checks["warnings"] if w["check"] not in REVIEWER_ONLY]:
-        if item["cue"] is not None:
+        # A fix file can name a cue the timing file does not have; check
+        # already reports that as a hard fail, and there is no cue to list.
+        if item["cue"] is not None and item["cue"] in rows:
             label = item["check"] + (f": {item['detail']}" if item["detail"] else "")
             reasons.setdefault(item["cue"], []).append(label)
     for n, tr in texts.items():
