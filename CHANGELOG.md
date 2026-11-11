@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- A polish run no longer leaves a line softer than the source's swearing.
+  The toned-down check now knows strong and mild words, so "fuck" turned
+  into "lanet olsun" is flagged. After the review, `polish.py soft` lists
+  the lines still soft, the polish fixer restores them, and the report
+  lists any left. On a 2-hour test film the human file had 52 such lines; 11 were
+  left after the fixer and the reviewer, before this last pass.
 - A run now starts from a human-made Turkish subtitle when one fits the
   film's timing: from the video's own files, else from OpenSubtitles. It
   skips the translators. A polish fixer agent changes only the flagged
