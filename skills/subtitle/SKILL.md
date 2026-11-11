@@ -89,8 +89,10 @@ image tracks, and anything in Turkish.
 
 Pick the text to translate from: the timing file itself when it is in the
 original language; otherwise the best original-language candidate. Pick
-English (hearing-impaired preferred) as the cross-check when it is not
-already the timing file.
+an English file as the cross-check (`--en`), hearing-impaired preferred,
+whenever one other than the timing file exists, even when the timing
+file is itself English: the hearing-impaired file's speaker names are
+what the sen/siz checks use to know who is talking.
 
 Before pairing another file onto the timing file, run
 `srt.py fit TIMING OTHER`. It finds the one constant shift that lines the
