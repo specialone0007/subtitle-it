@@ -1,4 +1,5 @@
 import json
+import random
 import wave
 from pathlib import Path
 
@@ -61,13 +62,70 @@ def test_merge_voices_keeps_labels_and_drops_old_voices():
     assert list(merged) == ["1", "2", "7"]
 
 
+def dialogue(count=120, seed=7):
+    """Cue starts 1.2 to 4 s apart, like dialogue: close enough that a 1.5 s
+    shift puts a neighbouring line nearer than the right one."""
+    rng = random.Random(seed)
+    t, starts = 60_000, []
+    for _ in range(count):
+        t += rng.randint(1200, 4000)
+        starts.append(t)
+    return starts
+
+
+def cues_at(starts):
+    return [cue(i, s, s + 1000) for i, s in enumerate(starts, 1)]
+
+
 def test_sync_offset_reports_late_subtitles():
-    cues = [cue(i, i * 5000 + 800, i * 5000 + 2000) for i in range(1, 6)]
-    starts = [i * 5000 for i in range(1, 6)]
-    r = speakers.sync_offset(cues, starts)
-    assert r == {"matched_cues": 5, "median_offset_ms": 800, "verdict": "subtitles are 800 ms late"}
-    assert speakers.sync_offset(cues, [s + 800 for s in starts])["verdict"] == "in sync"
-    assert speakers.sync_offset(cues, [])["median_offset_ms"] is None
+    speech = dialogue()
+    r = speakers.sync_offset(cues_at([s + 800 for s in speech]), speech)
+    assert (r["median_offset_ms"], r["verdict"]) == (800, "subtitles are 800 ms late")
+    assert r["matched_cues"] == r["speech_starts"] == len(speech)
+    assert speakers.sync_offset(cues_at(speech), [])["median_offset_ms"] is None
+
+
+def test_sync_offset_will_not_judge_from_a_few_matches():
+    r = speakers.sync_offset(cues_at([1000, 3000]), [1000, 3000])
+    assert r["median_offset_ms"] is None and r["verdict"].startswith("too little speech")
+
+
+@pytest.mark.parametrize("shift", [1000, -1000, 1500, -1500, 3000, -3000, 5000, -5000])
+def test_sync_offset_finds_a_clean_shift_past_the_gap_between_lines(shift):
+    speech = dialogue()
+    r = speakers.sync_offset(cues_at([s + shift for s in speech]), speech)
+    assert r["median_offset_ms"] == shift
+    assert r["verdict"] == f"subtitles are {abs(shift)} ms {'late' if shift > 0 else 'early'}"
+
+
+def test_sync_offset_finds_a_shift_through_noise():
+    # Speech starts off by up to 250 ms, a third of the lines without a cue,
+    # and stray speech starts (breaths, sounds) with no cue at all.
+    rng = random.Random(3)
+    speech = dialogue()
+    subs = [s + 1500 + rng.randint(-250, 250) for s in speech if rng.random() > 0.33]
+    stray = [rng.randint(60_000, speech[-1]) for _ in range(40)]
+    r = speakers.sync_offset(cues_at(subs), speech + stray)
+    assert abs(r["median_offset_ms"] - 1500) <= 100
+    assert r["verdict"].startswith("subtitles are") and r["verdict"].endswith("late")
+
+
+def test_sync_offset_leaves_an_in_sync_file_alone():
+    rng = random.Random(5)
+    speech = dialogue()
+    subs = [s + rng.randint(-200, 200) for s in speech]
+    r = speakers.sync_offset(cues_at(subs), speech)
+    assert r["verdict"] == "in sync"
+    assert abs(r["median_offset_ms"]) <= 100
+
+
+def test_sync_offset_refuses_to_guess_without_a_clear_peak():
+    # Speech starts that have nothing to do with the cues.
+    rng = random.Random(9)
+    speech = sorted(rng.randint(60_000, 400_000) for _ in range(120))
+    r = speakers.sync_offset(cues_at(dialogue()), speech)
+    assert r["median_offset_ms"] is None
+    assert r["verdict"].startswith(("no clear offset", "no speech matched"))
 
 
 def test_token_from_env_first_then_config(tmp_path: Path, monkeypatch):
@@ -106,7 +164,8 @@ def test_run_writes_voices_with_models_faked(tmp_path: Path, monkeypatch, capsys
     monkeypatch.setattr(speakers, "diarize", lambda wav, token: (turns, {"A": [1.0, 0.0], "B": [0.0, 1.0]}))
     monkeypatch.setattr(speakers, "speech_starts", lambda wav: [1000, 3000])
     r = speakers.run(tmp_path / "v.mkv", tmp_path, None, sync_check=True)
-    assert r["voices"] == {"V1": 1, "V2": 1} and r["voices_before_merge"] == 2 and r["sync"]["verdict"] == "in sync"
+    assert r["voices"] == {"V1": 1, "V2": 1} and r["voices_before_merge"] == 2
+    assert r["sync"]["matched_cues"] == 2 and r["sync"]["verdict"].startswith("too little speech")
     saved = json.loads((tmp_path / "speakers.json").read_text(encoding="utf-8"))
     assert saved == {"1": {"label": "Sandra", "voice": "V1"}, "2": {"voice": "V2"}}
     out, err = capsys.readouterr()

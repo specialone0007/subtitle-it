@@ -49,6 +49,7 @@ downloads the models (a few GB). Without a token it prints
 from __future__ import annotations
 
 import argparse
+import bisect
 import getpass
 import json
 import math
@@ -206,23 +207,68 @@ def merge_voices(speakers: dict[str, dict], voices: dict[int, str]) -> dict[str,
     return dict(sorted(merged.items(), key=lambda kv: int(kv[0])))
 
 
-def sync_offset(cues: list[srt.Cue], speech_starts: list[int], window: int = 2000) -> dict:
-    """Median gap between each cue start and the nearest speech start within
-    `window` ms. Positive: the subtitles come late."""
-    starts = sorted(speech_starts)
-    diffs = []
-    k = 0
-    for c in cues:
-        while k + 1 < len(starts) and starts[k + 1] <= c.start:
-            k += 1
-        near = [s for s in starts[max(0, k - 1) : k + 2] if abs(c.start - s) <= window]
+# The sync check tries every constant offset in ±SYNC_SEARCH_MS, in
+# SYNC_STEP_MS steps. A speech start matches an offset when a cue start lies
+# within SYNC_TOLERANCE_MS of it once the cues are moved back by that offset.
+SYNC_SEARCH_MS = 20_000
+SYNC_STEP_MS = 100
+SYNC_TOLERANCE_MS = 300
+SYNC_MAX_IN_SYNC_MS = 300
+# The best offset must match at least this many speech starts, and this many
+# times as many as the best offset more than SYNC_PEAK_GAP_MS away from it.
+# On a 2-hour test film the true offset matched 98 of 160 starts and the best other
+# one 44, whatever the shift.
+SYNC_MIN_MATCHED = 20
+SYNC_MIN_LEAD = 1.5
+SYNC_PEAK_GAP_MS = 1000
+
+
+def _offset_pairs(cue_starts: list[int], speech: list[int], offset: int) -> list[int]:
+    """cue start - speech start for each speech start whose nearest cue
+    start, moved back by `offset`, lies within SYNC_TOLERANCE_MS of it.
+    `cue_starts` is sorted."""
+    out = []
+    for s in speech:
+        i = bisect.bisect_left(cue_starts, s + offset)
+        near = [cue_starts[j] for j in (i - 1, i) if 0 <= j < len(cue_starts)]
         if near:
-            diffs.append(c.start - min(near, key=lambda s: abs(c.start - s)))
-    if not diffs:
-        return {"matched_cues": 0, "median_offset_ms": None, "verdict": "no speech matched the cues"}
+            c = min(near, key=lambda c: abs(c - s - offset))
+            if abs(c - s - offset) <= SYNC_TOLERANCE_MS:
+                out.append(c - s)
+    return out
+
+
+def sync_offset(cues: list[srt.Cue], speech_starts: list[int]) -> dict:
+    """How far the subtitles sit from the speech, in ms. Positive: the
+    subtitles come late.
+
+    Matching each cue to its nearest speech start fails once the shift nears
+    the gap between lines: the nearest start then belongs to the line before
+    or after, and the gaps cancel out (1.5 s on a test film read as in sync).
+    So, as `srt.py fit` does for two files, this tries every constant offset
+    and keeps the one under which most speech starts land on a cue start;
+    ties go to the smallest offset, so an in-sync file stays put. The
+    reported offset is the median gap over the starts matched at that offset."""
+    speech = sorted(speech_starts)
+    cue_starts = sorted(c.start for c in cues)
+    base = {"matched_cues": 0, "speech_starts": len(speech), "median_offset_ms": None}
+    if not speech or not cue_starts:
+        return {**base, "verdict": "no speech matched the cues"}
+    scores = {d: len(_offset_pairs(cue_starts, speech, d)) for d in range(-SYNC_SEARCH_MS, SYNC_SEARCH_MS + 1, SYNC_STEP_MS)}
+    best = max(scores, key=lambda d: (scores[d], -abs(d)))
+    runner_up = max((n for d, n in scores.items() if abs(d - best) > SYNC_PEAK_GAP_MS), default=0)
+    diffs = _offset_pairs(cue_starts, speech, best)
+    base |= {"matched_cues": len(diffs), "runner_up_matched": runner_up}
+    if len(diffs) < SYNC_MIN_MATCHED:
+        return {**base, "verdict": f"too little speech to judge: {len(diffs)} starts matched a cue (needs {SYNC_MIN_MATCHED})"}
+    if len(diffs) < SYNC_MIN_LEAD * runner_up:
+        return {**base, "verdict": f"no clear offset: best {best} ms matched {len(diffs)} starts, another {runner_up}"}
+    # The 100 ms grid leaves the matched window off-centre; centre it on the
+    # median once and measure again.
+    diffs = _offset_pairs(cue_starts, speech, int(statistics.median(diffs))) or diffs
     med = int(statistics.median(diffs))
-    verdict = "in sync" if abs(med) <= 300 else f"subtitles are {abs(med)} ms {'late' if med > 0 else 'early'}"
-    return {"matched_cues": len(diffs), "median_offset_ms": med, "verdict": verdict}
+    verdict = "in sync" if abs(med) <= SYNC_MAX_IN_SYNC_MS else f"subtitles are {abs(med)} ms {'late' if med > 0 else 'early'}"
+    return {**base, "median_offset_ms": med, "verdict": verdict}
 
 
 # --- audio (needs the models) ---------------------------------------------
