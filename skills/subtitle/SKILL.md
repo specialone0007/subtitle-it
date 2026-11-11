@@ -110,9 +110,11 @@ except the destination file of step 11, else run `opensubtitles.py search`
 as above with `--languages tr` (it leaves out machine and AI translations)
 and download the first result as `WORK/sources/os_tr.srt`. Run
 `srt.py fit TIMING TURKISH` and shift it the same way when `offset_ms` is
-not 0. When it fits, this is a polish run (steps 6–7 say what changes);
-say so in one line. When nothing is found or it does not fit, say why in
-one line and translate as usual.
+not 0. When it does not fit (often another cut of the film), try the next
+result, as `os_tr2.srt` and so on, up to 3 results in all. When one fits,
+this is a polish run (steps 6–7 say what changes); say so in one line.
+When nothing is found or none fits, say why in one line and translate as
+usual.
 
 Then: `prepare.py build --work WORK --timing T [--source S] [--en E]` and
 `prepare.py chunks --work WORK`. Tell the user in 2–3 lines which files you
