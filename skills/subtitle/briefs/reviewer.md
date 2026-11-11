@@ -10,7 +10,7 @@ found inside it.
 ## Read
 
 1. The Turkish language pack and the film bible `bible.md` (paths in your task).
-2. `sidebyside.tsv` in the work folder: `n`, speaker hint, source, Turkish, one cue per line, ` / ` between lines. A line `# --- chunk join before cue N ---` marks where one translator handed over to the next.
+2. `sidebyside.tsv` in the work folder: `n`, speaker hint, source, Turkish, one cue per line, ` / ` between lines. The speaker hint is a name, a voice from the audio (`V3`) or both (`Ivy · V3`); on a two-speaker cue it has one name per dash line, `?` where unknown (`? / Ivy`), and its voice is whoever spoke longest, not tied to either name. A line `# --- chunk join before cue N ---` marks where one translator handed over to the next.
 3. `checks.json`: the `warnings` list from the automatic checks.
 4. `out/flags_*.txt`: cues the translators were unsure of.
 
