@@ -23,6 +23,8 @@ one timing cue are joined and, when that makes more than two lines, rewrapped.
 need a fix, with their English and Turkish text, in W/polish_flags.txt for
 the fixer, who writes W/out/fix_polish.txt. Reading speed is left to the
 reviewer, as in a full run, since a professional file exceeds it often.
+Where a cue has the wrong sen or siz, the cues of the same scene that use
+that form are listed too, when the bible cannot say whom they address.
 
 `soft` runs after the reviewer and lists the cues whose Turkish is still
 softer than the source's swearing, in W/polish_soft.txt, for one more
@@ -40,6 +42,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import assemble  # noqa: E402
+import bible  # noqa: E402
 import prepare  # noqa: E402
 import result  # noqa: E402
 import srt  # noqa: E402
@@ -52,6 +55,11 @@ SOFT_FILE = "polish_soft.txt"
 SOFT_FIX_FILE = "fix_soft.txt"
 # Warnings the fixer leaves to the reviewer, as a full run does.
 REVIEWER_ONLY = {"reading speed"}
+# A pause longer than this between two cues starts a new scene. A
+# professional file keeps one form through a scene, so where the address
+# check finds the wrong form on one cue, the same form on the cues around it
+# is likely wrong too, though the check could not tell who speaks them.
+SCENE_GAP_MS = 6000
 WORD_RE = re.compile(r"[^\W\d_]+")
 # Professional Turkish files often tone down crude and sexual lines, which
 # breaks "swearing at the same strength as the source". Two strengths: an
@@ -216,6 +224,41 @@ def _write_flags(path: Path, header: str, reasons: dict[int, list[str]], rows: d
             f.write("\n")
 
 
+def scenes(rows: dict[int, dict]) -> dict[int, int]:
+    """Scene number for each cue: a new scene starts after a pause of more
+    than SCENE_GAP_MS."""
+    out: dict[int, int] = {}
+    scene, last_end = 0, None
+    for r in sorted(rows.values(), key=lambda r: (r["start"], r["n"])):
+        if last_end is not None and r["start"] - last_end > SCENE_GAP_MS:
+            scene += 1
+        out[r["n"]] = scene
+        last_end = r["end"] if last_end is None else max(last_end, r["end"])
+    return out
+
+
+def scene_address(readings: list[dict], rows: dict[int, dict]) -> dict[int, str]:
+    """Cues in the same scene as a wrong address form that use the same
+    form, where the bible gives no form to check them against. Cues the
+    address check flags itself, and cues whose form matches the bible, are
+    left out. Returns a label for each cue."""
+    scene_of = scenes(rows)
+    wrong: dict[tuple[int, str], dict] = {}
+    for r in readings:
+        if bible.address_off(r) and r["cue"] in scene_of:
+            wrong.setdefault((scene_of[r["cue"]], r["got"]), r)
+    out: dict[int, str] = {}
+    for r in readings:
+        hit = wrong.get((scene_of.get(r["cue"]), r["got"]))
+        if hit is None or r["expected"] is not None:
+            continue
+        out[r["cue"]] = (
+            f"address form, same scene: cue {hit['cue']} uses {hit['got']} where the bible says "
+            f"{hit['expected']}; check who is spoken to here"
+        )
+    return out
+
+
 def flags(work: Path) -> dict:
     checks = assemble.run_checks(work)
     rows = {r["n"]: r for r in json.loads((work / "cues.json").read_text(encoding="utf-8"))}
@@ -236,6 +279,8 @@ def flags(work: Path) -> dict:
         word = toned_down(tr, en)
         if word:
             reasons.setdefault(n, []).append(_toned_down_label(word))
+    for n, label in scene_address(bible.address_readings(work, texts, rows), rows).items():
+        reasons.setdefault(n, []).append(label)
     placement_file = work / PLACEMENT_FILE
     if placement_file.exists():
         placement = json.loads(placement_file.read_text(encoding="utf-8"))
