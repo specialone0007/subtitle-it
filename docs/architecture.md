@@ -28,7 +28,8 @@ flowchart TD
     C --> E[4. Film bible<br>bible.md, glossary.json, decisions.json]
     D --> V[Voice mapper<br>which character each voice is]
     E --> V
-    V --> F[5. Check the bible<br>blind second reader, judge on differences]
+    E --> F[5. Check the bible<br>blind second reader, judge on differences]
+    V --> F
     F --> G[6-7. Translate<br>one subagent per chunk, in parallel]
     G --> H[8-9. Assemble and check<br>up to 3 fix rounds]
     H --> I[10. Whole-film review]
