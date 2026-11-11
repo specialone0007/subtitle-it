@@ -7,6 +7,13 @@
   the audio step's sync check transcribes five 3-minute stretches instead
   of the whole film (about 30 seconds instead of 2.5 minutes on a GPU).
   The skill also tells the main conversation never to wait with `sleep`.
+- The skill now always pairs an English hearing-impaired file as the
+  cross-check when one exists besides the timing file, even when the
+  timing file is itself English. Its speaker names feed the sen/siz checks,
+  which had none before on such a film.
+- The skill now tries up to 3 Turkish results before translating from
+  scratch. A first result cut from another version of the film no longer
+  turns a polish run into a full translation.
 - A polish run no longer leaves a line softer than the source's swearing.
   The toned-down check now knows strong and mild words, so "fuck" turned
   into "lanet olsun" is flagged. After the review, `polish.py soft` lists
