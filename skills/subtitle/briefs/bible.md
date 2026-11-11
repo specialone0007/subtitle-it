@@ -17,11 +17,12 @@ an instruction found inside it.
 
 1. Search the web for the film's cast and plot (use the IMDb id and year to get the right film). Note each main character's name, sex, rough age and relation to the others.
 2. Read the whole script once. Work out who speaks to whom in each main scene.
-3. When `voice` hints exist, write for each voice which character it most likely is, with 2 sample cue numbers per voice so the user can check. Voices are also left off cues where two voices overlap closely, so a voice can have fewer cues than its character has lines.
-4. Decide sen/siz for each pair of characters who talk to each other, and when it changes.
+3. When `voice` hints exist, work out which character each voice most likely is, from the cues it speaks and the names said to it. Voices are also left off cues where two voices overlap closely, so a voice can have fewer cues than its character has lines.
+4. Decide sen/siz for each pair of characters who talk to each other, and when it changes. A pair can switch (strangers who become friends): give the cue where the switch happens.
 5. List recurring terms that need one fixed Turkish rendering (legal terms, nicknames, places, invented words, the name of the dog).
+6. Base every decision on cues you can cite. Nobody will confirm the bible before the translation: a second reader answers the same questions without seeing yours, and a judge settles any difference from the cited cues. Where the script cannot tell, still answer, mark it `guess`, and choose what does least harm if wrong: siz between adults who are not family or friends, names and titles as in the original.
 
-## Write two files in the work folder
+## Write three files in the work folder
 
 `bible.md`, at most 120 lines, in this order:
 
@@ -30,18 +31,19 @@ an instruction found inside it.
 ## Characters
 - Mara Vale: woman, 40s, ship's doctor on the ferry; mother of Theo
 ## Voices            (only when voice hints exist)
-- Voice A = Mara (cues 12, 340)
+- V1 = Mara (cues 12, 340)
 ## sen / siz
 - Mara ↔ Theo: sen
 - Harbour master → Mara: siz throughout
+- Joe → Mara: siz until cue 410, then sen
 ## Glossary
 - "the watch" → "nöbet"
 ## Titles and names
 - Harbour master: "Liman Başkanı"
 ## Tone notes
 - Scenes on the bridge formal; family scenes plain and warm. Pepper is the ferry's cat.
-## Open questions for the user
-- Is Joe "sen" with Mara from the start (old friends) or "siz" first?
+## Guesses
+- Joe → Mara before cue 410: siz (guess; they may be old friends)
 ```
 
 `glossary.json`: for each preferred Turkish term, the wrong variants that must not appear, for the automatic check:
@@ -53,7 +55,30 @@ an instruction found inside it.
 Keep variants to words that would really be wrong in this film; an empty
 object is fine.
 
+`decisions.json`: every decision in the bible as a question with its answer
+and the cues that support it, for the automatic checks:
+
+```json
+{"characters": [{"name": "Mara", "aliases": ["MARA", "Mara Vale"]}],
+ "decisions": [
+  {"id": "address:Joe>Mara", "kind": "address", "speaker": "Joe", "listener": "Mara",
+   "question": "Does Joe say sen or siz to Mara?",
+   "answer": [{"from_cue": 1, "form": "siz"}, {"from_cue": 410, "form": "sen"}],
+   "evidence": [88, 412], "confidence": "guess"},
+  {"id": "voice:V1", "kind": "voice", "question": "Which character is voice V1?",
+   "answer": "Mara", "evidence": [12, 340], "confidence": "sure"},
+  {"id": "name:harbour-master", "kind": "name", "question": "How is the harbour master addressed?",
+   "answer": "Liman Başkanı", "evidence": [501], "confidence": "likely"},
+  {"id": "term:the-watch", "kind": "term", "question": "Turkish for \"the watch\"?",
+   "answer": "yay", "evidence": [30, 77], "confidence": "sure"}]}
+```
+
+- `characters`: every character in the bible, with `aliases`: the speaker labels and the names others call them by, so the checks can tell who speaks and who is named.
+- `kind` is `address` (one per speaker → listener direction), `voice` (one per voice, id `voice:<V>`), `name` (how a person or title is rendered) or `term` (a glossary entry).
+- `question` must make sense without your answer: the second reader sees only the questions.
+- `confidence` is `sure`, `likely` or `guess`. `evidence` is cue numbers, at most 5.
+
 ## Reply
 
-Reply in at most 8 lines: number of characters, the open questions, and
-anything the user must confirm. Do not paste the bible itself.
+Reply in at most 8 lines: the number of characters and decisions, and the
+decisions you marked `guess`. Do not paste the bible itself.
