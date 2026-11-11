@@ -152,6 +152,15 @@ def test_command_writes_the_result(work: Path, tmp_path: Path):
     assert json.loads(res.read_text(encoding="utf-8"))["seeded"] == 5
 
 
+def test_soft_command_writes_the_result(work: Path, tmp_path: Path):
+    polish.seed(work, tmp_path / "tr.srt")
+    res = tmp_path / "r.json"
+    polish.main(["--result", str(res), "soft", "--work", str(work)])
+    out = json.loads(res.read_text(encoding="utf-8"))
+    assert out["left"] == 0 and out["cue_numbers"] == []
+    assert (work / polish.SOFT_FILE).exists()
+
+
 def test_match_form_drops_dashes_the_source_does_not_have():
     assert polish.match_form(["Wait, who?"], ["- Bekle, kim?"]) == (["Bekle, kim?"], True)
     assert polish.match_form(["<i>Go on.</i>"], ["<i>- Devam et.</i>"]) == (["<i>Devam et.</i>"], True)
@@ -175,6 +184,9 @@ def test_toned_down_ignores_words_that_only_look_crude():
     assert polish.toned_down(["Kokteyl ister misin?"], ["A cocktail?"]) is None
     assert polish.toned_down(["Bunu götürmem lazım."], ["I need to take this."]) is None
     assert polish.toned_down(["Boks maçı."], ["Shitty boxing match."]) == "shit"
+    assert polish.toned_down(["Hadi ama, yine mi?"], ["Oh shit, not again?"]) == "shit"
+    assert polish.toned_down(["Kahrolası kapı."], ["Damn door."]) is None
+    assert polish.toned_down(["Kahramanlar hep geç kalır."], ["Heroes are always damn late."]) == "damn"
 
 
 def test_flags_lists_toned_down_and_misplaced_cues(tmp_path: Path):
