@@ -24,7 +24,9 @@ en: The train leaves at eight. / Take your coat.
 `#501` is the cue number. `src:` is the text to translate; ` / ` separates
 the source's own lines. `en:` is the English cross-check, when there is
 one. `[Lena]` is a speaker hint and can be wrong; the bible wins when
-they disagree.
+they disagree. `[Lena · V3]` adds the voice heard in the audio. A cue
+with two dash lines gets one name per line, `?` where it is unknown:
+`[? / Daniel]`.
 
 ## Write your output file (path in your task)
 

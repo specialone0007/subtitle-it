@@ -28,6 +28,7 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import prepare  # noqa: E402
 import result  # noqa: E402
 import srt  # noqa: E402
 
@@ -179,8 +180,7 @@ def sidebyside(work: Path) -> Path:
             n = r["n"]
             if n in joins:
                 f.write(f"# --- chunk join before cue {n} ---\n")
-            sp = speakers.get(str(n), {})
-            who = sp.get("name") or sp.get("label") or sp.get("voice") or ""
+            who = prepare.speaker_hint(speakers.get(str(n), {}))
             src = " / ".join(r["source"] or r["timing_lines"])
             tr = " / ".join(texts.get(n, ["<MISSING>"]))
             f.write(f"{n}\t{who}\t{src}\t{tr}\n")
