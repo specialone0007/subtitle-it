@@ -1,0 +1,29 @@
+# Development only. The plugin's scripts declare their own dependencies at
+# the top of each file and run with `uv run scripts/<name>.py`.
+[project]
+name = "turkish-subtitles-dev"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6", "charset-normalizer>=3.3"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["scripts"]
+
+[tool.ruff]
+line-length = 130
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+# B905: the zips over cue lists are meant to stop at the shorter list.
+ignore = ["E741", "B905"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["srt", "prepare", "assemble", "learn", "sources", "opensubtitles", "speakers"]
