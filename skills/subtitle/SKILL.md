@@ -75,9 +75,10 @@ used and the timing confidence.
 
 ## 3. Speaker hints
 
-`build` already took speaker labels (`SANDRA:`) from the text. If
-`nvidia-smi` works, the input is a video and the preferences or the user
-want audio hints, run `uv run "SCRIPTS/speakers.py" --video V --work WORK`
+`build` already took speaker labels (`SANDRA:`) from the text. Skip the
+rest of this step when `SCRIPTS/speakers.py` does not exist (it arrives in
+v2). If it exists, `nvidia-smi` works, the input is a video and the
+preferences or the user want audio hints, run `uv run "SCRIPTS/speakers.py" --video V --work WORK`
 (v2; it adds `voice` per cue to `speakers.json`; first run downloads
 models). It needs a Hugging Face token: if it says the token is missing,
 skip it and say so. Then run `prepare.py chunks --work WORK` again so the
@@ -133,7 +134,9 @@ Run `assemble.py sidebyside --work WORK`. Start one subagent with
 `${CLAUDE_SKILL_DIR}/briefs/reviewer.md` and the paths: pack, bible,
 `WORK/sidebyside.tsv`, `WORK/checks.json`, `WORK/out/`. It writes
 `WORK/out/fix_review.txt` and `WORK/review.md`. Run `check` again; a new
-hard fail gets one fix round as in step 9.
+hard fail gets one fix round as in step 9, written to
+`WORK/out/fix_post_<NN>.txt`. Fix files apply in the order they were
+written, so that round's files win over `fix_review.txt`.
 
 ## 11. Deliver
 

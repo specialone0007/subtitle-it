@@ -9,9 +9,11 @@ deliver the result next to the video.
     uv run assemble.py sidebyside  --work W
     uv run assemble.py deliver     --work W --dest FILM.tr.srt --backups DIR [--force]
 
-`check` reads W/out/tr_*.txt, then W/out/fix_*.txt in name order (later
-files win), writes W/draft.tr.srt when every cue has text, and writes
-W/checks.json. Hard fails block delivery; warnings do not.
+`check` reads W/out/tr_*.txt, then W/out/fix_*.txt in the order they were
+written (later files win), writes W/draft.tr.srt when every cue has text, and
+writes W/checks.json. When a cue is missing or a file is malformed, no draft is
+written and any older draft is removed. Hard fails block delivery; warnings do
+not, and nothing without a current draft is ever delivered.
 """
 
 from __future__ import annotations
@@ -49,7 +51,9 @@ def load_translation(work: Path) -> tuple[dict[int, list[str]], list[str]]:
                 problems.append(f"cue {n} is in more than one chunk file")
             seen_in_tr.add(n)
         texts.update(blocks)
-    for f in sorted(out.glob("fix_*.txt")):
+    # Fix files apply in the order they were written, so a fix round after the
+    # review wins over fix_review.txt whatever the files are called.
+    for f in sorted(out.glob("fix_*.txt"), key=lambda p: (p.stat().st_mtime_ns, p.name)):
         blocks, probs = srt.read_blocks(f)
         problems += probs
         texts.update(blocks)
@@ -120,8 +124,14 @@ def run_checks(work: Path) -> dict:
         glossary = json.loads(glossary_file.read_text(encoding="utf-8"))
         for preferred, alts in glossary.items():
             for alt in alts:
-                rx = re.compile(r"\b" + re.escape(alt.casefold()) + r"\b")
-                hits = [n for n, t in texts.items() if rx.search(" ".join(t).casefold())]
+                # A variant that differs from the preferred term only by case
+                # (TAMAM for Tamam) is matched case-sensitively; otherwise the
+                # correct term itself would be flagged.
+                if alt.casefold() == preferred.casefold():
+                    rx, fold = re.compile(r"\b" + re.escape(alt) + r"\b"), False
+                else:
+                    rx, fold = re.compile(r"\b" + re.escape(alt.casefold()) + r"\b"), True
+                hits = [n for n, t in texts.items() if rx.search(" ".join(t).casefold() if fold else " ".join(t))]
                 for n in hits:
                     w(n, "term variant", f"'{alt}' used; glossary says '{preferred}'")
 
@@ -137,6 +147,7 @@ def run_checks(work: Path) -> dict:
         draft = str(work / "draft.tr.srt")
     else:
         draft = None
+        (work / "draft.tr.srt").unlink(missing_ok=True)
 
     result = {
         "draft": draft,
@@ -178,8 +189,9 @@ def sidebyside(work: Path) -> Path:
 def deliver(work: Path, dest: Path, backups: Path, force: bool) -> dict:
     checks = json.loads((work / "checks.json").read_text(encoding="utf-8"))
     draft = work / "draft.tr.srt"
-    if not draft.exists():
-        raise SystemExit("no draft: run check first")
+    if not checks.get("draft") or not draft.exists():
+        # Even --force never ships a draft the last check did not write.
+        raise SystemExit("the last check wrote no draft (a cue is missing or a file is malformed): fix it and run check again")
     if checks["hard_fail_count"] and not force:
         raise SystemExit(f"{checks['hard_fail_count']} hard fails; deliver with --force only if the user agreed")
     checked = (work / "checks.json").stat().st_mtime
