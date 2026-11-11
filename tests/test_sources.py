@@ -290,6 +290,59 @@ def test_local_reads_a_folder_named_after_the_video_inside_subs(tmp_path: Path, 
     assert {c["language"] for c in r["candidates"]} == {"en"}
 
 
+def test_local_keeps_files_apart_under_a_long_folder_name(tmp_path: Path, monkeypatch):
+    film = tmp_path / "Film"
+    inner = film / "Subs" / "Film (2019) subtitles in several languages, with notes"
+    inner.mkdir(parents=True)
+    video = film / "Film (2019).mkv"
+    video.write_bytes(b"x")
+    (inner / "2_English.srt").write_text(_srt(60), encoding="utf-8")
+    (inner / "3_French.srt").write_text(_srt(70), encoding="utf-8")
+    _no_tools(monkeypatch)
+    r = sources.local(video, tmp_path / "work")
+    by = {c["language"]: c for c in r["candidates"]}
+    assert set(by) == {"en", "fr"}
+    assert by["en"]["path"] != by["fr"]["path"]
+    assert by["en"]["check"]["cues"] == 60 and by["fr"]["check"]["cues"] == 70
+
+
+def test_local_keeps_any_inner_folder_when_this_is_the_only_video(tmp_path: Path, monkeypatch):
+    film = tmp_path / "Film"
+    inner = film / "Subs" / "Extras"
+    inner.mkdir(parents=True)
+    video = film / "Film (2019).mkv"
+    video.write_bytes(b"x")
+    (inner / "2_English.srt").write_text(_srt(60), encoding="utf-8")
+    _no_tools(monkeypatch)
+    r = sources.local(video, tmp_path / "work")
+    assert [c["language"] for c in r["candidates"]] == ["en"]
+
+
+def test_local_skips_another_episodes_file_directly_in_subs(tmp_path: Path, monkeypatch):
+    show = tmp_path / "Show S01"
+    (show / "Subs").mkdir(parents=True)
+    for ep in ("Show.S01E01", "Show.S01E02"):
+        (show / f"{ep}.mkv").write_bytes(b"x")
+        (show / "Subs" / f"{ep}.English.srt").write_text(_srt(60), encoding="utf-8")
+    _no_tools(monkeypatch)
+    r = sources.local(show / "Show.S01E01.mkv", tmp_path / "work")
+    assert [Path(c["original"]).name for c in r["candidates"]] == ["Show.S01E01.English.srt"]
+
+
+def test_local_reads_english_hi_as_hearing_impaired_english(tmp_path: Path, monkeypatch):
+    film = tmp_path / "Film"
+    (film / "Subs").mkdir(parents=True)
+    video = film / "Film.mkv"
+    video.write_bytes(b"x")
+    (film / "Subs" / "English.HI.srt").write_text(_srt(60), encoding="utf-8")
+    (film / "Subs" / "hi.srt").write_text(_srt(60), encoding="utf-8")
+    _no_tools(monkeypatch)
+    r = sources.local(video, tmp_path / "work")
+    by = {Path(c["original"]).name: c for c in r["candidates"]}
+    assert by["English.HI.srt"]["language"] == "en" and by["English.HI.srt"]["hearing_impaired"]
+    assert by["hi.srt"]["language"] == "hi", "a file named only hi is still Hindi"
+
+
 def test_local_skips_another_episodes_subtitle_folder(tmp_path: Path, monkeypatch):
     show = tmp_path / "Show S01"
     for ep in ("Show.S01E01", "Show.S01E02"):

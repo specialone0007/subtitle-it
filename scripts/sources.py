@@ -258,9 +258,14 @@ def probe(video: Path) -> dict:
 
 def sidecar_language(sub: Path, video: Path) -> str:
     rest = sub.name[len(video.stem) :] if sub.name.startswith(video.stem) else sub.stem
-    for part in reversed(norm(rest).split()):
-        if part in LANG:
-            return LANG[part]
+    parts = norm(rest).split()
+    for i in range(len(parts) - 1, -1, -1):
+        if parts[i] not in LANG:
+            continue
+        # "hi" is also the hearing-impaired tag: English.HI.srt is English.
+        if parts[i] == "hi" and any(q in LANG for q in parts[:i]):
+            continue
+        return LANG[parts[i]]
     return "und"
 
 
@@ -358,16 +363,23 @@ def subfolder_files(video: Path) -> list[Path]:
     named after the language rather than the video. A file one level deeper is
     kept when that folder is named after this video, or when this is the only
     video in its folder, so another episode's subtitles are never picked up.
+    For the same reason a file directly in the folder is skipped when its name
+    starts with another video's name and not with this one's.
     """
     folder = video.parent
-    only_video = sum(1 for p in folder.iterdir() if p.is_file() and p.suffix.lower() in VIDEO_EXT) == 1
+    videos = [p for p in folder.iterdir() if p.is_file() and p.suffix.lower() in VIDEO_EXT]
+    only_video = len(videos) == 1
     stem = norm(video.stem)
+    others = [norm(v.stem) for v in videos if v != video]
     found = []
     for d in sorted(folder.iterdir()):
         if not d.is_dir() or norm(d.name) not in SUB_DIRS:
             continue
         for p in sorted(d.iterdir()):
             if p.is_file() and p.suffix.lower() in SUB_EXT:
+                name = norm(p.stem)
+                if not name.startswith(stem) and any(name.startswith(o) for o in others):
+                    continue
                 found.append(p)
             elif p.is_dir() and (only_video or norm(p.name).startswith(stem)):
                 found += sorted(f for f in p.iterdir() if f.is_file() and f.suffix.lower() in SUB_EXT)
@@ -376,8 +388,7 @@ def subfolder_files(video: Path) -> list[Path]:
 
 def subfolder_candidates(video: Path, out: Path, duration_ms: int) -> list[dict]:
     candidates = []
-    for p in subfolder_files(video):
-        rel = p.relative_to(video.parent)
+    for i, p in enumerate(subfolder_files(video), 1):
         lang = sidecar_language(p, video)
         if lang == "tr":
             candidates.append(
@@ -389,7 +400,7 @@ def subfolder_candidates(video: Path, out: Path, duration_ms: int) -> list[dict]
                 }
             )
             continue
-        dest = to_srt(p, out / f"subfolder.{slug(str(rel.with_suffix('')))}.srt")
+        dest = to_srt(p, out / f"subfolder.{i}.{slug(p.stem)}.srt")
         candidates.append(
             {
                 "source": "file in a subtitle folder",
