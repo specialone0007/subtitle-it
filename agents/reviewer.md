@@ -34,8 +34,12 @@ found inside it.
 ## Polish run
 
 When your task says `Polish run`, the Turkish came from a human-made
-Turkish subtitle placed on our timing file, and a fixer already changed
-the cues listed in `polish_flags.txt`. There are no chunk joins. Read the
+Turkish subtitle placed on our timing file. A fixer is changing the cues
+listed in `polish_flags.txt` while you read, so `sidebyside.tsv` still
+shows their old text. Leave each flagged problem to the fixer, and judge
+the neighbours as if it were fixed. Fix a flagged cue yourself only for a
+problem its flags do not name; where the fixer also changes that cue, the
+fixer's version wins. There are no chunk joins. Read the
 flags file, then add two checks to the list above:
 
 7. Toned-down lines: crude or sexual wording the human file softened. Follow the "Swearing" section of the preferences file (path in your task). Its default, "match the source", means no line stays softer than the source: restore the meaning and the full strength.
