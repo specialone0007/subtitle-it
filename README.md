@@ -65,7 +65,9 @@ whole film, and saves `Anatomy of a Fall.tr.srt` next to the video.
   files replaced by a new one). Kept when the plugin is uninstalled.
 - The plugin's data folder (`~/.claude/plugins/data/turkish-subtitles-.../`): one work
   folder per film with the bible, the delivered copy and a report, plus the download
-  cache. **Uninstalling the plugin deletes it.**
+  cache and `results/`, where each script saves its last JSON result. The skill reads
+  those files rather than the scripts' printed output, so tools that shorten
+  command output do not get in the way. **Uninstalling the plugin deletes it.**
 - Next to the video: `<film>.tr.srt`. Nothing else is written into your film folders.
 
 ## Learning from your fixes
