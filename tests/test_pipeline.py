@@ -117,6 +117,13 @@ def test_sidebyside(work: Path):
     assert lines[1] == "1\tSandra\tSANDRA: Viens.\tGel."
 
 
+def test_sidebyside_result_names_the_file(work: Path):
+    (work / "out" / "tr_01.txt").write_text(GOOD, encoding="utf-8")
+    res = work / "assemble-sidebyside.json"
+    assemble.main(["--result", str(res), "sidebyside", "--work", str(work)])
+    assert json.loads(res.read_text(encoding="utf-8")) == {"sidebyside": str(work / "sidebyside.tsv")}
+
+
 def test_deliver_backs_up_and_learn_finds_swaps(work: Path, tmp_path: Path):
     (work / "out" / "tr_01.txt").write_text(GOOD.replace("Evet.", "Peki.").replace("Tamam.", "Peki."), encoding="utf-8")
     assemble.run_checks(work)

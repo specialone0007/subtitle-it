@@ -23,6 +23,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import result  # noqa: E402
 import srt  # noqa: E402
 
 # "SANDRA:", "- SANDRA:" or "[SANDRA]:" at the start of a line. A bracket
@@ -157,11 +158,12 @@ def main(argv: list[str] | None = None) -> None:
     c = sub.add_parser("chunks")
     c.add_argument("--work", type=Path, required=True)
     c.add_argument("--target", type=int, default=250)
-    a = p.parse_args(argv)
+    result.add_argument(p)
+    a = result.parse(p, argv)
     if a.cmd == "build":
-        print(json.dumps(build(a.work, a.timing, a.source, a.en), indent=1))
+        result.emit(build(a.work, a.timing, a.source, a.en), a.result)
     else:
-        print(json.dumps(chunks(a.work, a.target), indent=1))
+        result.emit(chunks(a.work, a.target), a.result)
 
 
 if __name__ == "__main__":

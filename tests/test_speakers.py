@@ -54,10 +54,14 @@ def test_token_from_env_first_then_config(tmp_path: Path, monkeypatch):
 
 def test_run_without_token_exits_3_and_touches_nothing(tmp_path: Path, monkeypatch, capsys):
     monkeypatch.delenv("HF_TOKEN", raising=False)
+    res = tmp_path / "results" / "speakers-run.json"
+    argv = ["--result", str(res), "run", "--video", str(tmp_path / "v.mkv"), "--work", str(tmp_path), "--config", str(tmp_path)]
     with pytest.raises(SystemExit) as e:
-        speakers.run(tmp_path / "v.mkv", tmp_path, tmp_path, sync_check=True)
+        speakers.main(argv)
     assert e.value.code == speakers.TOKEN_MISSING
     assert json.loads(capsys.readouterr().out)["skipped"] == "token missing"
+    # The skill reads the result file, so the skip must be in it too.
+    assert json.loads(res.read_text(encoding="utf-8"))["skipped"] == "token missing"
     assert not (tmp_path / "speakers.json").exists()
 
 
@@ -76,11 +80,9 @@ def test_run_writes_voices_with_models_faked(tmp_path: Path, monkeypatch):
     assert saved == {"1": {"label": "Sandra", "voice": "V1"}, "2": {"voice": "V2"}}
 
 
-def test_run_without_token_or_config_suggests_the_default_folder(tmp_path: Path, monkeypatch, capsys):
+def test_run_without_token_or_config_suggests_the_default_folder(tmp_path: Path, monkeypatch):
     monkeypatch.delenv("HF_TOKEN", raising=False)
-    with pytest.raises(SystemExit):
-        speakers.run(tmp_path / "v.mkv", tmp_path, None, sync_check=False)
-    fix = json.loads(capsys.readouterr().out)["fix"]
+    fix = speakers.run(tmp_path / "v.mkv", tmp_path, None, sync_check=False)["fix"]
     assert str(speakers.DEFAULT_CONFIG) in fix and '"None"' not in fix
 
 

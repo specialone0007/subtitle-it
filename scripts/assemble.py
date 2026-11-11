@@ -28,6 +28,7 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import result  # noqa: E402
 import srt  # noqa: E402
 
 MAX_LINE = 42
@@ -245,13 +246,14 @@ def main(argv: list[str] | None = None) -> None:
     d.add_argument("--dest", type=Path, required=True)
     d.add_argument("--backups", type=Path, required=True)
     d.add_argument("--force", action="store_true")
-    a = p.parse_args(argv)
+    result.add_argument(p)
+    a = result.parse(p, argv)
     if a.cmd == "check":
-        print(json.dumps(_summary(run_checks(a.work)), ensure_ascii=False, indent=1))
+        result.emit(_summary(run_checks(a.work)), a.result)
     elif a.cmd == "sidebyside":
-        print(sidebyside(a.work))
+        result.emit({"sidebyside": str(sidebyside(a.work))}, a.result)
     else:
-        print(json.dumps(deliver(a.work, a.dest, a.backups, a.force), indent=1))
+        result.emit(deliver(a.work, a.dest, a.backups, a.force), a.result)
 
 
 if __name__ == "__main__":
