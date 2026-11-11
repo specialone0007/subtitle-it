@@ -286,6 +286,17 @@ def test_address_warnings_use_the_named_listener_and_skip_plural_siz(work):
     ]
 
 
+def test_address_readings_keep_the_cues_the_check_cannot_judge(work):
+    rows = {r["n"]: r for r in json.loads((work / "cues.json").read_text(encoding="utf-8"))}
+    texts = {1: ["Nora, sen otur."], 2: ["Evet. Sen?"], 4: ["Koçum, sen de gel."], 5: ["Otur."]}
+    got = {r["cue"]: r for r in bible.address_readings(work, texts, rows)}
+    assert sorted(got) == [1, 2, 4]  # cue 5 has no form
+    assert (got[1]["speaker"], got[1]["listener"], got[1]["expected"], got[1]["got"]) == ("Sam", "Nora", "siz", "sen")
+    assert bible.address_off(got[1])
+    assert got[2]["speaker"] is None and got[4]["expected"] is None
+    assert not bible.address_off(got[2]) and not bible.address_off(got[4])
+
+
 def test_address_warnings_need_decisions(tmp_path):
     assert bible.address_warnings(tmp_path, {1: ["Sen"]}, {}) == []
 
