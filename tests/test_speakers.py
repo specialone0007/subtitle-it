@@ -117,3 +117,45 @@ def test_speech_starts_falls_back_to_cpu_when_cuda_fails_while_transcribing(monk
     monkeypatch.setitem(sys.modules, "faster_whisper", types.SimpleNamespace(WhisperModel=Model))
     monkeypatch.setattr(speakers, "_device", lambda: "cuda")
     assert speakers.speech_starts(Path("a.wav")) == [1500]
+
+
+def test_diarize_allows_full_checkpoint_load_before_the_pipeline_loads(tmp_path: Path, monkeypatch):
+    import sys
+    import types
+
+    # setenv then delenv: the variable is unset during the test and unset again after it.
+    monkeypatch.setenv("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", "")
+    monkeypatch.delenv("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD")
+    seen = {}
+
+    class Segment:
+        start, end = 1.0, 2.5
+
+    class Result:
+        def itertracks(self, yield_label):
+            return [(Segment(), None, "SPEAKER_00")]
+
+    class Pipeline:
+        @classmethod
+        def from_pretrained(cls, name, use_auth_token):
+            import os
+
+            seen["env"] = os.environ.get("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD")
+            return cls()
+
+        def to(self, device):
+            return self
+
+        def __call__(self, wav):
+            return Result()
+
+    torch = types.SimpleNamespace(cuda=types.SimpleNamespace(is_available=lambda: False), device=lambda d: d)
+    pyannote = types.ModuleType("pyannote")
+    audio = types.ModuleType("pyannote.audio")
+    audio.Pipeline = Pipeline
+    monkeypatch.setitem(sys.modules, "torch", torch)
+    monkeypatch.setitem(sys.modules, "pyannote", pyannote)
+    monkeypatch.setitem(sys.modules, "pyannote.audio", audio)
+
+    assert speakers.diarize(tmp_path / "a.wav", "hf_x") == [(1000, 2500, "SPEAKER_00")]
+    assert seen["env"] == "1"
