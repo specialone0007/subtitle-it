@@ -44,6 +44,11 @@ def labels_in(lines: list[str]) -> list[str]:
 
 def build(work: Path, timing_path: Path, source_path: Path | None, en_path: Path | None) -> dict:
     work.mkdir(parents=True, exist_ok=True)
+    # A new build starts a new translation: an earlier run's translations,
+    # fixes, draft and checks must never be read into this one.
+    shutil.rmtree(work / "out", ignore_errors=True)
+    for name in ("draft.tr.srt", "checks.json"):
+        (work / name).unlink(missing_ok=True)
     timing, enc = srt.parse(timing_path)
     if not timing:
         raise SystemExit(f"no cues found in {timing_path}")

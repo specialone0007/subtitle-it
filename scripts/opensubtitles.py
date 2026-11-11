@@ -146,7 +146,7 @@ def setup(config: Path) -> None:
         creds["api_key"] = key
     if not creds.get("api_key"):
         raise SystemExit("An API key is required.")
-    user = input("OpenSubtitles username (Enter to skip login): ").strip()
+    user = getpass.getpass("OpenSubtitles username (Enter to skip login): ").strip()
     if user:
         creds["username"] = user
         creds["password"] = getpass.getpass("Password: ")

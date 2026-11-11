@@ -222,7 +222,7 @@ def chunk(cues: list[Cue], target: int = 250, window: int = 40) -> list[tuple[in
         if lo >= hi:
             cuts.append(nominal)
             continue
-        # gap after index i (0-based) = cues[i+1].start - cues[i].end; cut after i
+        # gap before index i (0-based) = cues[i].start - cues[i-1].end; the next chunk starts at i
         best = max(range(lo, hi), key=lambda i: (cues[i].start - cues[i - 1].end, -abs(i - nominal)))
         cuts.append(best)
     bounds = [0, *cuts, total]

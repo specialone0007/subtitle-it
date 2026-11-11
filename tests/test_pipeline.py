@@ -2,6 +2,7 @@
 translate (by hand), check, review file, deliver, learn."""
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -117,7 +118,7 @@ def test_sidebyside(work: Path):
 
 
 def test_deliver_backs_up_and_learn_finds_swaps(work: Path, tmp_path: Path):
-    (work / "out" / "tr_01.txt").write_text(GOOD.replace("Evet.", "Peki."), encoding="utf-8")
+    (work / "out" / "tr_01.txt").write_text(GOOD.replace("Evet.", "Peki.").replace("Tamam.", "Peki."), encoding="utf-8")
     assemble.run_checks(work)
     dest = tmp_path / "Film.tr.srt"
     dest.write_text("old", encoding="utf-8")
@@ -136,7 +137,8 @@ def test_deliver_backs_up_and_learn_finds_swaps(work: Path, tmp_path: Path):
     dest.write_bytes(text.replace("\n", "\r\n").encode())
     assert [x["file"] for x in learn.scan(tmp_path / "data")] == [str(dest)]
     d = learn.diff(w2)
-    assert d["cues_edited"] == 2
+    assert d["cues_edited"] == 3
+    assert d["repeated_swaps"] == [{"from": "Peki", "to": "Tamam", "count": 2, "cues": [3, 4]}]
     learn.mark_learned(w2)
     assert learn.scan(tmp_path / "data") == []
 
@@ -147,3 +149,61 @@ def test_deliver_refuses_hard_fails(work: Path, tmp_path: Path):
     with pytest.raises(SystemExit):
         assemble.deliver(work, tmp_path / "x.tr.srt", tmp_path / "b", force=False)
     assemble.deliver(work, tmp_path / "x.tr.srt", tmp_path / "b", force=True)
+
+
+def _touch(path: Path, mtime: float) -> None:
+    os.utime(path, (mtime, mtime))
+
+
+def test_post_review_fix_wins_over_review(work: Path):
+    out = work / "out"
+    (out / "tr_01.txt").write_text(GOOD, encoding="utf-8")
+    # The reviewer breaks cue 2's italics; a later fix round repairs it. The
+    # later file must win even though its name sorts before fix_review.txt.
+    (out / "fix_review.txt").write_text("2\nHava soğuk.\n", encoding="utf-8")
+    (out / "fix_r3_01.txt").write_text("2\n<i>Hava soğuk.</i>\n", encoding="utf-8")
+    t = (out / "tr_01.txt").stat().st_mtime
+    _touch(out / "fix_review.txt", t + 10)
+    _touch(out / "fix_r3_01.txt", t + 20)
+    assert assemble.run_checks(work)["hard_fail_count"] == 0
+
+
+def test_rebuild_drops_earlier_runs_files(work: Path, tmp_path: Path):
+    (work / "out" / "tr_01.txt").write_text(GOOD, encoding="utf-8")
+    (work / "out" / "fix_review.txt").write_text("4\nPeki.\n", encoding="utf-8")
+    assemble.run_checks(work)
+    assert (work / "draft.tr.srt").exists()
+    prepare.build(work, tmp_path / "fr.srt", None, tmp_path / "en.srt")
+    prepare.chunks(work, target=250)
+    assert list((work / "out").iterdir()) == []
+    assert not (work / "draft.tr.srt").exists() and not (work / "checks.json").exists()
+
+
+def test_force_never_ships_a_stale_draft(work: Path, tmp_path: Path):
+    (work / "out" / "tr_01.txt").write_text(GOOD, encoding="utf-8")
+    assert assemble.run_checks(work)["draft"]
+    (work / "out" / "fix_review.txt").write_text("not a cue\nGel.\n", encoding="utf-8")
+    r = assemble.run_checks(work)
+    assert r["draft"] is None and not (work / "draft.tr.srt").exists()
+    with pytest.raises(SystemExit):
+        assemble.deliver(work, tmp_path / "x.tr.srt", tmp_path / "b", force=True)
+    assert not (tmp_path / "x.tr.srt").exists()
+
+
+def test_glossary_variant_that_differs_only_by_case(work: Path):
+    (work / "glossary.json").write_text(json.dumps({"Tamam": ["TAMAM"]}), encoding="utf-8")
+    (work / "out" / "tr_01.txt").write_text(GOOD, encoding="utf-8")
+    assert assemble.run_checks(work)["warnings"] == []
+    (work / "out" / "tr_01.txt").write_text(GOOD.replace("Tamam.", "TAMAM."), encoding="utf-8")
+    checks = sorted(x["check"] for x in assemble.run_checks(work)["warnings"])
+    assert checks == ["caps", "term variant"]
+
+
+def test_deliver_refuses_edits_after_check(work: Path, tmp_path: Path):
+    (work / "out" / "tr_01.txt").write_text(GOOD, encoding="utf-8")
+    assemble.run_checks(work)
+    late = work / "out" / "fix_late.txt"
+    late.write_text("4\nPeki.\n", encoding="utf-8")
+    _touch(late, (work / "checks.json").stat().st_mtime + 5)
+    with pytest.raises(SystemExit, match="changed after the last check"):
+        assemble.deliver(work, tmp_path / "x.tr.srt", tmp_path / "b", force=True)
