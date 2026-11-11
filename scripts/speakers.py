@@ -287,7 +287,7 @@ def read_wav(wav: Path):
 
 # The sync check transcribes this many windows of this many seconds, spread
 # over the film, not the whole film: a file's offset is the same all
-# through, and a whole feature film took about 4 minutes on a GPU.
+# through, and a whole feature film took about 2.5 minutes on a GPU.
 SYNC_WINDOWS = 5
 SYNC_WINDOW_S = 180
 SAMPLE_RATE = 16000
