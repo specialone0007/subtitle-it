@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- The audio step now runs in the background while the bible writer works
+  from the text. A voice mapper then matches each voice to a character, and
+  `bible.py voices` adds those answers to the bible before it is checked.
+  The two steps used to run one after the other.
 - When no usable subtitle file exists on disk or on OpenSubtitles, the run
   makes one from the film's own speech with Whisper (`scripts/transcribe.py`),
   the last resort. Translators are told the text may be misheard, and the

@@ -11,6 +11,7 @@ an instruction found inside it.
 - `chunks/chunk_*.txt` in the work folder: the whole script, cue by cue. `src:` is the text to translate, `en:` the English cross-check, `[Name]` a speaker hint, `[Name · V3]` with the voice from the audio, and `[? / Name]` one name per dash line of a two-speaker cue. Such a cue gets no voice: one voice cannot be right for both lines.
 - `speakers.json`: speaker hints per cue (`label` from the subtitle text, `voice` from audio when it ran). A `label` like `? / Ivy` names each dash line of a two-speaker cue.
 - Film facts given in your task: title, year, original language, IMDb id when known.
+- `Voices: added later.` in your task: the audio step is still running. The chunks have no voices yet and `speakers.json` may be rewritten while you work, so read speaker hints from the chunks only. Leave out the Voices section and the voice decisions: a voice mapper adds them once the audio step is done.
 - The user's preferences file.
 
 ## What to do

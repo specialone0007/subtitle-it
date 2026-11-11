@@ -8,6 +8,7 @@
     uv run bible.py compare   --work W
     uv run bible.py cues      --work W --cues 12,340 [--context 2]
     uv run bible.py apply     --work W
+    uv run bible.py voices    --work W
 
 The bible writer records each decision in W/decisions.json with the cues
 that support it. `questions` writes W/questions.json: the same questions with
@@ -16,6 +17,10 @@ no answers, for the second reader, who answers them in W/second.json.
 ones a judge must settle. The judge looks at the cited cues with `cues` and
 writes W/judged.json. `apply` puts the judge's answers into decisions.json and
 lists the ties: questions the cues could not settle, decided by a safe default.
+
+When the audio step runs alongside the bible writer, the writer sees no
+voices. The voice mapper then writes W/voices.json, and `voices` adds its
+decisions to decisions.json and its lines to bible.md, before `questions`.
 
 decisions.json:
 
@@ -333,6 +338,72 @@ def apply(work: Path) -> dict:
     return {"agreed": len(cmp["agreed"]), "judged": len(judged), "changed": changed, "added": added, "ties": ties}
 
 
+# --- voices added after the bible ---------------------------------------
+
+VOICE_ID_RE = re.compile(r"^voice:V\d+$")
+
+
+def _load_text(path: Path) -> str:
+    if not path.exists():
+        raise SystemExit(f"{path.name} is missing in {path.parent}")
+    return path.read_text(encoding="utf-8")
+
+
+def _without_section(lines: list[str], title: str) -> list[str]:
+    out, skip = [], False
+    for line in lines:
+        if line.startswith("## "):
+            skip = line[3:].strip().startswith(title)
+        if not skip:
+            out.append(line)
+    return out
+
+
+def add_voices(work: Path) -> dict:
+    """Put the voice mapper's answers (W/voices.json) into decisions.json and
+    bible.md. Voice decisions already there are replaced, so it can run twice."""
+    data = load_decisions(work)
+    vo = _load_object(work / "voices.json")
+    lines, new = vo.get("lines"), vo.get("decisions")
+    problems = []
+    if not isinstance(lines, list) or not all(isinstance(x, str) for x in lines):
+        problems.append("voices.json: lines is a list of strings")
+    if not isinstance(new, list):
+        raise SystemExit("voices.json needs a decisions list")
+    ids = set()
+    for d in new:
+        problems += check_decision(d, "voices.json")
+        if not isinstance(d, dict):
+            continue
+        if d.get("kind") != "voice" or not VOICE_ID_RE.match(str(d.get("id"))):
+            problems.append(f"voices.json {d.get('id')}: only voice decisions, with ids like voice:V3")
+        problems += _check_answer("voice", d.get("answer"), f"voices.json {d.get('id')}")
+        if d.get("answer") is None:
+            problems.append(f"voices.json {d.get('id')}: every voice question needs an answer")
+        if d.get("id") in ids:
+            problems.append(f"voices.json: id {d.get('id')} is used twice")
+        ids.add(d.get("id"))
+    if problems:
+        raise SystemExit("voices.json has problems:\n" + "\n".join(problems[:20]))
+    bible_file = work / "bible.md"
+    text = _without_section(_load_text(bible_file).splitlines(), "Voices")
+    kept = [d for d in data["decisions"] if d.get("kind") != "voice"]
+    replaced = len(data["decisions"]) - len(kept)
+    data["decisions"] = kept + new
+    (work / "decisions.json").write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+
+    # The Voices section goes right after Characters, as the bible brief orders it.
+    section = ["## Voices", *[x if x.startswith("- ") else f"- {x}" for x in lines]] if lines else []
+    chars = next((i for i, x in enumerate(text) if x.startswith("## Characters")), None)
+    if chars is None:
+        at = len(text)
+    else:
+        at = next((i for i in range(chars + 1, len(text)) if text[i].startswith("## ")), len(text))
+    text[at:at] = section
+    bible_file.write_text("\n".join(text) + "\n", encoding="utf-8")
+    return {"voices": len(new), "replaced": replaced, "bible_lines": len(lines)}
+
+
 # --- address forms in the Turkish text ------------------------------------
 
 SIZ_RE = re.compile(r"\b(siz|sizi|size|sizin|sizde|sizden|sizinle|sizce)\b|\w(sınız|siniz|sunuz|sünüz)\b")
@@ -446,7 +517,7 @@ def main(argv: list[str] | None = None) -> None:
     sys.stdout.reconfigure(encoding="utf-8")
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
-    for name in ("questions", "compare", "apply"):
+    for name in ("questions", "compare", "apply", "voices"):
         sub.add_parser(name).add_argument("--work", type=Path, required=True)
     c = sub.add_parser("cues")
     c.add_argument("--work", type=Path, required=True)
@@ -464,6 +535,8 @@ def main(argv: list[str] | None = None) -> None:
         except ValueError as e:
             raise SystemExit("--cues takes cue numbers separated by commas") from e
         result.emit(cues(a.work, numbers, a.context), a.result)
+    elif a.cmd == "voices":
+        result.emit(add_voices(a.work), a.result)
     else:
         result.emit(apply(a.work), a.result)
 

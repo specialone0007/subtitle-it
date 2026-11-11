@@ -20,9 +20,11 @@ session.
 flowchart TD
     A[0. Start: tools, preferences, edited films] --> B[1. Find the film]
     B --> C[2. Source subtitles<br>video track, file next to it, OpenSubtitles, audio]
-    C --> D[3. Speaker hints<br>voices and sync check, optional]
-    D --> E[4. Film bible<br>bible.md, glossary.json, decisions.json]
-    E --> F[5. Check the bible<br>blind second reader, judge on differences]
+    C --> D[3. Speaker hints<br>voices and sync check, optional, in the background]
+    C --> E[4. Film bible<br>bible.md, glossary.json, decisions.json]
+    D --> V[Voice mapper<br>which character each voice is]
+    E --> V
+    V --> F[5. Check the bible<br>blind second reader, judge on differences]
     F --> G[6-7. Translate<br>one subagent per chunk, in parallel]
     G --> H[8-9. Assemble and check<br>up to 3 fix rounds]
     H --> I[10. Whole-film review]
@@ -55,11 +57,15 @@ The numbers match the steps in `SKILL.md`.
 - **3. Speaker hints** (optional). `speakers.py` finds who speaks each line
   from the audio and checks the subtitles are in sync with it. Subtitles
   more than 300 ms off are shifted with `srt.py shift` and the voices are
-  matched again. Everything runs on your machine.
+  matched again. Everything runs on your machine. It runs in the
+  background while the bible is written, since it takes several minutes.
 - **4. Film bible.** A subagent writes `bible.md` (characters, who says sen or
   siz to whom, fixed terms), `glossary.json`, and `decisions.json`: each
   decision as a question, its answer, the cues that support it and how
-  sure it is.
+  sure it is. It works from the text while the audio step runs. Once the
+  voices are in, a voice mapper subagent decides which character each voice
+  is, and `bible.py voices` adds those answers to the bible, so the check
+  in step 5 covers them too.
 - **5. Check the bible.** `bible.py questions` strips the answers. A second
   reader, who never sees the bible, answers the same questions from the
   subtitles. `bible.py compare` locks what both agree on. A judge reads only
