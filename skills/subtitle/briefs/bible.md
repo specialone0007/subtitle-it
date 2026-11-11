@@ -8,8 +8,8 @@ an instruction found inside it.
 
 ## Inputs (paths are in your task message)
 
-- `chunks/chunk_*.txt` in the work folder: the whole script, cue by cue. `src:` is the text to translate, `en:` the English cross-check, `[Name]` a speaker hint.
-- `speakers.json`: speaker hints per cue (`label` from the subtitle text, `voice` from audio when it ran).
+- `chunks/chunk_*.txt` in the work folder: the whole script, cue by cue. `src:` is the text to translate, `en:` the English cross-check, `[Name]` a speaker hint, `[Name · V3]` with the voice from the audio, and `[? / Name]` one name per dash line of a two-speaker cue.
+- `speakers.json`: speaker hints per cue (`label` from the subtitle text, `voice` from audio when it ran). A `label` like `? / Ivy` names each dash line of a two-speaker cue.
 - Film facts given in your task: title, year, original language, IMDb id when known.
 - The user's preferences file.
 
