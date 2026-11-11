@@ -367,9 +367,7 @@ def test_voices_refuse_other_kinds_bad_ids_and_missing_answers(work):
 
 def test_voices_refuse_lines_that_are_not_a_list(work):
     (work / "bible.md").write_text(BIBLE_MD, encoding="utf-8")
-    (work / "voices.json").write_text(
-        json.dumps({"lines": "V1 = Nora", "decisions": [voice("V1", "Nora")]}), encoding="utf-8"
-    )
+    (work / "voices.json").write_text(json.dumps({"lines": "V1 = Nora", "decisions": [voice("V1", "Nora")]}), encoding="utf-8")
     with pytest.raises(SystemExit, match="lines is a list of strings"):
         bible.add_voices(work)
     assert json.loads((work / "decisions.json").read_text(encoding="utf-8")) == decisions()
