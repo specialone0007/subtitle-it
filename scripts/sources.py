@@ -16,7 +16,9 @@ preferences.md, unless a listed folder already holds it or the folder is a
 drive root or the home folder.
 `local` probes the video with ffprobe, extracts every text subtitle track
 into W/sources/, lists subtitle files next to the video, and validates each
-candidate. Image tracks (PGS, VobSub, DVB) are listed but not extracted.
+candidate. It also reads subtitle files in a Subs or Subtitles folder beside
+the video, up to two levels down. Image tracks (PGS, VobSub, DVB) are listed
+but not extracted.
 Needs ffmpeg and ffprobe on PATH.
 """
 
@@ -256,9 +258,14 @@ def probe(video: Path) -> dict:
 
 def sidecar_language(sub: Path, video: Path) -> str:
     rest = sub.name[len(video.stem) :] if sub.name.startswith(video.stem) else sub.stem
-    for part in reversed(norm(rest).split()):
-        if part in LANG:
-            return LANG[part]
+    parts = norm(rest).split()
+    for i in range(len(parts) - 1, -1, -1):
+        if parts[i] not in LANG:
+            continue
+        # "hi" is also the hearing-impaired tag: English.HI.srt is English.
+        if parts[i] == "hi" and any(q in LANG for q in parts[:i]):
+            continue
+        return LANG[parts[i]]
     return "und"
 
 
@@ -342,7 +349,93 @@ def local(video: Path, work: Path) -> dict:
                     "check": validate(dest, info["duration_ms"]),
                 }
             )
+    candidates += subfolder_candidates(video, out, info["duration_ms"])
     return {"video": str(video), "duration_ms": info["duration_ms"], "candidates": candidates}
+
+
+SUB_DIRS = {"subs", "sub", "subtitles", "subtitle", "altyazi", "altyazilar"}
+
+# "S01E02", "s1 e2" or "1x02" once a name has gone through norm().
+EPISODE_RE = re.compile(r"(?:^| )(?:s(\d{1,2}) ?e(\d{1,3})|(\d{1,2})x(\d{2,3}))(?: |$)")
+
+
+def episode(name: str) -> tuple[int, int] | None:
+    m = EPISODE_RE.search(norm(name))
+    if not m:
+        return None
+    season, ep = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
+    return int(season), int(ep)
+
+
+def folder_word(name: str) -> str:
+    """A folder name folded for matching SUB_DIRS. The Turkish dotless ı has
+    no ASCII form and norm() would drop it, so it becomes i first."""
+    return norm(name.replace("ı", "i"))
+
+
+def subfolder_files(video: Path) -> list[Path]:
+    """Subtitle files in a Subs-like folder beside the video, up to two levels down.
+
+    Such a folder often holds "Subs/English.srt" or numbered subtitle files in a subfolder,
+    named after the language rather than the video. A file one level deeper is
+    kept when that folder is named after this video, or when this is the only
+    video in its folder, so another episode's subtitles are never picked up.
+    For the same reason a file directly in the folder is skipped when it names
+    another episode (S01E02 for a run on S01E01), or when its name starts with
+    another video's name and not with this one's.
+    """
+    folder = video.parent
+    videos = [p for p in folder.iterdir() if p.is_file() and p.suffix.lower() in VIDEO_EXT]
+    only_video = len(videos) == 1
+    stem = norm(video.stem)
+    others = [norm(v.stem) for v in videos if v != video]
+    this_episode = episode(video.stem)
+    found = []
+    for d in sorted(folder.iterdir()):
+        if not d.is_dir() or folder_word(d.name) not in SUB_DIRS:
+            continue
+        for p in sorted(d.iterdir()):
+            if p.is_file() and p.suffix.lower() in SUB_EXT:
+                name = norm(p.stem)
+                named = episode(p.stem)
+                if this_episode and named and named != this_episode:
+                    continue
+                if not name.startswith(stem) and any(name.startswith(o) for o in others):
+                    continue
+                found.append(p)
+            elif p.is_dir() and (only_video or norm(p.name).startswith(stem)):
+                found += sorted(f for f in p.iterdir() if f.is_file() and f.suffix.lower() in SUB_EXT)
+    return found
+
+
+def subfolder_candidates(video: Path, out: Path, duration_ms: int) -> list[dict]:
+    candidates = []
+    for i, p in enumerate(subfolder_files(video), 1):
+        lang = sidecar_language(p, video)
+        if lang == "tr":
+            candidates.append(
+                {
+                    "source": "file in a subtitle folder",
+                    "language": "tr",
+                    "path": str(p),
+                    "confidence": "existing Turkish file, not a source",
+                }
+            )
+            continue
+        dest = to_srt(p, out / f"subfolder.{i}.{slug(p.stem)}.srt")
+        candidates.append(
+            {
+                "source": "file in a subtitle folder",
+                "language": lang,
+                "hearing_impaired": bool(re.search(r"\b(sdh|hi|cc)\b", norm(p.stem))),
+                "forced": "forced" in p.name.lower(),
+                "confidence": "likely",
+                "original": str(p),
+                "path": str(dest),
+                "check": validate(dest, duration_ms),
+            }
+        )
+    return candidates
 
 
 def main(argv: list[str] | None = None) -> None:
