@@ -46,7 +46,11 @@ file; read its error output instead. `--result` always comes before the
 command. The step texts below leave it out for brevity. When two or more script
 commands follow each other with no decision between them (`prepare.py build`
 then `chunks`), run them in one Bash call joined with `&&`: every call you
-make re-sends this whole conversation. Never read, print or edit `CONFIG/credentials.json`; only
+make re-sends this whole conversation. Never wait with `sleep` or poll
+for a file: a background command and a subagent each send you a
+notification when they finish, so end your turn and go on when it comes.
+A `sleep` cannot be cut short, and a run once lost two minutes to one.
+Never read, print or edit `CONFIG/credentials.json`; only
 `opensubtitles.py` and `speakers.py` touch it.
 
 Arguments: $ARGUMENTS
@@ -85,8 +89,10 @@ image tracks, and anything in Turkish.
 
 Pick the text to translate from: the timing file itself when it is in the
 original language; otherwise the best original-language candidate. Pick
-English (hearing-impaired preferred) as the cross-check when it is not
-already the timing file.
+an English file as the cross-check (`--en`), hearing-impaired preferred,
+whenever one other than the timing file exists, even when the timing
+file is itself English: the hearing-impaired file's speaker names are
+what the sen/siz checks use to know who is talking.
 
 Before pairing another file onto the timing file, run
 `srt.py fit TIMING OTHER`. It finds the one constant shift that lines the
@@ -104,9 +110,11 @@ except the destination file of step 11, else run `opensubtitles.py search`
 as above with `--languages tr` (it leaves out machine and AI translations)
 and download the first result as `WORK/sources/os_tr.srt`. Run
 `srt.py fit TIMING TURKISH` and shift it the same way when `offset_ms` is
-not 0. When it fits, this is a polish run (steps 6–7 say what changes);
-say so in one line. When nothing is found or it does not fit, say why in
-one line and translate as usual.
+not 0. When it does not fit (often another cut of the film), try the next
+result, as `os_tr2.srt` and so on, up to 3 results in all. When one fits,
+this is a polish run (steps 6–7 say what changes); say so in one line.
+When nothing is found or none fits, say why in one line and translate as
+usual.
 
 Then: `prepare.py build --work WORK --timing T [--source S] [--en E]` and
 `prepare.py chunks --work WORK`. Tell the user in 2–3 lines which files you
@@ -189,11 +197,18 @@ agreed on, how many the judge settled, and how many were ties.
 
 In a polish run, start no translators. Run
 `polish.py seed --work WORK --tr <the fitted Turkish file>`, then
-`polish.py flags --work WORK`. Tell the user in one line how many cues
-were seeded and how many are flagged. When `flagged` is above 0, start one
-`turkish-subtitles:polish-fixer` subagent with the paths: pack, bible,
-preferences, WORK. It writes `WORK/out/fix_polish.txt`. Then go on to
-step 8.
+`polish.py flags --work WORK`, then `assemble.py sidebyside --work WORK`,
+in one Bash call. Tell the user in one line how many cues were seeded and
+how many are flagged. Then, in ONE message, start the fixer and the
+reviewer, so they work at the same time on different cues:
+
+- When `flagged` is above 0, one `turkish-subtitles:polish-fixer`
+  subagent with the paths: pack, bible, preferences, WORK. It writes
+  `WORK/out/fix_polish.txt`.
+- The step 10 reviewer, with the polish run's lines. It leaves the
+  flagged cues to the fixer.
+
+Wait for both, then go on to step 8.
 
 Otherwise, read `WORK/chunks.json`. In ONE message, start one
 `turkish-subtitles:translator` subagent per chunk. Use the model from the
@@ -235,7 +250,8 @@ Run `assemble.py sidebyside --work WORK`. Start one
 run the preferences file and the line `Polish run: WORK/polish_flags.txt`. It writes
 `WORK/out/fix_review.txt` and `WORK/review.md`.
 
-In a polish run, then run `polish.py soft --work WORK`. When `left` is
+In a polish run the reviewer already ran beside the fixer (step 6–7), so
+start no second one here: run `polish.py soft --work WORK`. When `left` is
 above 0, start the `turkish-subtitles:polish-fixer` once more with the same
 paths plus the lines `Flags: WORK/polish_soft.txt` and
 `Write to: WORK/out/fix_soft.txt`, then run `soft` again and keep its

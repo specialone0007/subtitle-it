@@ -206,6 +206,21 @@ def test_post_review_fix_wins_over_review(work: Path):
     assert assemble.run_checks(work)["hard_fail_count"] == 0
 
 
+def test_polish_fix_wins_over_a_later_review_and_loses_to_later_rounds(work: Path):
+    out = work / "out"
+    for name in ("tr_00.txt", "fix_polish.txt", "fix_review.txt", "fix_soft.txt"):
+        (out / name).write_text("1\nx\n", encoding="utf-8")
+    t = (out / "tr_00.txt").stat().st_mtime
+    # The fixer and the reviewer ran side by side; the reviewer finished last.
+    _touch(out / "fix_polish.txt", t + 10)
+    _touch(out / "fix_review.txt", t + 20)
+    _touch(out / "fix_soft.txt", t + 30)
+    assert [p.name for p in assemble.fix_order(out)] == ["fix_review.txt", "fix_polish.txt", "fix_soft.txt"]
+    # Without a review, the order is the writing order.
+    (out / "fix_review.txt").unlink()
+    assert [p.name for p in assemble.fix_order(out)] == ["fix_polish.txt", "fix_soft.txt"]
+
+
 def test_rebuild_drops_earlier_runs_files(work: Path, tmp_path: Path):
     (work / "out" / "tr_01.txt").write_text(GOOD, encoding="utf-8")
     (work / "out" / "fix_review.txt").write_text("4\nPeki.\n", encoding="utf-8")

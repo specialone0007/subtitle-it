@@ -10,7 +10,8 @@ deliver the result next to the video.
     uv run assemble.py deliver     --work W --dest FILM.tr.srt --backups DIR [--force]
 
 `check` reads W/out/tr_*.txt, then W/out/fix_*.txt in the order they were
-written (later files win), writes W/draft.tr.srt when every cue has text, and
+written (later files win; in a polish run fix_polish.txt also wins over
+fix_review.txt), writes W/draft.tr.srt when every cue has text, and
 writes W/checks.json. When a cue is missing or a file is malformed, no draft is
 written and any older draft is removed. Hard fails block delivery; warnings do
 not, and nothing without a current draft is ever delivered.
@@ -41,6 +42,26 @@ CAPS_RE = re.compile(r"\b(TAMAM|HAYIR)\b")
 ITALIC_RE = re.compile(r"</?i>", re.I)
 
 
+def fix_order(out: Path) -> list[Path]:
+    """W/out/fix_*.txt in the order they apply. Fix files apply in the order
+    they were written, so a fix round after the review wins over
+    fix_review.txt whatever the files are called. One exception: in a polish
+    run the fixer and the reviewer work at the same time, and the flagged
+    cues are the fixer's, so fix_polish.txt applies right after
+    fix_review.txt even when it was written first."""
+    files = list(out.glob("fix_*.txt"))
+    review = out / "fix_review.txt"
+    review_at = review.stat().st_mtime_ns if review.exists() else -1
+
+    def key(p: Path) -> tuple[int, int, str]:
+        at = p.stat().st_mtime_ns
+        if p.name == "fix_polish.txt":
+            return (max(at, review_at), 1, p.name)
+        return (at, 0, p.name)
+
+    return sorted(files, key=key)
+
+
 def load_translation(work: Path) -> tuple[dict[int, list[str]], list[str]]:
     out = work / "out"
     texts: dict[int, list[str]] = {}
@@ -54,9 +75,7 @@ def load_translation(work: Path) -> tuple[dict[int, list[str]], list[str]]:
                 problems.append(f"cue {n} is in more than one chunk file")
             seen_in_tr.add(n)
         texts.update(blocks)
-    # Fix files apply in the order they were written, so a fix round after the
-    # review wins over fix_review.txt whatever the files are called.
-    for f in sorted(out.glob("fix_*.txt"), key=lambda p: (p.stat().st_mtime_ns, p.name)):
+    for f in fix_order(out):
         blocks, probs = srt.read_blocks(f)
         problems += probs
         texts.update(blocks)
