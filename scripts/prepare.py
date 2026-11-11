@@ -45,9 +45,10 @@ def labels_in(lines: list[str]) -> list[str]:
 def build(work: Path, timing_path: Path, source_path: Path | None, en_path: Path | None) -> dict:
     work.mkdir(parents=True, exist_ok=True)
     # A new build starts a new translation: an earlier run's translations,
-    # fixes, draft and checks must never be read into this one.
+    # fixes, draft, checks and speaker labels must never be read into this
+    # one: the new timing file may number its cues differently.
     shutil.rmtree(work / "out", ignore_errors=True)
-    for name in ("draft.tr.srt", "checks.json"):
+    for name in ("draft.tr.srt", "checks.json", "speakers.json"):
         (work / name).unlink(missing_ok=True)
     timing, enc = srt.parse(timing_path)
     if not timing:
@@ -63,8 +64,7 @@ def build(work: Path, timing_path: Path, source_path: Path | None, en_path: Path
         en, _ = srt.parse(en_path)
         en_pairs = srt.pair(timing, en)
 
-    speakers_file = work / "speakers.json"
-    speakers = json.loads(speakers_file.read_text(encoding="utf-8")) if speakers_file.exists() else {}
+    speakers: dict[str, dict] = {}
 
     rows, unpaired = [], 0
     for c in timing:
@@ -75,11 +75,8 @@ def build(work: Path, timing_path: Path, source_path: Path | None, en_path: Path
         if en_path is not None:
             en_lines = c.lines if en_pairs is None else [ln for o in en_pairs[c.n] for ln in o.lines]
         found = labels_in(src_lines) + labels_in(en_lines or [])
-        entry = speakers.setdefault(str(c.n), {})
-        if found and "label" not in entry:
-            entry["label"] = found[0]
-        if not entry:
-            del speakers[str(c.n)]
+        if found:
+            speakers[str(c.n)] = {"label": found[0]}
         rows.append(
             {
                 "n": c.n,
@@ -93,7 +90,7 @@ def build(work: Path, timing_path: Path, source_path: Path | None, en_path: Path
         )
 
     (work / "cues.json").write_text(json.dumps(rows, ensure_ascii=False, indent=0), encoding="utf-8")
-    speakers_file.write_text(json.dumps(speakers, ensure_ascii=False, indent=1), encoding="utf-8")
+    (work / "speakers.json").write_text(json.dumps(speakers, ensure_ascii=False, indent=1), encoding="utf-8")
     for name, p in (("timing", timing_path), ("source", source_path), ("en", en_path)):
         if p:
             dest = work / "sources" / f"{name}{p.suffix}"
