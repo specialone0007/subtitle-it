@@ -7,6 +7,11 @@
   (`sources.py remember`). A film in its own folder adds the folder above it.
 - When no film matches, the run names any media folder that was not there,
   such as an unplugged drive, instead of only saying nothing was found.
+- Step 2 also reads subtitle files in a `Subs` or `Subtitles` folder beside
+  the video, up to two levels down, where a film's subtitles often sit
+  (`Subs/English.srt`, or numbered subtitle files in a subfolder). Before, only files
+  next to the video and named after it were found, so the run fell back to
+  OpenSubtitles.
 
 ## 0.3.0
 

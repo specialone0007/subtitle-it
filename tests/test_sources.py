@@ -245,3 +245,67 @@ def test_remember_adds_nothing_for_a_loose_film_at_a_drive_root(monkeypatch, tmp
     out = sources.remember(tmp_path / "Anatomy.of.a.Fall.2023.mkv", prefs)
     assert out == {"added": None, "covered_by": None, "too_broad": str(root)}
     assert prefs.read_text(encoding="utf-8") == TEMPLATE
+
+
+def _no_tools(monkeypatch):
+    def fake_run(cmd):
+        assert cmd[0] == "ffprobe", "no track or .ass here, so only ffprobe runs"
+        return json.dumps({"format": {"duration": "70.0"}, "streams": []})
+
+    monkeypatch.setattr(sources, "_run", fake_run)
+
+
+def test_local_reads_a_subs_folder_named_by_language(tmp_path: Path, monkeypatch):
+    film = tmp_path / "Film (2019)"
+    (film / "Subs").mkdir(parents=True)
+    video = film / "Film (2019).mkv"
+    video.write_bytes(b"x")
+    (film / "Subs" / "English.srt").write_text(_srt(60), encoding="utf-8")
+    (film / "Subs" / "French.SDH.srt").write_text(_srt(60), encoding="utf-8")
+    (film / "Subs" / "Turkish.srt").write_text(_srt(60), encoding="utf-8")
+    (film / "Subs" / "notes.txt").write_text("x", encoding="utf-8")
+    _no_tools(monkeypatch)
+    r = sources.local(video, tmp_path / "work")
+    by = {c["language"]: c for c in r["candidates"]}
+    assert set(by) == {"en", "fr", "tr"}
+    assert all(c["source"] == "file in a subtitle folder" for c in by.values())
+    assert by["en"]["confidence"] == "likely" and by["en"]["check"]["cues"] == 60
+    assert by["fr"]["hearing_impaired"]
+    assert by["tr"]["confidence"] == "existing Turkish file, not a source"
+    assert Path(by["en"]["path"]).parent == tmp_path / "work" / "sources"
+
+
+def test_local_reads_a_folder_named_after_the_video_inside_subs(tmp_path: Path, monkeypatch):
+    film = tmp_path / "Film"
+    inner = film / "Subtitles" / "Film (2019)"
+    inner.mkdir(parents=True)
+    video = film / "Film (2019).mp4"
+    video.write_bytes(b"x")
+    (inner / "2_English.srt").write_text(_srt(60), encoding="utf-8")
+    (inner / "3_English.srt").write_text(_srt(60), encoding="utf-8")
+    _no_tools(monkeypatch)
+    r = sources.local(video, tmp_path / "work")
+    paths = {Path(c["path"]).name for c in r["candidates"]}
+    assert len(paths) == 2, "two files with the same language keep separate copies"
+    assert {c["language"] for c in r["candidates"]} == {"en"}
+
+
+def test_local_skips_another_episodes_subtitle_folder(tmp_path: Path, monkeypatch):
+    show = tmp_path / "Show S01"
+    for ep in ("Show.S01E01", "Show.S01E02"):
+        (show / "Subs" / ep).mkdir(parents=True)
+        (show / f"{ep}.mkv").write_bytes(b"x")
+        (show / "Subs" / ep / "2_English.srt").write_text(_srt(60), encoding="utf-8")
+    _no_tools(monkeypatch)
+    r = sources.local(show / "Show.S01E01.mkv", tmp_path / "work")
+    assert [Path(c["original"]).parent.name for c in r["candidates"]] == ["Show.S01E01"]
+
+
+def test_local_ignores_folders_that_are_not_subtitle_folders(tmp_path: Path, monkeypatch):
+    film = tmp_path / "Film"
+    (film / "Extras").mkdir(parents=True)
+    video = film / "Film.mkv"
+    video.write_bytes(b"x")
+    (film / "Extras" / "English.srt").write_text(_srt(60), encoding="utf-8")
+    _no_tools(monkeypatch)
+    assert sources.local(video, tmp_path / "work")["candidates"] == []

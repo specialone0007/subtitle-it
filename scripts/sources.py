@@ -16,7 +16,9 @@ preferences.md, unless a listed folder already holds it or the folder is a
 drive root or the home folder.
 `local` probes the video with ffprobe, extracts every text subtitle track
 into W/sources/, lists subtitle files next to the video, and validates each
-candidate. Image tracks (PGS, VobSub, DVB) are listed but not extracted.
+candidate. It also reads subtitle files in a Subs or Subtitles folder beside
+the video, up to two levels down. Image tracks (PGS, VobSub, DVB) are listed
+but not extracted.
 Needs ffmpeg and ffprobe on PATH.
 """
 
@@ -342,7 +344,65 @@ def local(video: Path, work: Path) -> dict:
                     "check": validate(dest, info["duration_ms"]),
                 }
             )
+    candidates += subfolder_candidates(video, out, info["duration_ms"])
     return {"video": str(video), "duration_ms": info["duration_ms"], "candidates": candidates}
+
+
+SUB_DIRS = {"subs", "sub", "subtitles", "subtitle", "altyazi", "altyazilar"}
+
+
+def subfolder_files(video: Path) -> list[Path]:
+    """Subtitle files in a Subs-like folder beside the video, up to two levels down.
+
+    Such a folder often holds "Subs/English.srt" or numbered subtitle files in a subfolder,
+    named after the language rather than the video. A file one level deeper is
+    kept when that folder is named after this video, or when this is the only
+    video in its folder, so another episode's subtitles are never picked up.
+    """
+    folder = video.parent
+    only_video = sum(1 for p in folder.iterdir() if p.is_file() and p.suffix.lower() in VIDEO_EXT) == 1
+    stem = norm(video.stem)
+    found = []
+    for d in sorted(folder.iterdir()):
+        if not d.is_dir() or norm(d.name) not in SUB_DIRS:
+            continue
+        for p in sorted(d.iterdir()):
+            if p.is_file() and p.suffix.lower() in SUB_EXT:
+                found.append(p)
+            elif p.is_dir() and (only_video or norm(p.name).startswith(stem)):
+                found += sorted(f for f in p.iterdir() if f.is_file() and f.suffix.lower() in SUB_EXT)
+    return found
+
+
+def subfolder_candidates(video: Path, out: Path, duration_ms: int) -> list[dict]:
+    candidates = []
+    for p in subfolder_files(video):
+        rel = p.relative_to(video.parent)
+        lang = sidecar_language(p, video)
+        if lang == "tr":
+            candidates.append(
+                {
+                    "source": "file in a subtitle folder",
+                    "language": "tr",
+                    "path": str(p),
+                    "confidence": "existing Turkish file, not a source",
+                }
+            )
+            continue
+        dest = to_srt(p, out / f"subfolder.{slug(str(rel.with_suffix('')))}.srt")
+        candidates.append(
+            {
+                "source": "file in a subtitle folder",
+                "language": lang,
+                "hearing_impaired": bool(re.search(r"\b(sdh|hi|cc)\b", norm(p.stem))),
+                "forced": "forced" in p.name.lower(),
+                "confidence": "likely",
+                "original": str(p),
+                "path": str(dest),
+                "check": validate(dest, duration_ms),
+            }
+        )
+    return candidates
 
 
 def main(argv: list[str] | None = None) -> None:
