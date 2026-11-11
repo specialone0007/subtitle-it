@@ -43,6 +43,30 @@ def labels_in(lines: list[str]) -> list[str]:
     return found
 
 
+def cue_label(lines: list[str]) -> str | None:
+    """The speaker label for a cue. A cue with two or more dash lines
+    ("- Who?" / "- IVY: Me.") holds several speakers, so it gets one name
+    per dash line, "?" where a line has none: "? / Ivy". A line without a
+    dash continues the dash line above it."""
+    turns: list[list[str]] = []
+    for ln in lines:
+        if srt.strip_tags(ln).lstrip().startswith("-") or not turns:
+            turns.append([])
+        turns[-1].append(ln)
+    if sum(1 for t in turns if srt.strip_tags(t[0]).lstrip().startswith("-")) < 2:
+        found = labels_in(lines)
+        return found[0] if found else None
+    names = [(labels_in(t) or ["?"])[0] for t in turns]
+    return None if all(n == "?" for n in names) else " / ".join(names)
+
+
+def speaker_hint(entry: dict) -> str:
+    """What chunks and the review file show for a cue: the name or label,
+    and the voice from the audio when there is one: "Ivy · V3"."""
+    who = entry.get("name") or entry.get("label")
+    return " · ".join(x for x in (who, entry.get("voice")) if x)
+
+
 def build(work: Path, timing_path: Path, source_path: Path | None, en_path: Path | None) -> dict:
     work.mkdir(parents=True, exist_ok=True)
     # A new build starts a new translation: an earlier run's translations,
@@ -75,9 +99,9 @@ def build(work: Path, timing_path: Path, source_path: Path | None, en_path: Path
         en_lines = None
         if en_path is not None:
             en_lines = c.lines if en_pairs is None else [ln for o in en_pairs[c.n] for ln in o.lines]
-        found = labels_in(src_lines) + labels_in(en_lines or [])
-        if found:
-            speakers[str(c.n)] = {"label": found[0]}
+        label = cue_label(src_lines) or cue_label(en_lines or [])
+        if label:
+            speakers[str(c.n)] = {"label": label}
         rows.append(
             {
                 "n": c.n,
@@ -133,8 +157,7 @@ def chunks(work: Path, target: int) -> list[dict]:
             f.write("# src = text to translate; en = English cross-check; [..] = speaker hint\n")
             f.write("# ' / ' separates the source's own lines\n\n")
             for r in rows[first - 1 : last]:
-                sp = speakers.get(str(r["n"]), {})
-                hint = sp.get("name") or sp.get("label") or sp.get("voice")
+                hint = speaker_hint(speakers.get(str(r["n"]), {}))
                 head = f"#{r['n']} {r['ts'][:8]}" + (f" [{hint}]" if hint else "")
                 f.write(head + "\n")
                 f.write("src: " + _one_line(r["source"]) + "\n")
