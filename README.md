@@ -27,8 +27,9 @@ for certain goes under "Check after watching" in the film's `report.md`.
 ## What it needs
 
 - [Claude Code](https://code.claude.com/docs). A feature film takes about
-  one million tokens, most of them in the parallel translators and the
-  whole-film review, so a plan with room for that helps.
+  one million new tokens plus about eight million cheaper cached reads. The
+  parallel translators use the largest share, about two fifths, so a plan
+  with room for that helps. Polishing an existing Turkish file uses less.
 - uv and ffmpeg (Setup below). OpenSubtitles and audio hints are optional.
 - Subtitles in a text format (SRT, ASS, WebVTT, or a text track inside the
   video). Image subtitles (PGS, VobSub) are not read.
