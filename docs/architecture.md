@@ -28,7 +28,8 @@ flowchart TD
     C --> E[4. Film bible<br>bible.md, glossary.json, decisions.json]
     D --> V[Voice mapper<br>which character each voice is]
     E --> V
-    V --> F[5. Check the bible<br>blind second reader, judge on differences]
+    E --> F[5. Check the bible<br>blind second reader, judge on differences]
+    V --> F
     F --> G[6-7. Translate<br>one subagent per chunk, in parallel]
     G --> H[8-9. Assemble and check<br>up to 3 fix rounds]
     H --> I[10. Whole-film review]
@@ -77,7 +78,10 @@ The numbers match the steps in `SKILL.md`.
   in step 5 covers them too.
 - **5. Check the bible.** `bible.py questions` strips the answers. A second
   reader, who never sees the bible, answers the same questions from the
-  subtitles. `bible.py compare` locks what both agree on. A judge reads only
+  subtitles. It starts as soon as the bible is written, while the audio
+  step may still run. The voice questions come from `bible.py
+  voice-questions`, and a second second reader answers them beside the
+  voice mapper. `bible.py compare` locks what both agree on. A judge reads only
   the cited cues for the rest and decides from the evidence or by a safe
   default. `bible.py apply` writes the result; anything settled by a safe
   default goes into the report.

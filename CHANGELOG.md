@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- The bible check starts earlier. The second reader now answers the bible
+  writer's questions as soon as the bible is written, while the audio step
+  may still be running. The voice questions come from the audio step's
+  voices (`bible.py voice-questions`), and a second reader round answers
+  them beside the voice mapper. On a 2-hour test film this cut the steps from the
+  audio step to the judged bible from 13.1 to 9.2 minutes, about 2.5
+  minutes of it from the change itself; agreed, judged and tie counts
+  stayed the same within run-to-run spread.
 - Fix rounds 1 and 2 now say which model they use: the preferences'
   "Translator model", the same as the translators. The skill named a model
   only for round 3 (Opus), so the first two rounds could run on either.

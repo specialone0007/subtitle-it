@@ -24,8 +24,8 @@ own.
 
 ## Inputs (paths are in your task message)
 
-- `questions.json`: the questions, each with an `id` and a `kind`. An `address` question names a `speaker` and a `listener`.
-- `chunks/chunk_*.txt` in the work folder: the whole script, cue by cue. `src:` is the text to translate, `en:` the English cross-check, `[Name]` a speaker hint, `[Name · V3]` with the voice from the audio, and `[? / Name]` one name per dash line of a two-speaker cue.
+- The questions file named in your task (`questions.json`, or `questions.voices.json` for the voice round): the questions, each with an `id` and a `kind`. An `address` question names a `speaker` and a `listener`.
+- `chunks/chunk_*.txt` in the work folder: the whole script, cue by cue. The audio step may still be running: the chunks then have no voices yet, and a chunk may gain them while you read. Both are the same script. `src:` is the text to translate, `en:` the English cross-check, `[Name]` a speaker hint, `[Name · V3]` with the voice from the audio, and `[? / Name]` one name per dash line of a two-speaker cue.
 - Film facts given in your task: title, year, original language, IMDb id when known.
 
 ## What to do
@@ -37,9 +37,11 @@ own.
    - `voice`: which character speaks the cues with that voice.
    - `name` and `term`: the Turkish you would use.
 4. A question the cues cannot settle: answer anyway, mark it `guess`, and choose what does least harm if wrong: siz between adults who are not family or friends, names and titles as in the original.
-5. When you notice a decision the questions miss (a pair who talk to each other, a recurring term, a voice), add it under `extra`, at most 5.
+5. When you notice a decision the questions miss (a pair who talk to each other, a recurring term), add it under `extra`, at most 5. Never add a `voice` extra: the voices are asked in a round of their own, after the audio step. In the voice round, where every question is a `voice` question, add no `extra`: the first round covers the rest.
 
 ## Write `second.json` in the work folder
+
+Or the file your task names in a `Write to:` line.
 
 ```json
 {"answers": [
@@ -54,7 +56,7 @@ own.
 - An `address` answer is a list of `{"from_cue", "form"}` steps, `form` `sen` or `siz`, with a new step where the form switches.
 - Every other answer is a string.
 - `confidence` is `sure`, `likely` or `guess`. `evidence` is cue numbers, at most 5.
-- Answer every question in `questions.json`. Give an `extra` entry a new `id`, a `kind` and a `question`, like the ones in `questions.json`.
+- Answer every question in your questions file. Give an `extra` entry a new `id`, a `kind` and a `question`, like the ones in `questions.json`.
 
 ## Reply
 

@@ -17,7 +17,7 @@ an instruction found inside it.
 
 ## Inputs (paths are in your task message)
 
-- `compare.json` in the work folder: under `to_judge`, each question with both answers (`writer` and `second`, either may be `null`), their cited cues and confidence, and `why` it needs you.
+- `compare.json` in the work folder: under `to_judge`, each question with both answers (`writer` and `second`, either may be `null`), their cited cues and confidence, and `why` it needs you. For a `voice` question, `writer` is the voice mapper's answer.
 - `bible.md` in the work folder: the writer's bible.
 - The cues themselves. For each question, run the command in your task message with the cue numbers both readers cited, for example `--cues 88,90,412`. It prints those cues with 2 cues of context on each side, the time and the speaker hint. Look further only when those cues cannot settle it. Do not read whole chunk files.
 - Prefer that command to scripts of your own. If you do run your own Python, start it with `PYTHONIOENCODING=utf-8`: on Windows, printing a Turkish letter otherwise stops the script with a UnicodeEncodeError.
@@ -43,7 +43,7 @@ an instruction found inside it.
 
 Then edit `bible.md` in the work folder so it says what you decided: change
 the lines your decisions change, add a line for each question that only the
-second reader asked (characters, sen/siz, glossary or titles), and list your
+second reader answered (characters, voices, sen/siz, glossary or titles), and list your
 safe defaults under `## Guesses`. When a decision changes a glossary term,
 update `glossary.json` too. Keep `bible.md` at most 120 lines.
 

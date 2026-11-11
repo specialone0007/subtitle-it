@@ -120,12 +120,12 @@ Then: `prepare.py build --work WORK --timing T [--source S] [--en E]` and
 `prepare.py chunks --work WORK`. Tell the user in 2–3 lines which files you
 used and the timing confidence.
 
-## 3–4. Speaker hints and film bible, side by side
+## 3–5. Speaker hints, film bible and bible check, side by side
 
-The audio step takes several minutes on its own, and the bible writer
-does not wait for it. Start the audio step in the background, write the
-bible from the text meanwhile, and add the voices to the bible once the
-audio step is done.
+The audio step takes several minutes on its own, and the bible does not
+wait for it. Start the audio step in the background, write the bible from
+the text meanwhile, and start checking it as soon as it is written. The
+voices join the bible, and get checked, once the audio step is done.
 
 `build` already took speaker labels (`SANDRA:`) from the text. Audio
 hints add a `voice` (V1, V2, ...) to each spoken cue, which helps match
@@ -146,7 +146,12 @@ line that it downloads a few GB of models.
    year, original language, IMDb id), and, when audio hints are running,
    the line `Voices: added later.` It writes `WORK/bible.md`,
    `WORK/glossary.json` and `WORK/decisions.json`.
-3. When both are done, read the audio step's result:
+3. When the bible writer is done, run `bible.py questions --work WORK` (it
+   writes `WORK/questions.json`) and start the step 5 second reader at
+   once, whether or not the audio step is still running. When the audio
+   step is already done, start it in the same message as the voice
+   mapper, after item 5's `chunks`.
+4. When the bible writer and the audio step are both done, read the audio step's result:
    - Exit code 3 with `"skipped": "token missing"`: give the user the `fix`
      command it printed, to run in their own terminal, and go on without
      voices. Never ask for the token in chat.
@@ -155,34 +160,39 @@ line that it downloads a few GB of models.
      subtitles to the audio. Shift every file you passed to `build` by minus
      `sync.median_offset_ms`, with
      `srt.py shift "<file>" "WORK/sources/<name>_shifted.srt" --ms <minus median_offset_ms>`;
-     run `build` again with the shifted files, then `speakers.py run` once
+     run `build` again with the shifted files and `--keep-bible-check`, then `speakers.py run` once
      more (in the foreground), since the voices were matched on the old
      times. The bible stays: a shift moves times, not cue numbers. Do not
      shift a second time; note the shift and the second verdict for the
      report. Any other verdict that is not `in sync` (no speech matched,
      too little speech, no clear offset, or the check failed): note it for the report and go on;
      the voices were saved either way.
-4. With voices: run `prepare.py chunks --work WORK` again so the chunks
-   show the voices. Then start one `turkish-subtitles:voice-mapper`
-   subagent with the path WORK. It writes
+5. With voices: run `prepare.py chunks --work WORK` again so the chunks
+   show the voices, then `bible.py voice-questions --work WORK`, in one
+   Bash call. It writes `WORK/questions.voices.json`. In ONE message, start
+   one `turkish-subtitles:voice-mapper` subagent with the path WORK, and
+   the voice round of the step 5 second reader: a second
+   `turkish-subtitles:second-reader` with the paths (WORK,
+   `WORK/questions.voices.json`), the film facts and the line
+   `Write to: WORK/second.voices.json`. The mapper writes
    `WORK/voices.json`. Run `bible.py voices --work WORK`: it adds the voice
    decisions to `decisions.json` and the `## Voices` section to `bible.md`.
    If it refuses `voices.json`, start the voice mapper once more with the
    error, asking it to fix only that file, then run the command again.
    Once only: if it still fails, say so in one line and go on without
-   voice decisions.
+   voice decisions. The voice round may still be running: wait for it,
+   then delete `WORK/second.voices.json` before step 5's `compare`.
 
-## 5. Check the bible
+### 5. Check the bible
 
 Nobody confirms the bible by hand. A second reader answers the same
 questions without seeing the bible, and a judge settles any difference
 from the cited cues.
 
-1. Run `bible.py questions --work WORK`. It writes `WORK/questions.json`.
-2. Start one `turkish-subtitles:second-reader` subagent with the paths (WORK, `WORK/questions.json`) and the film facts. It writes `WORK/second.json`.
-3. Run `bible.py compare --work WORK`. It writes `WORK/compare.json`.
-4. If `to_judge` is above 0, start one `turkish-subtitles:bible-judge` subagent with the paths (WORK, `WORK/compare.json`) and this command for reading cues, with the paths filled in: `uv run "SCRIPTS/bible.py" --result "${CLAUDE_PLUGIN_DATA}/results/bible-cues.json" cues --work "WORK" --cues <numbers>`, and the note that it must read the result file, not the printed output. It writes `WORK/judged.json` and updates `bible.md`.
-5. Run `bible.py apply --work WORK`. Keep its `ties` for the report.
+1. The second reader: one `turkish-subtitles:second-reader` subagent with the paths (WORK, `WORK/questions.json`) and the film facts, started in item 3 above. It writes `WORK/second.json`. With voices, the voice round from item 5 writes `WORK/second.voices.json`.
+2. When the second reader is done, and with voices also the voice round and `bible.py voices`, run `bible.py compare --work WORK`. It reads both answer files and writes `WORK/compare.json`. If `bible.py voices` gave up in item 5, delete `WORK/second.voices.json` first, after the voice round is done, so the judge is not handed every voice.
+3. If `to_judge` is above 0, start one `turkish-subtitles:bible-judge` subagent with the paths (WORK, `WORK/compare.json`) and this command for reading cues, with the paths filled in: `uv run "SCRIPTS/bible.py" --result "${CLAUDE_PLUGIN_DATA}/results/bible-cues.json" cues --work "WORK" --cues <numbers>`, and the note that it must read the result file, not the printed output. It writes `WORK/judged.json` and updates `bible.md`.
+4. Run `bible.py apply --work WORK`. Keep its `ties` for the report.
 
 When `questions`, `compare` or `apply` refuses a file it reads, start one
 subagent of the type that wrote the file, with the error, asking it to
