@@ -55,6 +55,15 @@ def strip_tags(s: str) -> str:
     return TAG_RE.sub("", s)
 
 
+def is_dash_line(line: str) -> bool:
+    """A line that opens a speaker's turn with a dialogue dash ("- Who?")."""
+    return strip_tags(line).lstrip().startswith("-")
+
+
+def dash_lines(lines: list[str]) -> int:
+    return sum(1 for ln in lines if is_dash_line(ln))
+
+
 def _ms(h: str, m: str, s: str, frac: str) -> int:
     frac = (frac + "00")[:3]
     return ((int(h) * 60 + int(m)) * 60 + int(s)) * 1000 + int(frac)
