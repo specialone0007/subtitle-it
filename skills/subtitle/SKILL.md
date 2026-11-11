@@ -79,7 +79,10 @@ used and the timing confidence.
 hints add a `voice` (V1, V2, ...) to each spoken cue, which helps the
 bible match voices to characters. Run them when the input is a video and
 `Audio hints` in the preferences is `yes`, or is `ask` and the user says
-yes. Tell the user the first run downloads a few GB of models, and that
+yes. A `preferences.md` from an older version may have no `Audio hints`
+section: treat that as `ask`, and when you ask, also offer to add the
+section (copied from `${CLAUDE_SKILL_DIR}/preferences-template.md`, with
+the user's answer as its value) so they are not asked again. Tell the user the first run downloads a few GB of models, and that
 without a working `nvidia-smi` it runs on the CPU and takes about as long
 as the film.
 

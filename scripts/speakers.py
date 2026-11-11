@@ -184,6 +184,10 @@ def extract_audio(video: Path, dest: Path) -> Path:
 
 
 def diarize(wav: Path, token: str) -> list[Turn]:
+    # torch 2.6 and later load checkpoints weights-only by default, and
+    # pyannote 3.x's checkpoints store objects that loader refuses. They come
+    # from pyannote's own gated repo, so allow the full load.
+    os.environ.setdefault("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", "1")
     import torch
     from pyannote.audio import Pipeline
 
