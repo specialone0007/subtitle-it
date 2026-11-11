@@ -2,11 +2,17 @@
 
 ## Unreleased
 
+- A polish run no longer leaves a line softer than the source's swearing.
+  The toned-down check now knows strong and mild words, so "fuck" turned
+  into "lanet olsun" is flagged. After the review, `polish.py soft` lists
+  the lines still soft, the polish fixer restores them, and the report
+  lists any left. On a 2-hour test film the human file had 52 such lines; 11 were
+  left after the fixer and the reviewer, before this last pass.
 - The bible check now counts two voice answers as the same when they name
   the same character first or read the same up to a bracket, semicolon or
   comma, so "Harlan Pike" and "Uncle Harlan Pike" no longer go to the
   judge. A name followed by 's, as in "Sam's mother", names no one. On a 2-hour test film
-  the readers now agree on 23 of 32 voices instead of 8.
+  the readers now agree on 24 of 32 voices instead of 8.
 - `learn.py scan` no longer lists an older run's work folder as edited by
   you when a later run delivered to the same file. Only the last delivery
   to each file counts.
