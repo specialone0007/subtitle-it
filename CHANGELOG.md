@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- A film given by path from a folder that is not in your media folders adds
+  that folder, so later runs find films there by name
+  (`sources.py remember`). A film in its own folder adds the folder above it.
+- When no film matches, the run names any media folder that was not there,
+  such as an unplugged drive, instead of only saying nothing was found.
+
 ## 0.3.0
 
 - A second reader answers the bible's questions blind, and a judge settles
