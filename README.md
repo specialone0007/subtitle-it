@@ -133,12 +133,13 @@ Layout:
 skills/subtitle/SKILL.md        the run (steps 0-11) and learn mode
 skills/subtitle/pack-tr.md      Turkish language rules
 agents/                         subagent types: bible writer, second reader, judge, voice mapper,
-                                translator, reviewer (instructions and allowed tools)
+                                translator, polish fixer, reviewer (instructions and allowed tools)
 scripts/srt.py                  parse, encodings, pairing by time, chunking
 scripts/sources.py              find films, extract tracks, validate sources
 scripts/opensubtitles.py        OpenSubtitles login, search, download
 scripts/prepare.py              build the work folder and chunks
 scripts/bible.py                questions, blind comparison and judging for the film bible; adds the voices
+scripts/polish.py               start from an existing Turkish subtitle: seed it, list cues to fix
 scripts/assemble.py             assemble, checks, review file, delivery
 scripts/learn.py                find user edits for learn mode
 scripts/speakers.py             voices per cue from the audio, sync check
