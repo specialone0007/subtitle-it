@@ -32,7 +32,20 @@ whole film, and saves `Anatomy of a Fall.tr.srt` next to the video.
    ```
 
    A key alone allows 5 downloads a day; with the free account login, 20. Downloads are cached.
-4. **Install the plugin.** From a clone of this repo:
+4. **Audio hints** (optional: tells the translators which voice speaks each line). Create a free
+   read token at <https://huggingface.co/settings/tokens>, accept the terms of
+   <https://huggingface.co/pyannote/speaker-diarization-3.1> and
+   <https://huggingface.co/pyannote/segmentation-3.0> with the same account, then run this in your
+   own terminal (it asks for the token without showing it):
+
+   ```
+   uv run scripts/speakers.py setup --config ~/.config/turkish-subtitles
+   ```
+
+   The first run downloads a few GB (PyTorch, pyannote and a Whisper model). With an NVIDIA GPU it
+   takes a few minutes per film; on the CPU about as long as the film. It also reports when the
+   subtitles are out of sync with the audio.
+5. **Install the plugin.** From a clone of this repo:
 
    ```
    claude plugin marketplace add ./turkish-subtitles
@@ -44,8 +57,8 @@ whole film, and saves `Anatomy of a Fall.tr.srt` next to the video.
 ## Where files go
 
 - `~/.config/turkish-subtitles/` (on Windows `C:\Users\<you>\.config\turkish-subtitles\`):
-  `preferences.md` (media folders, swearing, titles, translator model, learned rules),
-  `credentials.json` (OpenSubtitles; only the script reads it), `backups/` (old Turkish
+  `preferences.md` (media folders, translator model, audio hints, swearing, titles, learned rules),
+  `credentials.json` (OpenSubtitles and Hugging Face; only the scripts read it), `backups/` (old Turkish
   files replaced by a new one). Kept when the plugin is uninstalled.
 - The plugin's data folder (`~/.claude/plugins/data/turkish-subtitles-.../`): one work
   folder per film with the bible, the delivered copy and a report, plus the download
@@ -80,6 +93,7 @@ scripts/opensubtitles.py        OpenSubtitles login, search, download
 scripts/prepare.py              build the work folder and chunks
 scripts/assemble.py             assemble, checks, review file, delivery
 scripts/learn.py                find user edits for learn mode
+scripts/speakers.py             voices per cue from the audio, sync check
 tests/                          pytest suite
 ```
 

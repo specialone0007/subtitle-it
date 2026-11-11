@@ -15,6 +15,13 @@ Folders searched when you give a film name instead of a path, one per line.
 
 session
 
+## Audio hints
+
+Find who speaks each line from the film's audio (needs a free Hugging Face
+token; see the README). One of: yes, no, ask.
+
+ask
+
 ## Swearing
 
 match the source
