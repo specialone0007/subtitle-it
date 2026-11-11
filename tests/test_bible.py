@@ -118,6 +118,10 @@ def test_voice_answers_agree_when_they_name_the_same_character(a, b):
         ("bus driver", "Mabel, the woman driving the bus"),
         ("the guard", "The guard captain"),
         ("Sam", "Samuel"),
+        ("Sam", "Sam's mother"),
+        ("Sam", "Sam’s mother"),
+        ("Sam", "Leo (Sam's friend)"),
+        ("Sam", "a clerk, Sam's cousin"),
     ],
 )
 def test_voice_answers_differ_when_they_name_someone_else(a, b):
