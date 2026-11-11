@@ -166,6 +166,84 @@ def test_compare_refuses_an_extra_that_reuses_a_question_id(work):
         bible.compare(work)
 
 
+def test_questions_drop_answers_to_earlier_questions(work):
+    write_second(work, [])
+    bible.questions(work)
+    assert not (work / "second.json").exists()
+
+
+def test_voice_questions_ask_about_each_voice_with_three_cues(work):
+    speakers = {str(n): {"voice": "V10"} for n in range(1, 4)}
+    speakers |= {str(n): {"label": "Sam", "voice": "V2"} for n in range(4, 8)}
+    speakers |= {"8": {"voice": "V3"}, "9": {"voice": "V3"}, "10": {"label": "Nora"}}
+    (work / "speakers.json").write_text(json.dumps(speakers), encoding="utf-8")
+    (work / "second.voices.json").write_text("{}", encoding="utf-8")
+    out = bible.voice_questions(work)
+    qs = json.loads((work / "questions.voices.json").read_text(encoding="utf-8"))
+    assert out["questions"] == 2
+    assert qs == [
+        {"id": "voice:V2", "kind": "voice", "question": "Which character is voice V2?"},
+        {"id": "voice:V10", "kind": "voice", "question": "Which character is voice V10?"},
+    ]
+    assert not (work / "second.voices.json").exists()
+
+
+def voice_round(work: Path, answers: list[dict], extra: list[dict] | None = None, voices=("V1", "V2")) -> None:
+    qs = [{"id": f"voice:{v}", "kind": "voice", "question": f"Which character is voice {v}?"} for v in voices]
+    (work / "questions.voices.json").write_text(json.dumps(qs), encoding="utf-8")
+    (work / "second.voices.json").write_text(json.dumps({"answers": answers, "extra": extra or []}), encoding="utf-8")
+
+
+def test_compare_pairs_the_voice_round_with_the_mappers_answers(work):
+    # The early round answered the writer's questions; voice:V1 came later,
+    # from the voice mapper, and the voice round answered it.
+    write_second(work, [ans("address:Sam>Nora", [{"from_cue": 1, "form": "siz"}]), ans("term:sport", "koçum")])
+    voice_round(work, [ans("voice:V1", "Sam"), ans("voice:V2", "Nora", evidence=(2,))])
+    out = bible.compare(work)
+    assert out["agreed"] == 3 and out["judge_ids"] == ["voice:V2"]
+    item = json.loads((work / "compare.json").read_text(encoding="utf-8"))["to_judge"][0]
+    assert item["writer"] is None and item["why"] == "the voice mapper gave no answer"
+    assert item["question"] == "Which character is voice V2?" and item["second"]["answer"] == "Nora"
+    judged = [{"id": "voice:V2", "answer": "Nora", "evidence": [2], "how": "evidence"}]
+    (work / "judged.json").write_text(json.dumps({"decisions": judged}), encoding="utf-8")
+    assert bible.apply(work)["added"] == ["voice:V2"]
+    final = {d["id"]: d for d in json.loads((work / "decisions.json").read_text(encoding="utf-8"))["decisions"]}
+    assert final["voice:V2"]["kind"] == "voice" and final["voice:V2"]["answer"] == "Nora"
+
+
+def test_compare_without_a_voice_round_reads_only_the_early_answers(work):
+    write_second(work, [ans("address:Sam>Nora", [{"from_cue": 1, "form": "siz"}]), ans("term:sport", "koçum")])
+    (work / "questions.voices.json").write_text("[]", encoding="utf-8")
+    out = bible.compare(work)
+    assert out["agreed"] == 2 and out["judge_ids"] == ["voice:V1"]
+
+
+@pytest.mark.parametrize(
+    ("answers", "message"),
+    [
+        ([ans("term:sport", "koçum")], "not a question it was asked"),
+        ([ans("address:Sam>Nora", [{"from_cue": 1, "form": "siz"}])], "answered twice"),
+        ([ans("voice:V1", [{"from_cue": 1, "form": "siz"}])], "non-empty string"),
+    ],
+)
+def test_compare_refuses_a_voice_round_that_strays(work, answers, message):
+    write_second(work, [ans("address:Sam>Nora", [{"from_cue": 1, "form": "siz"}])])
+    qs = [{"id": "voice:V1", "kind": "voice", "question": "Which character is voice V1?"}]
+    qs += [{"id": "address:Sam>Nora", "kind": "voice", "question": "?"}] if message == "answered twice" else []
+    (work / "questions.voices.json").write_text(json.dumps(qs), encoding="utf-8")
+    (work / "second.voices.json").write_text(json.dumps({"answers": answers, "extra": []}), encoding="utf-8")
+    with pytest.raises(SystemExit, match=message):
+        bible.compare(work)
+
+
+def test_compare_refuses_an_extra_id_used_in_both_rounds(work):
+    extra = {"id": "name:judge", "kind": "name", "question": "How is the judge addressed?", **ans("name:judge", "Hâkim Bey")}
+    write_second(work, [], [extra])
+    voice_round(work, [], [extra])
+    with pytest.raises(SystemExit, match="used twice"):
+        bible.compare(work)
+
+
 def test_address_switch_points_close_together_agree():
     a = [{"from_cue": 1, "form": "siz"}, {"from_cue": 400, "form": "sen"}]
     near = [{"from_cue": 1, "form": "siz"}, {"from_cue": 400 + bible.ADDRESS_TOLERANCE, "form": "sen"}]
