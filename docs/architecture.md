@@ -37,7 +37,10 @@ The numbers match the steps in `SKILL.md`.
   preferences, and mentions any delivered file you have edited since.
 - **1. Find the film.** `sources.py find` searches your media folders. Copies
   of one film are picked without asking; different films with a matching
-  name (Alien and Aliens) are the one question a run asks.
+  name (Alien and Aliens) are the one question a run asks. A film given by
+  path from a folder not listed yet adds that folder (`sources.py remember`),
+  and a listed folder that is not there, such as an unplugged drive, is
+  named when nothing is found.
 - **2. Source subtitles.** `sources.py local` reads text tracks inside the
   video and files next to it; `opensubtitles.py` searches by the video's
   hash, then by IMDb id or title. The timing file is the one whose timing

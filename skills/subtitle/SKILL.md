@@ -54,9 +54,9 @@ Arguments: $ARGUMENTS
 
 ## 1. Find the film
 
-- A path to a video or `.srt` that exists: use it.
+- A path to a video or `.srt` that exists: use it, and run `sources.py remember --file "<path>" --prefs "CONFIG/preferences.md"`. When its `added` is a folder, say in one line that later runs search it too.
 - Otherwise run `sources.py find --query "<name>" --dirs <media folders from preferences>`. No media folders yet: this is setup, so ask the user for the folder, save it under "Media folders", and go on.
-- Several matches: keep the results whose `kind` is `video` and that do not `looks_like_extra`. When they all sit in one folder, or their file names give the same title once the year, resolution and other tags in the file name are left out, they are copies of one film: take the first (the biggest) and name it in one line. Otherwise they are different films (Alien and Aliens): list them and ask which one, the one question a run may ask, since translating the wrong film would put the file next to the wrong video. No such result: stop and ask for the path.
+- Several `matches`: keep the ones whose `kind` is `video` and that do not `looks_like_extra`. When they all sit in one folder, or their file names give the same title once the year, resolution and other tags in the file name are left out, they are copies of one film: take the first (the biggest) and name it in one line. Otherwise they are different films (Alien and Aliens): list them and ask which one, the one question a run may ask, since translating the wrong film would put the file next to the wrong video. No such match: stop and ask for the path. When `missing_folders` is not empty, name those folders in the same message, for example "D:\Films was not there to search; is the drive connected?", since the film may be on it.
 
 Set SLUG to the `slug` field of `sources.py slug "<film title>"` and WORK to `${CLAUDE_PLUGIN_DATA}/films/SLUG`.
 
