@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - name: Tests
+        run: uv run --group dev pytest -q
+      - name: Lint
+        run: uv run --group dev ruff check .
+      - name: Format
+        run: uv run --group dev ruff format --check .
+
+  plugin:
+    name: plugin manifest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Manifests are valid JSON with matching names
+        run: |
+          python3 - <<'PY'
+          import json
+          plugin = json.load(open(".claude-plugin/plugin.json"))
+          market = json.load(open(".claude-plugin/marketplace.json"))
+          names = [p["name"] for p in market["plugins"]]
+          assert plugin["name"] in names, f"{plugin['name']} is not listed in marketplace.json"
+          print("ok:", plugin["name"], plugin["version"])
+          PY
