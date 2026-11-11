@@ -217,6 +217,7 @@ def offset_check(timing: list[Cue], other: list[Cue]) -> dict:
 # --- fit: does another file line up with the timing file? -----------------
 
 SOUND_RE = re.compile(r"\[[^\]]*\]|\([^)]*\)|^\s*-?\s*[A-Z][A-Z0-9 .'-]*:|[♪♫#*\-]", re.M)
+LYRIC_HASH_RE = re.compile(r"^\s*#|#\s*$", re.M)
 FIT_MIN_COVERED = 0.9  # share of the timing file's spoken cues the other file covers
 FIT_MIN_ON_SPEECH = 0.9  # share of the other file's spoken cues that land on timing cues
 FIT_MIN_WINDOW = 0.7  # the worst 10-minute window; a lower one means a different cut or drift
@@ -226,11 +227,13 @@ FIT_WINDOW_MS = 600_000
 
 def is_sound(cue: Cue) -> bool:
     """A cue with no dialogue in it: only sound descriptions ("[door
-    creaks]") or a speaker label, or a song lyric (marked with ♪ or ♫).
-    Hearing-impaired files are full of the first kind and translations
-    often leave songs out, so neither counts when judging whether two
-    files fit."""
-    return "♪" in cue.plain or "♫" in cue.plain or not re.search(r"\w", SOUND_RE.sub("", cue.plain))
+    creaks]") or a speaker label, or a song lyric (marked with ♪ or ♫, or
+    in older files with a # opening or closing a line). Hearing-impaired
+    files are full of the first kind and translations often leave songs
+    out, so neither counts when judging whether two files fit."""
+    if "♪" in cue.plain or "♫" in cue.plain or LYRIC_HASH_RE.search(cue.plain):
+        return True
+    return not re.search(r"\w", SOUND_RE.sub("", cue.plain))
 
 
 def _coverage(a: list[Cue], b: list[Cue]) -> list[float]:
@@ -317,7 +320,9 @@ def fit(timing: list[Cue], other: list[Cue], search_ms: int = 60_000) -> dict:
         reasons.append(f"{on_speech:.0%} of its cues land on speech (needs {FIT_MIN_ON_SPEECH:.0%})")
     if windows and min(windows) < FIT_MIN_WINDOW:
         reasons.append(f"a 10-minute window covers only {min(windows):.0%}: different cut or drift")
-    if median is None or abs(median) > FIT_MAX_MEDIAN_MS:
+    if median is None:
+        reasons.append("no cue pairs to measure the start difference")
+    elif abs(median) > FIT_MAX_MEDIAN_MS:
         reasons.append(f"median start difference {median} ms after the shift")
     return {
         "fits": not reasons,
