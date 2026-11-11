@@ -50,10 +50,10 @@ def cue_label(lines: list[str]) -> str | None:
     dash continues the dash line above it."""
     turns: list[list[str]] = []
     for ln in lines:
-        if srt.strip_tags(ln).lstrip().startswith("-") or not turns:
+        if srt.is_dash_line(ln) or not turns:
             turns.append([])
         turns[-1].append(ln)
-    if sum(1 for t in turns if srt.strip_tags(t[0]).lstrip().startswith("-")) < 2:
+    if srt.dash_lines([t[0] for t in turns]) < 2:
         found = labels_in(lines)
         return found[0] if found else None
     names = [(labels_in(t) or ["?"])[0] for t in turns]

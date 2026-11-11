@@ -95,7 +95,7 @@ def test_run_without_token_exits_3_and_touches_nothing(tmp_path: Path, monkeypat
     assert not (tmp_path / "speakers.json").exists()
 
 
-def test_run_writes_voices_with_models_faked(tmp_path: Path, monkeypatch):
+def test_run_writes_voices_with_models_faked(tmp_path: Path, monkeypatch, capsys):
     monkeypatch.setenv("HF_TOKEN", "hf_x")
     (tmp_path / "timing.srt").write_text(
         "1\n00:00:01,000 --> 00:00:02,000\nViens.\n\n2\n00:00:03,000 --> 00:00:04,000\nNon.\n", encoding="utf-8"
@@ -109,6 +109,14 @@ def test_run_writes_voices_with_models_faked(tmp_path: Path, monkeypatch):
     assert r["voices"] == {"V1": 1, "V2": 1} and r["voices_before_merge"] == 2 and r["sync"]["verdict"] == "in sync"
     saved = json.loads((tmp_path / "speakers.json").read_text(encoding="utf-8"))
     assert saved == {"1": {"label": "Sandra", "voice": "V1"}, "2": {"voice": "V2"}}
+    out, err = capsys.readouterr()
+    # Progress goes to stderr only: stdout carries the JSON result.
+    assert out == ""
+    assert [ln for ln in err.splitlines() if ln.startswith("speakers: ")] == [
+        "speakers: extracting the audio",
+        "speakers: finding who speaks when (a few minutes on a GPU, about the film's length on a CPU)",
+        "speakers: voices saved; checking sync with the audio",
+    ]
 
 
 def test_run_without_token_or_config_suggests_the_default_folder(tmp_path: Path, monkeypatch):
@@ -132,7 +140,14 @@ def test_run_keeps_voices_when_the_sync_check_fails(tmp_path: Path, monkeypatch)
     assert json.loads((tmp_path / "speakers.json").read_text(encoding="utf-8")) == {"1": {"voice": "V1"}}
 
 
-def test_speech_starts_falls_back_to_cpu_when_cuda_fails_while_transcribing(monkeypatch):
+@pytest.mark.parametrize(
+    "error",
+    [
+        "cudnn missing",
+        "Requested float16 compute type, but the target device or backend do not support efficient float16 computation.",
+    ],
+)
+def test_speech_starts_falls_back_to_cpu_when_cuda_fails_while_transcribing(monkeypatch, capsys, error):
     import sys
     import types
 
@@ -146,7 +161,7 @@ def test_speech_starts_falls_back_to_cpu_when_cuda_fails_while_transcribing(monk
 
             def segments():
                 if self.device == "cuda":
-                    raise RuntimeError("cudnn missing")  # raised lazily, as ctranslate2 does
+                    raise RuntimeError(error)  # raised lazily, as ctranslate2 does
                 yield types.SimpleNamespace(start=1.5)
 
             return segments(), None
@@ -155,6 +170,7 @@ def test_speech_starts_falls_back_to_cpu_when_cuda_fails_while_transcribing(monk
     monkeypatch.setattr(speakers, "_device", lambda: "cuda")
     monkeypatch.setattr(speakers, "read_wav", lambda wav: "samples")
     assert speakers.speech_starts(Path("a.wav")) == [1500]
+    assert "trying the CPU" in capsys.readouterr().err
 
 
 def test_speech_starts_does_not_retry_on_the_cpu_for_other_errors(monkeypatch):
