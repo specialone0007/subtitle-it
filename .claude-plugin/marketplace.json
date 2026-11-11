@@ -1,0 +1,16 @@
+{
+  "name": "turkish-subtitles",
+  "owner": {
+    "name": "Furkan Reha"
+  },
+  "metadata": {
+    "description": "Local development marketplace for the turkish-subtitles plugin."
+  },
+  "plugins": [
+    {
+      "name": "turkish-subtitles",
+      "source": "./",
+      "description": "Translate a film's subtitles from any language into natural Turkish."
+    }
+  ]
+}
