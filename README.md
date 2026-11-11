@@ -76,8 +76,9 @@ for certain goes under "Check after watching" in the film's `report.md`.
    out of sync with the audio, it moves them to match and says so in the report.
 
    Speech-to-text, the last resort when no subtitle file exists anywhere, needs no setup and no
-   token. Its first use downloads PyTorch and a Whisper model (about 1.6 GB); with an NVIDIA GPU a
-   film takes a few minutes, on the CPU about as long as the film or more.
+   token. Its first use downloads a few GB: PyTorch, unless the audio hints already did, plus a
+   Whisper model of about 1.6 GB. With an NVIDIA GPU a film takes a few minutes, on the CPU about as
+   long as the film or more.
 To work on the plugin itself, load it from a clone for one session with
 `claude --plugin-dir ./turkish-subtitles`.
 

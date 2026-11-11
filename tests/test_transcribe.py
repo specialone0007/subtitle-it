@@ -31,9 +31,23 @@ def test_a_sentence_end_closes_a_cue_only_once_it_is_long_enough():
 def test_a_cue_never_passes_two_lines_or_seven_seconds():
     words = [Word(i * 0.5, i * 0.5 + 0.4, "word") for i in range(40)]
     cues = transcribe.words_to_cues(words)
-    assert all(len(t) <= transcribe.MAX_CHARS for _, _, t in cues)
+    assert all(len(line) <= transcribe.LINE for _, _, t in cues for line in transcribe.wrap(t))
     assert all(e - s <= transcribe.MAX_DURATION * 1000 for s, e, _ in cues)
     assert sum(len(t.split()) for _, _, t in cues) == 40, "no word is lost"
+
+
+def test_a_cue_closes_before_no_two_line_break_fits():
+    line = "I told the investigators that the unbelievably complicated paperwork was never filed"
+    words = [Word(i * 0.2, i * 0.2 + 0.15, t) for i, t in enumerate(line.split())]
+    cues = transcribe.words_to_cues(words)
+    assert all(len(x) <= transcribe.LINE for _, _, t in cues for x in transcribe.wrap(t))
+    assert " ".join(t for _, _, t in cues) == line
+
+
+def test_fits_needs_a_break_that_leaves_both_lines_short():
+    assert transcribe.fits("Short.")
+    assert transcribe.fits("Where did you put the keys? They were on the table this morning.")
+    assert not transcribe.fits("I told the investigators that the unbelievably complicated paperwork was never")
 
 
 def test_empty_words_are_skipped():
@@ -141,3 +155,24 @@ def test_a_gpu_library_error_falls_back_to_the_cpu(tmp_path: Path, monkeypatch):
     words, lang, prob, device = transcribe.transcribe(tmp_path / "a.wav", "large-v3-turbo", None)
     assert devices == [("cuda", "float16"), ("cpu", "int8")]
     assert (lang, device) == ("en", "cpu") and [w.text for w in words] == [" Hi."]
+
+
+def test_an_error_unrelated_to_the_gpu_is_raised_not_retried(tmp_path: Path, monkeypatch):
+    import sys
+    import types
+
+    import pytest
+
+    devices = []
+
+    class FakeModel:
+        def __init__(self, name, device, compute_type):
+            devices.append(device)
+            raise ValueError("Invalid model size 'large-v9'")
+
+    monkeypatch.setitem(sys.modules, "faster_whisper", types.SimpleNamespace(WhisperModel=FakeModel))
+    monkeypatch.setattr(transcribe.speakers, "read_wav", lambda wav: [0.0])
+    monkeypatch.setattr(transcribe.speakers, "_device", lambda: "cuda")
+    with pytest.raises(ValueError, match="large-v9"):
+        transcribe.transcribe(tmp_path / "a.wav", "large-v9", None)
+    assert devices == ["cuda"], "no slow CPU retry for an error the CPU would hit too"
