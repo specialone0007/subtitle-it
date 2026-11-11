@@ -179,8 +179,9 @@ line that it downloads a few GB of models.
    decisions to `decisions.json` and the `## Voices` section to `bible.md`.
    If it refuses `voices.json`, start the voice mapper once more with the
    error, asking it to fix only that file, then run the command again.
-   Once only: if it still fails, say so in one line, delete
-   `WORK/second.voices.json`, and go on without voice decisions.
+   Once only: if it still fails, say so in one line and go on without
+   voice decisions. The voice round may still be running: wait for it,
+   then delete `WORK/second.voices.json` before step 5's `compare`.
 
 ### 5. Check the bible
 
@@ -189,7 +190,7 @@ questions without seeing the bible, and a judge settles any difference
 from the cited cues.
 
 1. The second reader: one `turkish-subtitles:second-reader` subagent with the paths (WORK, `WORK/questions.json`) and the film facts, started in item 3 above. It writes `WORK/second.json`. With voices, the voice round from item 5 writes `WORK/second.voices.json`.
-2. When the second reader is done, and with voices also the voice round and `bible.py voices`, run `bible.py compare --work WORK`. It reads both answer files and writes `WORK/compare.json`.
+2. When the second reader is done, and with voices also the voice round and `bible.py voices`, run `bible.py compare --work WORK`. It reads both answer files and writes `WORK/compare.json`. If `bible.py voices` gave up in item 5, delete `WORK/second.voices.json` first, after the voice round is done, so the judge is not handed every voice.
 3. If `to_judge` is above 0, start one `turkish-subtitles:bible-judge` subagent with the paths (WORK, `WORK/compare.json`) and this command for reading cues, with the paths filled in: `uv run "SCRIPTS/bible.py" --result "${CLAUDE_PLUGIN_DATA}/results/bible-cues.json" cues --work "WORK" --cues <numbers>`, and the note that it must read the result file, not the printed output. It writes `WORK/judged.json` and updates `bible.md`.
 4. Run `bible.py apply --work WORK`. Keep its `ties` for the report.
 

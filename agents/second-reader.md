@@ -37,7 +37,7 @@ own.
    - `voice`: which character speaks the cues with that voice.
    - `name` and `term`: the Turkish you would use.
 4. A question the cues cannot settle: answer anyway, mark it `guess`, and choose what does least harm if wrong: siz between adults who are not family or friends, names and titles as in the original.
-5. When you notice a decision the questions miss (a pair who talk to each other, a recurring term, a voice), add it under `extra`, at most 5. In the voice round, where every question is a `voice` question, add no `extra`: the first round covers the rest.
+5. When you notice a decision the questions miss (a pair who talk to each other, a recurring term), add it under `extra`, at most 5. Never add a `voice` extra: the voices are asked in a round of their own, after the audio step. In the voice round, where every question is a `voice` question, add no `extra`: the first round covers the rest.
 
 ## Write `second.json` in the work folder
 
