@@ -7,8 +7,13 @@
     uv run sources.py find     --query "Anatomy of a Fall" --dirs D1 [D2 ...]
     uv run sources.py local    --video V --work W
     uv run sources.py validate --file F [--duration-ms N]
+    uv run sources.py remember --file V --prefs CONFIG/preferences.md
 
-`find` lists video and subtitle files whose names match the query.
+`find` lists video and subtitle files whose names match the query, and
+names any listed folder that is not there (an unplugged drive, say).
+`remember` adds the folder of a film given by path to the media folders in
+preferences.md, unless a listed folder already holds it or the folder is a
+drive root or the home folder.
 `local` probes the video with ffprobe, extracts every text subtitle track
 into W/sources/, lists subtitle files next to the video, and validates each
 candidate. Image tracks (PGS, VobSub, DVB) are listed but not extracted.
@@ -19,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -106,11 +112,15 @@ def slug(s: str) -> str:
     return norm(s).replace(" ", "-")[:60] or "film"
 
 
-def find(query: str, dirs: list[Path]) -> list[dict]:
+def find(query: str, dirs: list[Path]) -> dict:
+    """Matching files, biggest video first, and the folders that were not there to search."""
     words = norm(query).split()
     hits = []
-    for d in dirs:
+    missing = []
+    for listed in dirs:
+        d = listed.expanduser()
         if not d.is_dir():
+            missing.append(str(listed))
             continue
         for p in d.rglob("*"):
             ext = p.suffix.lower()
@@ -127,7 +137,87 @@ def find(query: str, dirs: list[Path]) -> list[dict]:
                     }
                 )
     hits.sort(key=lambda h: (h["kind"] != "video", h["looks_like_extra"], -h["size_mb"]))
-    return hits
+    return {"matches": hits, "missing_folders": missing}
+
+
+MEDIA_HEADING = "## Media folders"
+
+
+def media_folders(prefs: Path) -> list[str]:
+    """The folders listed under "## Media folders" in preferences.md."""
+    if not prefs.is_file():
+        return []
+    folders, inside = [], False
+    for line in prefs.read_text(encoding="utf-8").splitlines():
+        if line.startswith("## "):
+            inside = line.strip() == MEDIA_HEADING
+        elif inside and line.startswith("-") and line[1:].strip():
+            folders.append(line[1:].strip())
+    return folders
+
+
+def _key(p: Path) -> str:
+    return os.path.normcase(str(p.expanduser().resolve()))
+
+
+def _inside(path: Path, folder: Path) -> bool:
+    child, parent = _key(path), _key(folder).rstrip("\\/")
+    return child == parent or child.startswith(parent + os.sep)
+
+
+def _too_broad(folder: Path) -> bool:
+    """A drive root or the home folder: searching all of it would be slow on every run."""
+    return folder.parent == folder or _key(folder) == _key(Path.home())
+
+
+def folder_to_remember(file: Path) -> Path:
+    """The folder to add for a film found outside the media folders.
+
+    A film in its own folder ("The Quiet Hour (2019)/The.Quiet.Hour.2019.mkv")
+    gives that folder's parent, where the next film probably sits too. A film
+    loose in a folder ("Films/Anatomy.of.a.Fall.2023.mkv") gives that folder.
+    """
+    film_dir = file.resolve().parent
+    title = [w for w in norm(film_dir.name).split() if not re.fullmatch(r"(19|20)\d\d", w)]
+    stem = norm(file.stem).split()
+    if title and stem[: len(title)] == title and not _too_broad(film_dir.parent):
+        return film_dir.parent
+    return film_dir
+
+
+def remember(file: Path, prefs: Path) -> dict:
+    """Add the film's folder to "## Media folders" unless a listed folder already holds it.
+
+    A film lying loose at a drive root or in the home folder adds nothing:
+    searching all of that on every run would be slow. The result names the
+    folder under `too_broad` instead.
+    """
+    listed = media_folders(prefs)
+    for f in listed:
+        if _inside(file, Path(f)):
+            return {"added": None, "covered_by": f, "too_broad": None}
+    folder = folder_to_remember(file)
+    if _too_broad(folder):
+        return {"added": None, "covered_by": None, "too_broad": str(folder)}
+    lines = prefs.read_text(encoding="utf-8").splitlines() if prefs.is_file() else []
+    try:
+        start = next(i for i, line in enumerate(lines) if line.strip() == MEDIA_HEADING)
+    except StopIteration:
+        lines += ["", MEDIA_HEADING, ""]
+        start = len(lines) - 2
+    end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
+    bullets = [i for i in range(start + 1, end) if lines[i].startswith("-")]
+    entry = f"- {folder}"
+    blank = [i for i in bullets if not lines[i][1:].strip()]
+    if blank:
+        lines[blank[0]] = entry
+    elif bullets:
+        lines.insert(bullets[-1] + 1, entry)
+    else:
+        lines.insert(start + 1, entry)
+    prefs.parent.mkdir(parents=True, exist_ok=True)
+    prefs.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return {"added": str(folder), "covered_by": None, "too_broad": None}
 
 
 def _run(cmd: list[str]) -> str:
@@ -268,6 +358,9 @@ def main(argv: list[str] | None = None) -> None:
     v = sub.add_parser("validate")
     v.add_argument("--file", type=Path, required=True)
     v.add_argument("--duration-ms", type=int)
+    r = sub.add_parser("remember")
+    r.add_argument("--file", type=Path, required=True)
+    r.add_argument("--prefs", type=Path, required=True)
     s = sub.add_parser("slug")
     s.add_argument("name")
     result.add_argument(p)
@@ -276,6 +369,8 @@ def main(argv: list[str] | None = None) -> None:
         out = find(a.query, a.dirs)
     elif a.cmd == "local":
         out = local(a.video, a.work)
+    elif a.cmd == "remember":
+        out = remember(a.file, a.prefs)
     elif a.cmd == "validate":
         out = validate(a.file, a.duration_ms)
     else:
