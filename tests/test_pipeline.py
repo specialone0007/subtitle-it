@@ -207,3 +207,11 @@ def test_deliver_refuses_edits_after_check(work: Path, tmp_path: Path):
     _touch(late, (work / "checks.json").stat().st_mtime + 5)
     with pytest.raises(SystemExit, match="changed after the last check"):
         assemble.deliver(work, tmp_path / "x.tr.srt", tmp_path / "b", force=True)
+
+
+def test_rebuild_with_another_timing_file_drops_old_speaker_labels(work: Path, tmp_path: Path):
+    assert json.loads((work / "speakers.json").read_text(encoding="utf-8")) == {"1": {"label": "Sandra"}}
+    other = "1\n00:00:00,500 --> 00:00:01,000\nMusique.\n\n2\n00:00:01,000 --> 00:00:03,000\nMARC: Viens.\n"
+    (tmp_path / "other.srt").write_text(other, encoding="utf-8")
+    prepare.build(work, tmp_path / "other.srt", None, None)
+    assert json.loads((work / "speakers.json").read_text(encoding="utf-8")) == {"2": {"label": "Marc"}}
