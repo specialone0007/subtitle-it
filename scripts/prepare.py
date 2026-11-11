@@ -4,22 +4,28 @@
 # ///
 """Build a film's work folder and cut it into chunks for the translators.
 
-    uv run prepare.py build  --work W --timing T [--source S] [--en E]
+    uv run prepare.py build  --work W --timing T [--source S] [--en E] [--keep-bible-check]
     uv run prepare.py chunks --work W [--target 250]
 
 `build` writes W/timing.srt (UTF-8 copy of the timing file, timestamps kept
 character for character), W/cues.json (per cue: timing, source text, English
 cross-check, speaker label) and W/speakers.json (labels found in the text).
-`chunks` writes W/chunks/chunk_NN.txt, the files translators read.
+`chunks` writes W/chunks/chunk_NN.txt, the files translators read. It can
+run again while an agent reads them: each file is replaced whole.
+
+`--keep-bible-check` is for a rebuild that only shifts the times of the same
+cues: the bible check's files stay, since its answers cite cue numbers.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -67,23 +73,27 @@ def speaker_hint(entry: dict) -> str:
     return " · ".join(x for x in (who, entry.get("voice")) if x)
 
 
-def build(work: Path, timing_path: Path, source_path: Path | None, en_path: Path | None) -> dict:
+BIBLE_CHECK_FILES = (
+    "questions.json",
+    "second.json",
+    "questions.voices.json",
+    "second.voices.json",
+    "compare.json",
+    "judged.json",
+    "decisions.writer.json",
+)
+
+
+def build(work: Path, timing_path: Path, source_path: Path | None, en_path: Path | None, keep_bible_check: bool = False) -> dict:
     work.mkdir(parents=True, exist_ok=True)
     # A new build starts a new translation: an earlier run's translations,
     # fixes, draft, checks and speaker labels must never be read into this
     # one: the new timing file may number its cues differently.
     shutil.rmtree(work / "out", ignore_errors=True)
-    # The bible check's files belong to the earlier run's bible too.
-    for name in (
-        "draft.tr.srt",
-        "checks.json",
-        "speakers.json",
-        "questions.json",
-        "second.json",
-        "compare.json",
-        "judged.json",
-        "decisions.writer.json",
-    ):
+    # The bible check's files belong to the earlier run's bible too, unless
+    # this rebuild only shifts the times of the same cues.
+    stale = ("draft.tr.srt", "checks.json", "speakers.json") + (() if keep_bible_check else BIBLE_CHECK_FILES)
+    for name in stale:
         (work / name).unlink(missing_ok=True)
     timing, enc = srt.parse(timing_path)
     if not timing:
@@ -154,15 +164,20 @@ def chunks(work: Path, target: int) -> list[dict]:
     cues = [srt.Cue(n=r["n"], start=r["start"], end=r["end"], ts=r["ts"], lines=r["timing_lines"]) for r in rows]
     bounds = srt.chunk(cues, target=target)
     out_dir = work / "chunks"
-    if out_dir.exists():
-        shutil.rmtree(out_dir)
-    out_dir.mkdir()
+    out_dir.mkdir(exist_ok=True)
     (work / "out").mkdir(exist_ok=True)
     info = []
     total = len(bounds)
+    names = {f"chunk_{k:02d}.txt" for k in range(1, total + 1)}
+    for old in out_dir.iterdir():
+        if old.name not in names:
+            old.unlink()
     for k, (first, last) in enumerate(bounds, 1):
         path = out_dir / f"chunk_{k:02d}.txt"
-        with open(path, "w", encoding="utf-8") as f:
+        # An agent may be reading the old file: write a new one and swap it
+        # in, so a reader sees the old text or the new, never half of one.
+        tmp = path.with_suffix(".tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
             f.write(f"# chunk {k:02d} of {total:02d}, cues {first}-{last}\n")
             f.write("# src = text to translate; en = English cross-check; [..] = speaker hint\n")
             f.write("# ' / ' separates the source's own lines\n\n")
@@ -174,9 +189,23 @@ def chunks(work: Path, target: int) -> list[dict]:
                 if r["en"] is not None and r["en"] != r["source"]:
                     f.write("en: " + _one_line(r["en"]) + "\n")
                 f.write("\n")
+        _swap(tmp, path)
         info.append({"chunk": k, "file": str(path), "first": first, "last": last, "out": str(work / "out" / f"tr_{k:02d}.txt")})
     (work / "chunks.json").write_text(json.dumps(info, indent=1), encoding="utf-8")
     return info
+
+
+def _swap(tmp: Path, path: Path, tries: int = 20) -> None:
+    """Replace path with tmp. Windows refuses while another program has the
+    file open, so try again for about two seconds."""
+    for i in range(tries):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError:
+            if i == tries - 1:
+                raise
+            time.sleep(0.1)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -188,13 +217,18 @@ def main(argv: list[str] | None = None) -> None:
     b.add_argument("--timing", type=Path, required=True)
     b.add_argument("--source", type=Path, help="original-language file, if the timing file is in another language")
     b.add_argument("--en", type=Path, help="English file for cross-check and speaker labels")
+    b.add_argument(
+        "--keep-bible-check",
+        action="store_true",
+        help="keep the bible check's files: the rebuild only shifts the times of the same cues",
+    )
     c = sub.add_parser("chunks")
     c.add_argument("--work", type=Path, required=True)
     c.add_argument("--target", type=int, default=250)
     result.add_argument(p)
     a = result.parse(p, argv)
     if a.cmd == "build":
-        result.emit(build(a.work, a.timing, a.source, a.en), a.result)
+        result.emit(build(a.work, a.timing, a.source, a.en, a.keep_bible_check), a.result)
     else:
         result.emit(chunks(a.work, a.target), a.result)
 
