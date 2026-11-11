@@ -50,7 +50,6 @@ import srt  # noqa: E402
 
 MODEL = "large-v3-turbo"
 LINE = 42  # characters per line
-MAX_CHARS = 2 * LINE  # a cue is at most two lines
 MAX_GAP = 1.0  # seconds of silence that end a cue
 MAX_DURATION = 7.0  # seconds a cue may stay on screen
 SENTENCE_MIN = 30  # a sentence end closes the cue once it holds this many characters
@@ -66,10 +65,19 @@ class Word:
     text: str
 
 
+def fits(text: str) -> bool:
+    """True when text fits in two LINE-character lines: one line, or a
+    space that leaves both halves short enough."""
+    if len(text) <= LINE:
+        return True
+    return any(ch == " " and i <= LINE and len(text) - i - 1 <= LINE for i, ch in enumerate(text))
+
+
 def words_to_cues(words: list[Word]) -> list[tuple[int, int, str]]:
     """Group words into (start_ms, end_ms, text) cues. A cue closes at a
-    pause over MAX_GAP, before it would pass MAX_CHARS or MAX_DURATION, and
-    at a sentence end once it holds SENTENCE_MIN characters."""
+    pause over MAX_GAP, before it would no longer fit in two LINE-character
+    lines or pass MAX_DURATION, and at a sentence end once it holds
+    SENTENCE_MIN characters."""
     cues: list[tuple[int, int, str]] = []
     cur: list[Word] = []
 
@@ -87,7 +95,7 @@ def words_to_cues(words: list[Word]) -> list[tuple[int, int, str]]:
             text = " ".join(x.text for x in cur)
             if (
                 w.start - cur[-1].end > MAX_GAP
-                or len(text) + 1 + len(w.text) > MAX_CHARS
+                or not fits(text + " " + w.text)
                 or w.end - cur[0].start > MAX_DURATION
                 or (SENTENCE_END.search(cur[-1].text) and len(text) >= SENTENCE_MIN)
             ):
