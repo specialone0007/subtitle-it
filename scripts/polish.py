@@ -27,6 +27,7 @@ reviewer, as in a full run, since a professional file exceeds it often.
 from __future__ import annotations
 
 import argparse
+import bisect
 import json
 import re
 import sys
@@ -41,9 +42,27 @@ import srt  # noqa: E402
 SEED_FILE = "tr_00.txt"
 FLAG_FILE = "polish_flags.txt"
 FIX_FILE = "fix_polish.txt"
+PLACEMENT_FILE = "polish_placement.json"
 # Warnings the fixer leaves to the reviewer, as a full run does.
 REVIEWER_ONLY = {"reading speed"}
 WORD_RE = re.compile(r"[^\W\d_]+")
+# Professional Turkish files often tone down crude and sexual lines, which
+# breaks "swearing at the same strength as the source". A cue whose English
+# has one of these words and whose Turkish has none of the Turkish ones goes
+# to the fixer. Short on purpose: the reviewer still reads the whole film.
+# Word starts only, so "cocktail", "götürmek" and "boks" do not match.
+EN_STRONG_RE = re.compile(
+    r"(?<![^\W\d_])(?:fuck|motherfuck|shit|bullshit|bitch|cunt|asshole|dumbass|jackass|bastard|"
+    r"cocks?(?![^\W\d_])|pussy|penis|vagina|dildo|porn|whore|slut|tits|boobs|blowjob|"
+    r"handjob|masturbat|jerk(?:ing)? off|horny|orgasm|sex)",
+    re.I,
+)
+TR_STRONG_RE = re.compile(
+    r"(?<![^\W\d_])(?:sik(?![iı]nt)|s[i*.]ktir|hassiktir|amk|amın|amcık|yarra|taşak|orospu|"
+    r"piç|göt(?!ür)|bok(?!s)|kahrolası|lanet|sürtük|kaltak|fahişe|puşt|şerefsiz|penis|"
+    r"vajina|seks|porno|meme|mastürbasyon|otuzbir|azgın|orgazm|pipi|çük|sakso|yatmak|yatt)",
+    re.I,
+)
 
 
 def _wrap(text: str, width: int = assemble.MAX_LINE) -> list[str]:
@@ -92,6 +111,16 @@ def seed(work: Path, tr_path: Path) -> dict:
         raise SystemExit(f"no cues found in {tr_path}")
     pairs = srt.pair(timing, turkish)
     used = {id(o) for v in pairs.values() for o in v}
+    placement = {"joined": [], "unplaced": []}
+    starts = [c.start for c in timing]
+    for o in turkish:
+        if id(o) in used:
+            continue
+        # The timing cues just before and after a Turkish line that landed
+        # nowhere: songs and on-screen text often end up there.
+        k = bisect.bisect_left(starts, o.start)
+        near = [timing[i].n for i in (k - 1, k) if 0 <= i < len(timing)]
+        placement["unplaced"].append({"near": near, "text": prepare._one_line(o.lines)})
     out = work / "out"
     out.mkdir(exist_ok=True)
     seeded = joined = rewrapped = reformed = 0
@@ -103,6 +132,7 @@ def seed(work: Path, tr_path: Path) -> dict:
             lines = [ln for o in parts for ln in o.lines if ln.strip()]
             if len(parts) > 1:
                 joined += 1
+                placement["joined"].append(c.n)
                 if len(lines) > max(2, len(c.lines)):
                     lines = _wrap(" ".join(ln.strip() for ln in lines))
                     rewrapped += 1
@@ -110,6 +140,7 @@ def seed(work: Path, tr_path: Path) -> dict:
             reformed += changed
             seeded += 1
             f.write(f"{c.n}\n" + "\n".join(lines) + "\n\n")
+    (work / PLACEMENT_FILE).write_text(json.dumps(placement, ensure_ascii=False, indent=1), encoding="utf-8")
     return {
         "file": str(out / SEED_FILE),
         "turkish_encoding": enc,
@@ -134,6 +165,15 @@ def untranslated(tr: list[str], en: list[str] | None) -> bool:
     return len(a) >= 2 and a == b
 
 
+def toned_down(tr: list[str], en: list[str] | None) -> str | None:
+    """The English word that has no crude or sexual counterpart in the
+    Turkish line, or None."""
+    m = EN_STRONG_RE.search(srt.strip_tags(" ".join(en or [])))
+    if m and not TR_STRONG_RE.search(srt.strip_tags(" ".join(tr))):
+        return m.group(0).lower()
+    return None
+
+
 def flags(work: Path) -> dict:
     checks = assemble.run_checks(work)
     rows = {r["n"]: r for r in json.loads((work / "cues.json").read_text(encoding="utf-8"))}
@@ -144,8 +184,26 @@ def flags(work: Path) -> dict:
             label = item["check"] + (f": {item['detail']}" if item["detail"] else "")
             reasons.setdefault(item["cue"], []).append(label)
     for n, tr in texts.items():
-        if n in rows and untranslated(tr, rows[n]["en"] or rows[n]["source"]):
+        if n not in rows:
+            continue
+        en = rows[n]["en"] or rows[n]["source"]
+        if untranslated(tr, en):
             reasons.setdefault(n, []).append("untranslated: same words as the English")
+        word = toned_down(tr, en)
+        if word:
+            reasons.setdefault(n, []).append(f'toned down: the English says "{word}", the Turkish has nothing as strong')
+    placement_file = work / PLACEMENT_FILE
+    if placement_file.exists():
+        placement = json.loads(placement_file.read_text(encoding="utf-8"))
+        for n in placement["joined"]:
+            if n in rows:
+                reasons.setdefault(n, []).append(
+                    "placement: two Turkish cues were joined here; check none belongs to a neighbour"
+                )
+        for item in placement["unplaced"]:
+            for n in item["near"]:
+                if n in rows:
+                    reasons.setdefault(n, []).append(f"placement: a Turkish line nearby landed on no cue: {item['text']}")
     by_check: dict[str, int] = {}
     for labels in reasons.values():
         for label in {lab.split(":")[0] for lab in labels}:
