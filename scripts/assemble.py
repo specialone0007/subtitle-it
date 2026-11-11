@@ -170,7 +170,12 @@ def sidebyside(work: Path) -> Path:
     rows = json.loads((work / "cues.json").read_text(encoding="utf-8"))
     speakers = json.loads((work / "speakers.json").read_text(encoding="utf-8"))
     texts, _ = load_translation(work)
-    chunks = json.loads((work / "chunks.json").read_text(encoding="utf-8"))
+    # A run seeded from an existing Turkish file (polish.py writes
+    # polish_placement.json) had no translators handing over, so no joins
+    # to mark, even when the bible writer's chunks.json exists.
+    chunks_file = work / "chunks.json"
+    seeded = (work / "polish_placement.json").exists()
+    chunks = json.loads(chunks_file.read_text(encoding="utf-8")) if chunks_file.exists() and not seeded else []
     joins = {c["first"] for c in chunks[1:]}
     path = work / "sidebyside.tsv"
     with open(path, "w", encoding="utf-8") as f:

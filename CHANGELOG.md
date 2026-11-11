@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- A run now starts from a human-made Turkish subtitle when one fits the
+  film's timing: from the video's own files, else from OpenSubtitles. It
+  skips the translators. A polish fixer agent changes only the flagged
+  cues, and the reviewer also restores toned-down lines and checks lines on
+  the wrong cue. On a 2-hour test film that used about half the subagent tokens of
+  a full run. Without a fitting Turkish file the run translates as before.
+- New `scripts/polish.py` for that path. `seed` puts the Turkish text on the timing file's cues and
+  copies the timing file's italics and dialogue dashes where that is a
+  mechanical change. `flags` lists only the cues a fixer must change: hard
+  check fails, glossary and sen/siz warnings, long lines, lines left in
+  English, crude or sexual lines the Turkish tones down, and cues where a
+  Turkish line may sit on the wrong cue. On a 2-hour test film it flags 134 of 1,838
+  cues.
 - Another subtitle file is now paired onto the timing file when
   `srt.py fit` says it lines up after one constant shift, found by searching
   ±60 s. It ignores sound descriptions and songs, and allows lines that are

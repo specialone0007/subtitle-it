@@ -97,6 +97,17 @@ ignores sound descriptions and songs. Pair only when `fits` is true. When
 pair the shifted file. When `fits` is false, leave that file out and say
 why in one line, from its `reason`.
 
+Then look for a human-made Turkish subtitle to polish instead of
+translating every line. Skip this when the timing file came from the
+audio. Take a Turkish text track or file that `sources.py local` found,
+except the destination file of step 11, else run `opensubtitles.py search`
+as above with `--languages tr` (it leaves out machine and AI translations)
+and download the first result as `WORK/sources/os_tr.srt`. Run
+`srt.py fit TIMING TURKISH` and shift it the same way when `offset_ms` is
+not 0. When it fits, this is a polish run (steps 6–7 say what changes);
+say so in one line. When nothing is found or it does not fit, say why in
+one line and translate as usual.
+
 Then: `prepare.py build --work WORK --timing T [--source S] [--en E]` and
 `prepare.py chunks --work WORK`. Tell the user in 2–3 lines which files you
 used and the timing confidence.
@@ -176,7 +187,15 @@ agreed on, how many the judge settled, and how many were ties.
 
 ## 6–7. Translate in parallel
 
-Read `WORK/chunks.json`. In ONE message, start one
+In a polish run, start no translators. Run
+`polish.py seed --work WORK --tr <the fitted Turkish file>`, then
+`polish.py flags --work WORK`. Tell the user in one line how many cues
+were seeded and how many are flagged. When `flagged` is above 0, start one
+`turkish-subtitles:polish-fixer` subagent with the paths: pack, bible,
+preferences, WORK. It writes `WORK/out/fix_polish.txt`. Then go on to
+step 8.
+
+Otherwise, read `WORK/chunks.json`. In ONE message, start one
 `turkish-subtitles:translator` subagent per chunk. Use the model from the
 preferences' "Translator model" (`session` means do not set a model). Each
 prompt is:
@@ -212,7 +231,8 @@ fails.
 
 Run `assemble.py sidebyside --work WORK`. Start one
 `turkish-subtitles:reviewer` subagent with the paths: pack, bible,
-`WORK/sidebyside.tsv`, `WORK/checks.json`, `WORK/out/`. It writes
+`WORK/sidebyside.tsv`, `WORK/checks.json`, `WORK/out/`, and in a polish
+run the preferences file and the line `Polish run: WORK/polish_flags.txt`. It writes
 `WORK/out/fix_review.txt` and `WORK/review.md`. Run `check` again; a new
 hard fail gets one fix round as in step 9, written to
 `WORK/out/fix_post_<NN>.txt`. Fix files apply in the order they were
@@ -228,7 +248,9 @@ replaced by `tr`). Run
 An old Turkish file at the destination is moved to the backups folder.
 
 Write `WORK/report.md`: sources and timing confidence (for a file made
-from the audio, say so and name the model and device), any timing shift
+from the audio, say so and name the model and device; in a polish run, the
+Turkish file it started from and how many cues the fixer and the reviewer
+changed), any timing shift
 and sync verdict, the bible check (decisions, agreed, judged, ties), cue
 count, hard fails and warnings left, the reviewer's summary. End it with
 `## Check after watching`: each tie from `bible.py apply` (question,
