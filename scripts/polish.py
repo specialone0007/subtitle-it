@@ -59,7 +59,7 @@ WORD_RE = re.compile(r"[^\W\d_]+")
 # is not matched by "lanet olsun"; a word from the mild list needs a word
 # from either Turkish list. A cue that falls short goes to the fixer. Short
 # on purpose: the reviewer still reads the whole film. Word starts only, so
-# "cocktail", "götürmek" and "boks" do not match.
+# "cocktail", "götürmek", "boks" and "kahraman" do not match.
 EN_STRONG_RE = re.compile(
     r"(?<![^\W\d_])(?:fuck|motherfuck|cunt|cocks?(?![^\W\d_])|cocksucker|pussy|twat|dickhead|"
     r"whore|slut|blowjob|handjob|jerk(?:ing)? off|wanker)",
@@ -76,7 +76,7 @@ TR_STRONG_RE = re.compile(
     re.I,
 )
 TR_MILD_RE = re.compile(
-    r"(?<![^\W\d_])(?:bok(?!s)|kahr|lanet|şerefsiz|fahişe|penis|vajina|seks|porno|meme|"
+    r"(?<![^\W\d_])(?:bok(?!s)|kahr(?:et|ol)|lanet|şerefsiz|fahişe|penis|vajina|seks|porno|meme|"
     r"mastürbasyon|azgın|orgazm|pipi|çük|yatmak|yatt|işe(?:mek|yece|di))",
     re.I,
 )
