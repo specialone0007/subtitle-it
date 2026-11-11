@@ -41,3 +41,11 @@ def test_only_the_judge_runs_commands():
 def test_the_judge_is_told_to_print_utf8():
     text = (AGENTS / "bible-judge.md").read_text(encoding="utf-8")
     assert "PYTHONIOENCODING=utf-8" in text
+
+
+def test_a_fix_round_never_gets_the_chunk_output_path():
+    text = SKILL.read_text(encoding="utf-8")
+    bullet = next(line for line in text.splitlines() if line.startswith("- Hard fails:"))
+    assert "fix_r<round>_<NN>.txt" in bullet
+    assert "flags_r<round>_<NN>.txt" in bullet
+    assert "never its two `Write` lines" in bullet
