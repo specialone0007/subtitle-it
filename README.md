@@ -93,8 +93,10 @@ To work on the plugin itself, load it from a clone for one session with
 
 Subtitle text goes to Claude as part of your Claude Code session.
 OpenSubtitles receives the video's hash, title or IMDb id when it searches.
-Audio hints run locally and send no audio anywhere. Credentials stay in
-`credentials.json`, typed into your own terminal, never into the chat.
+Audio hints run locally and send no audio anywhere. Credentials are typed
+into your own terminal, never into the chat, and kept in `credentials.json`;
+the OpenSubtitles key and login go only to OpenSubtitles, and the Hugging
+Face token only to Hugging Face.
 [SECURITY.md](SECURITY.md) has the details and how to report a problem.
 
 ## Learning from your fixes

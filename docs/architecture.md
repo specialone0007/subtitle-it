@@ -31,47 +31,51 @@ flowchart TD
 
 ## The steps
 
-1. **Find the film.** `sources.py find` searches your media folders. Copies
-   of one film are picked without asking; different films with a matching
-   name (Alien and Aliens) are the one question a run asks.
-2. **Source subtitles.** `sources.py local` reads text tracks inside the
-   video and files next to it; `opensubtitles.py` searches by the video's
-   hash, then by IMDb id or title. The timing file is the one whose timing
-   is most certain to fit this exact video. Other files are paired onto it
-   by time with `srt.py compare` only when they line up.
-3. **Build.** `prepare.py build` writes the work folder: `cues.json` (every
-   cue with its source and English text) and `chunks.json` (about 250 cues
-   each, cut at the longest pause).
-4. **Speaker hints** (optional). `speakers.py` finds who speaks each line
-   from the audio and checks the subtitles are in sync with it. Subtitles
-   more than 300 ms off are shifted with `srt.py shift` and the voices are
-   matched again. Everything runs on your machine.
-5. **Film bible.** A subagent writes `bible.md` (characters, who says sen or
-   siz to whom, fixed terms), `glossary.json`, and `decisions.json`: each
-   decision as a question, its answer, the cues that support it and how
-   sure it is.
-6. **Check the bible.** `bible.py questions` strips the answers. A second
-   reader, who never sees the bible, answers the same questions from the
-   subtitles. `bible.py compare` locks what both agree on. A judge reads only
-   the cited cues for the rest and decides from the evidence or by a safe
-   default. `bible.py apply` writes the result; anything settled by a safe
-   default goes into the report.
-7. **Translate.** One subagent per chunk, all started at once, each with
-   the Turkish language pack (`pack-tr.md`), the bible, your preferences and
-   its neighbours' chunks for context.
-8. **Assemble and check.** `assemble.py check` joins the chunks and checks
-   every cue. Hard fails are missing, extra or empty cues, italics or
-   dialogue dashes that differ from the source, and too many lines; they go
-   back to the chunk's translator, and after two rounds one more round runs
-   on a stronger model. Warnings (long lines, fast reading speed, glossary
-   variants, sen or siz against the bible, and a few Turkish style checks)
-   go to the reviewer.
-9. **Review.** One subagent reads the whole film side by side with the
-   source and fixes what the chunk translators could not see.
-10. **Deliver.** `assemble.py deliver` writes `<film>.tr.srt` next to the
-    video and moves any older Turkish file to a backups folder. `report.md`
-    ends with "Check after watching": what could not be settled for
-    certain, with timestamps, kept out of the chat so nothing is spoiled.
+The numbers match the steps in `SKILL.md`.
+
+- **0. Start.** Checks that uv and ffprobe are installed, reads your
+  preferences, and mentions any delivered file you have edited since.
+- **1. Find the film.** `sources.py find` searches your media folders. Copies
+  of one film are picked without asking; different films with a matching
+  name (Alien and Aliens) are the one question a run asks.
+- **2. Source subtitles.** `sources.py local` reads text tracks inside the
+  video and files next to it; `opensubtitles.py` searches by the video's
+  hash, then by IMDb id or title. The timing file is the one whose timing
+  is most certain to fit this exact video. Other files are paired onto it
+  by time with `srt.py compare` only when they line up. Then
+  `prepare.py build` writes the work folder: `cues.json` (every cue with
+  its source and English text) and `chunks.json` (about 250 cues each, cut
+  at the longest pause).
+- **3. Speaker hints** (optional). `speakers.py` finds who speaks each line
+  from the audio and checks the subtitles are in sync with it. Subtitles
+  more than 300 ms off are shifted with `srt.py shift` and the voices are
+  matched again. Everything runs on your machine.
+- **4. Film bible.** A subagent writes `bible.md` (characters, who says sen or
+  siz to whom, fixed terms), `glossary.json`, and `decisions.json`: each
+  decision as a question, its answer, the cues that support it and how
+  sure it is.
+- **5. Check the bible.** `bible.py questions` strips the answers. A second
+  reader, who never sees the bible, answers the same questions from the
+  subtitles. `bible.py compare` locks what both agree on. A judge reads only
+  the cited cues for the rest and decides from the evidence or by a safe
+  default. `bible.py apply` writes the result; anything settled by a safe
+  default goes into the report.
+- **6–7. Translate.** One subagent per chunk, all started at once, each with
+  the Turkish language pack (`pack-tr.md`), the bible, your preferences and
+  its neighbours' chunks for context.
+- **8–9. Assemble and check.** `assemble.py check` joins the chunks and checks
+  every cue. Hard fails are missing, extra or empty cues, italics or
+  dialogue dashes that differ from the source, and too many lines; they go
+  back to the chunk's translator, and after two rounds one more round runs
+  on a stronger model. Warnings (long lines, fast reading speed, glossary
+  variants, sen or siz against the bible, and a few Turkish style checks)
+  go to the reviewer.
+- **10. Review.** One subagent reads the whole film side by side with the
+  source and fixes what the chunk translators could not see.
+- **11. Deliver.** `assemble.py deliver` writes `<film>.tr.srt` next to the
+  video and moves any older Turkish file to a backups folder. `report.md`
+  ends with "Check after watching": what could not be settled for
+  certain, with timestamps, kept out of the chat so nothing is spoiled.
 
 ## Learn mode
 

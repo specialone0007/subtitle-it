@@ -10,6 +10,9 @@ What the plugin keeps and sends:
   into a setup command in your own terminal, never into the chat. They are
   saved in `~/.config/turkish-subtitles/credentials.json` with owner-only
   permissions where the system supports it, and only the scripts read them.
+  The OpenSubtitles key and login are sent only to OpenSubtitles, to log in,
+  and the Hugging Face token only to Hugging Face, to download the speaker
+  models.
 - Subtitle text is sent to Claude as part of your Claude Code session.
 - OpenSubtitles receives the film's hash, title or IMDb id when it searches.
 - Audio hints run on your machine. They download models from Hugging Face,
