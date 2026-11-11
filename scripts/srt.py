@@ -9,12 +9,14 @@ Used as a library by the other scripts and as a small command-line tool:
 
     uv run srt.py info FILE
     uv run srt.py compare A B
+    uv run srt.py fit TIMING OTHER
     uv run srt.py shift IN OUT --ms N
 """
 
 from __future__ import annotations
 
 import argparse
+import bisect
 import re
 import sys
 from dataclasses import dataclass, field
@@ -212,6 +214,129 @@ def offset_check(timing: list[Cue], other: list[Cue]) -> dict:
     return {"paired_share": round(share, 3), "median_start_diff_ms": median}
 
 
+# --- fit: does another file line up with the timing file? -----------------
+
+SOUND_RE = re.compile(r"\[[^\]]*\]|\([^)]*\)|^\s*-?\s*[A-Z][A-Z0-9 .'-]*:|[♪♫#*\-]", re.M)
+LYRIC_HASH_RE = re.compile(r"^\s*#|#\s*$", re.M)
+FIT_MIN_COVERED = 0.9  # share of the timing file's spoken cues the other file covers
+FIT_MIN_ON_SPEECH = 0.9  # share of the other file's spoken cues that land on timing cues
+FIT_MIN_WINDOW = 0.7  # the worst 10-minute window; a lower one means a different cut or drift
+FIT_MAX_MEDIAN_MS = 500
+FIT_WINDOW_MS = 600_000
+
+
+def is_sound(cue: Cue) -> bool:
+    """A cue with no dialogue in it: only sound descriptions ("[door
+    creaks]") or a speaker label, or a song lyric (marked with ♪ or ♫, or
+    in older files with a # opening or closing a line). Hearing-impaired
+    files are full of the first kind and translations often leave songs
+    out, so neither counts when judging whether two files fit."""
+    if "♪" in cue.plain or "♫" in cue.plain or LYRIC_HASH_RE.search(cue.plain):
+        return True
+    return not re.search(r"\w", SOUND_RE.sub("", cue.plain))
+
+
+def _coverage(a: list[Cue], b: list[Cue]) -> list[float]:
+    """For each cue of `a`, the share of its time covered by cues of `b`.
+    Both lists sorted by start time."""
+    starts = [c.start for c in b]
+    longest = max((c.duration for c in b), default=0)
+    out = []
+    for c in a:
+        i = bisect.bisect_left(starts, c.start - longest)
+        covered = 0
+        while i < len(b) and b[i].start < c.end:
+            covered += max(0, min(c.end, b[i].end) - max(c.start, b[i].start))
+            i += 1
+        out.append(min(covered / c.duration, 1.0))
+    return out
+
+
+def _covered_share(a: list[Cue], b: list[Cue]) -> float:
+    cov = _coverage(a, b)
+    return sum(x >= 0.5 for x in cov) / max(len(cov), 1)
+
+
+def _median_start_diff(a: list[Cue], b: list[Cue]) -> int | None:
+    """Median of (start of b's partner - start of a) over a's paired cues.
+    Only one-to-one pairs of similar length count: when a translation merges
+    two lines into one cue, its start says nothing about the second line."""
+    pairs = [(c, v) for c, v in zip(a, pair(a, b).values()) if v]
+    alike = [(c, v) for c, v in pairs if len(v) == 1 and 0.7 <= v[0].duration / c.duration <= 1.4]
+    diffs = sorted(v[0].start - c.start for c, v in (alike if len(alike) >= 20 else pairs))
+    return diffs[len(diffs) // 2] if diffs else None
+
+
+def fit(timing: list[Cue], other: list[Cue], search_ms: int = 60_000) -> dict:
+    """Whether `other` (a translation, another edition's subtitles) lines up
+    with `timing` once moved by one constant offset.
+
+    Editions of the same film often differ by a fixed lead-in (a studio logo,
+    a recap), so the offset is searched over ±search_ms: every 500 ms, then
+    every 50 ms around the best. Sound-only cues are left out on both sides,
+    and so are differences in how lines are split into cues, which is why
+    this measures time covered instead of one-to-one pairs.
+
+    `fits` needs: at least FIT_MIN_COVERED of the timing file's spoken cues
+    covered by `other`, at least FIT_MIN_ON_SPEECH of `other`'s spoken cues
+    landing on timing cues, no 10-minute window below FIT_MIN_WINDOW (a
+    different cut or a frame-rate drift), and a median start difference
+    within FIT_MAX_MEDIAN_MS after the shift."""
+    t = [c for c in timing if not is_sound(c)]
+    o = [c for c in other if not is_sound(c)]
+    if not t or not o:
+        return {"fits": False, "offset_ms": 0, "reason": "no spoken cues in one of the files"}
+
+    def score(ms: int) -> float:
+        return _covered_share(t, shift(o, ms))
+
+    def best_of(candidates) -> int:
+        # ties go to the smallest shift, so a file that already fits stays put
+        return max(candidates, key=lambda ms: (round(score(ms), 3), -abs(ms)))
+
+    coarse = best_of(range(-search_ms, search_ms + 1, 500))
+    offset = best_of(range(coarse - 450, coarse + 451, 50))
+    # Coverage is flat across a few hundred ms; centre the shift on the
+    # median start difference when that covers as much.
+    centred = offset - (_median_start_diff(t, shift(o, offset)) or 0)
+    if score(centred) >= score(offset):
+        offset = centred
+    moved = shift(o, offset)
+
+    cov = _coverage(t, moved)
+    covered = sum(x >= 0.5 for x in cov) / len(t)
+    on_speech = _covered_share(moved, t)
+    windows = []
+    for k in range(t[-1].start // FIT_WINDOW_MS + 1):
+        idx = [i for i, c in enumerate(t) if k * FIT_WINDOW_MS <= c.start < (k + 1) * FIT_WINDOW_MS]
+        if len(idx) >= 20:
+            windows.append(round(sum(cov[i] >= 0.5 for i in idx) / len(idx), 3))
+    median = _median_start_diff(t, moved)
+
+    reasons = []
+    if covered < FIT_MIN_COVERED:
+        reasons.append(f"covers {covered:.0%} of the spoken cues (needs {FIT_MIN_COVERED:.0%})")
+    if on_speech < FIT_MIN_ON_SPEECH:
+        reasons.append(f"{on_speech:.0%} of its cues land on speech (needs {FIT_MIN_ON_SPEECH:.0%})")
+    if windows and min(windows) < FIT_MIN_WINDOW:
+        reasons.append(f"a 10-minute window covers only {min(windows):.0%}: different cut or drift")
+    if median is None:
+        reasons.append("no cue pairs to measure the start difference")
+    elif abs(median) > FIT_MAX_MEDIAN_MS:
+        reasons.append(f"median start difference {median} ms after the shift")
+    return {
+        "fits": not reasons,
+        "offset_ms": offset,
+        "covered": round(covered, 3),
+        "on_speech": round(on_speech, 3),
+        "worst_window": min(windows) if windows else None,
+        "median_start_diff_ms": median,
+        "spoken_cues": [len(t), len(o)],
+        "sound_cues": [len(timing) - len(t), len(other) - len(o)],
+        "reason": "; ".join(reasons) or None,
+    }
+
+
 # --- chunking ------------------------------------------------------------
 
 
@@ -277,6 +402,12 @@ def _cmd_compare(a) -> None:
     result.emit({"cues": [len(x), len(y)], "timestamp_mismatches": len(mism), "first": mism[:5], **offset_check(x, y)}, a.result)
 
 
+def _cmd_fit(a) -> None:
+    timing, _ = parse(a.timing)
+    other, _ = parse(a.other)
+    result.emit({"timing": str(a.timing), "other": str(a.other), **fit(timing, other)}, a.result)
+
+
 def _cmd_shift(a) -> None:
     cues, _ = parse(a.src)
     if not cues:
@@ -296,6 +427,10 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("a", type=Path)
     s.add_argument("b", type=Path)
     s.set_defaults(func=_cmd_compare)
+    s = sub.add_parser("fit", help="whether OTHER lines up with TIMING after one constant shift")
+    s.add_argument("timing", type=Path)
+    s.add_argument("other", type=Path)
+    s.set_defaults(func=_cmd_fit)
     s = sub.add_parser("shift", help="move every cue by the same number of ms")
     s.add_argument("src", type=Path)
     s.add_argument("dest", type=Path)
