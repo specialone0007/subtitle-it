@@ -329,6 +329,37 @@ def test_local_skips_another_episodes_file_directly_in_subs(tmp_path: Path, monk
     assert [Path(c["original"]).name for c in r["candidates"]] == ["Show.S01E01.English.srt"]
 
 
+def test_local_skips_another_episodes_file_named_only_by_episode(tmp_path: Path, monkeypatch):
+    show = tmp_path / "Show S01"
+    (show / "Subs").mkdir(parents=True)
+    for ep in ("S01E01", "S01E02"):
+        (show / f"Show {ep} (2020).mkv").write_bytes(b"x")
+        (show / "Subs" / f"Show.{ep}.English.srt").write_text(_srt(60), encoding="utf-8")
+    (show / "Subs" / "Show.1x02.French.srt").write_text(_srt(60), encoding="utf-8")
+    (show / "Subs" / "English.srt").write_text(_srt(60), encoding="utf-8")
+    _no_tools(monkeypatch)
+    r = sources.local(show / "Show S01E01 (2020).mkv", tmp_path / "work")
+    names = sorted(Path(c["original"]).name for c in r["candidates"])
+    assert names == ["English.srt", "Show.S01E01.English.srt"], "a file with no episode code is still kept"
+
+
+def test_episode_reads_the_usual_codes():
+    assert sources.episode("Show.S01E02.English") == (1, 2)
+    assert sources.episode("show 1x03 pilot") == (1, 3)
+    assert sources.episode("Film.2019.1080p") is None
+
+
+def test_local_reads_a_folder_spelled_the_turkish_way(tmp_path: Path, monkeypatch):
+    film = tmp_path / "Film"
+    (film / "Altyazılar").mkdir(parents=True)
+    video = film / "Film.mkv"
+    video.write_bytes(b"x")
+    (film / "Altyazılar" / "English.srt").write_text(_srt(60), encoding="utf-8")
+    _no_tools(monkeypatch)
+    r = sources.local(video, tmp_path / "work")
+    assert [c["language"] for c in r["candidates"]] == ["en"]
+
+
 def test_local_reads_english_hi_as_hearing_impaired_english(tmp_path: Path, monkeypatch):
     film = tmp_path / "Film"
     (film / "Subs").mkdir(parents=True)

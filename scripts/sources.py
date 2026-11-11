@@ -355,6 +355,23 @@ def local(video: Path, work: Path) -> dict:
 
 SUB_DIRS = {"subs", "sub", "subtitles", "subtitle", "altyazi", "altyazilar"}
 
+# "S01E02", "s1 e2" or "1x02" once a name has gone through norm().
+EPISODE_RE = re.compile(r"(?:^| )(?:s(\d{1,2}) ?e(\d{1,3})|(\d{1,2})x(\d{2,3}))(?: |$)")
+
+
+def episode(name: str) -> tuple[int, int] | None:
+    m = EPISODE_RE.search(norm(name))
+    if not m:
+        return None
+    season, ep = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
+    return int(season), int(ep)
+
+
+def folder_word(name: str) -> str:
+    """A folder name folded for matching SUB_DIRS. The Turkish dotless ı has
+    no ASCII form and norm() would drop it, so it becomes i first."""
+    return norm(name.replace("ı", "i"))
+
 
 def subfolder_files(video: Path) -> list[Path]:
     """Subtitle files in a Subs-like folder beside the video, up to two levels down.
@@ -363,21 +380,26 @@ def subfolder_files(video: Path) -> list[Path]:
     named after the language rather than the video. A file one level deeper is
     kept when that folder is named after this video, or when this is the only
     video in its folder, so another episode's subtitles are never picked up.
-    For the same reason a file directly in the folder is skipped when its name
-    starts with another video's name and not with this one's.
+    For the same reason a file directly in the folder is skipped when it names
+    another episode (S01E02 for a run on S01E01), or when its name starts with
+    another video's name and not with this one's.
     """
     folder = video.parent
     videos = [p for p in folder.iterdir() if p.is_file() and p.suffix.lower() in VIDEO_EXT]
     only_video = len(videos) == 1
     stem = norm(video.stem)
     others = [norm(v.stem) for v in videos if v != video]
+    this_episode = episode(video.stem)
     found = []
     for d in sorted(folder.iterdir()):
-        if not d.is_dir() or norm(d.name) not in SUB_DIRS:
+        if not d.is_dir() or folder_word(d.name) not in SUB_DIRS:
             continue
         for p in sorted(d.iterdir()):
             if p.is_file() and p.suffix.lower() in SUB_EXT:
                 name = norm(p.stem)
+                named = episode(p.stem)
+                if this_episode and named and named != this_episode:
+                    continue
                 if not name.startswith(stem) and any(name.startswith(o) for o in others):
                     continue
                 found.append(p)
