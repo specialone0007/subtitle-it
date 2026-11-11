@@ -307,3 +307,83 @@ def test_cli_writes_questions_and_the_result_file(work, tmp_path):
     out = tmp_path / "res" / "q.json"
     bible.main(["--result", str(out), "questions", "--work", str(work)])
     assert json.loads(out.read_text(encoding="utf-8"))["questions"] == 3
+
+
+BIBLE_MD = "# Film (2024), original language: en\n## Characters\n- Sam: man, 50s\n## sen / siz\n- Sam → Nora: siz\n"
+
+
+def write_voices(work: Path, decisions: list[dict], lines: list[str] | None = None) -> None:
+    (work / "voices.json").write_text(json.dumps({"lines": lines or [], "decisions": decisions}), encoding="utf-8")
+
+
+def voice(v: str, answer: str, confidence: str = "likely") -> dict:
+    return {
+        "id": f"voice:{v}",
+        "kind": "voice",
+        "question": f"Which character is voice {v}?",
+        "answer": answer,
+        "evidence": [1],
+        "confidence": confidence,
+    }
+
+
+def test_voices_replace_the_voice_decisions_and_go_after_characters(work):
+    (work / "bible.md").write_text(BIBLE_MD, encoding="utf-8")
+    write_voices(work, [voice("V1", "Nora"), voice("V2", "Sam", "guess")], ["V1 = Nora (cues 1)", "- V2 = Sam (cues 5)"])
+    out = bible.add_voices(work)
+    assert out == {"voices": 2, "replaced": 1, "bible_lines": 2}
+    data = json.loads((work / "decisions.json").read_text(encoding="utf-8"))
+    assert [d["id"] for d in data["decisions"]] == ["address:Sam>Nora", "term:sport", "voice:V1", "voice:V2"]
+    assert bible.questions(work)["by_kind"] == {"address": 1, "term": 1, "voice": 2}
+    text = (work / "bible.md").read_text(encoding="utf-8")
+    assert "## Characters\n- Sam: man, 50s\n## Voices\n- V1 = Nora (cues 1)\n- V2 = Sam (cues 5)\n## sen / siz" in text
+
+
+def test_voices_run_twice_keeps_one_voices_section(work):
+    (work / "bible.md").write_text(BIBLE_MD, encoding="utf-8")
+    write_voices(work, [voice("V1", "Nora")], ["V1 = Nora"])
+    bible.add_voices(work)
+    write_voices(work, [voice("V1", "Sam")], ["V1 = Sam"])
+    assert bible.add_voices(work)["replaced"] == 1
+    text = (work / "bible.md").read_text(encoding="utf-8")
+    assert text.count("## Voices") == 1 and "V1 = Sam" in text and "V1 = Nora" not in text
+
+
+def test_voices_refuse_other_kinds_bad_ids_and_missing_answers(work):
+    (work / "bible.md").write_text(BIBLE_MD, encoding="utf-8")
+    term = {**voice("V1", "x"), "id": "term:sport", "kind": "term"}
+    listed = {**voice("V4", "Sam"), "id": ["voice:V4"]}
+    write_voices(work, [term, {**voice("V2", "Sam"), "id": "voice:Sam"}, {**voice("V3", "Sam"), "answer": None}, listed])
+    with pytest.raises(SystemExit) as e:
+        bible.add_voices(work)
+    msg = str(e.value)
+    assert "term:sport: only voice decisions" in msg
+    assert "voice:Sam: only voice decisions" in msg
+    assert "voice:V3: every voice question needs an answer" in msg
+    assert "each entry needs a string id" in msg
+    assert json.loads((work / "decisions.json").read_text(encoding="utf-8")) == decisions()
+    assert (work / "bible.md").read_text(encoding="utf-8") == BIBLE_MD
+
+
+def test_voices_refuse_lines_that_are_not_a_list(work):
+    (work / "bible.md").write_text(BIBLE_MD, encoding="utf-8")
+    (work / "voices.json").write_text(json.dumps({"lines": "V1 = Nora", "decisions": [voice("V1", "Nora")]}), encoding="utf-8")
+    with pytest.raises(SystemExit, match="lines is a list of strings"):
+        bible.add_voices(work)
+    assert json.loads((work / "decisions.json").read_text(encoding="utf-8")) == decisions()
+    assert (work / "bible.md").read_text(encoding="utf-8") == BIBLE_MD
+
+
+def test_voices_go_at_the_end_without_a_characters_section(work):
+    (work / "bible.md").write_text("# Film (2024)\n## sen / siz\n- Sam → Nora: siz\n", encoding="utf-8")
+    write_voices(work, [voice("V1", "Nora")], ["V1 = Nora"])
+    bible.add_voices(work)
+    text = (work / "bible.md").read_text(encoding="utf-8")
+    assert text.endswith("- Sam → Nora: siz\n## Voices\n- V1 = Nora\n")
+
+
+def test_voices_need_the_bible(work):
+    write_voices(work, [voice("V1", "Nora")])
+    with pytest.raises(SystemExit, match="bible.md is missing"):
+        bible.add_voices(work)
+    assert json.loads((work / "decisions.json").read_text(encoding="utf-8")) == decisions()

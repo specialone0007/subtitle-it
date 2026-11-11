@@ -90,44 +90,58 @@ Then: `prepare.py build --work WORK --timing T [--source S] [--en E]` and
 `prepare.py chunks --work WORK`. Tell the user in 2–3 lines which files you
 used and the timing confidence.
 
-## 3. Speaker hints
+## 3–4. Speaker hints and film bible, side by side
+
+The audio step takes several minutes on its own, and the bible writer
+does not wait for it. Start the audio step in the background, write the
+bible from the text meanwhile, and add the voices to the bible once the
+audio step is done.
 
 `build` already took speaker labels (`SANDRA:`) from the text. Audio
-hints add a `voice` (V1, V2, ...) to each spoken cue, which helps the
-bible match voices to characters. Run them when the input is a video and
+hints add a `voice` (V1, V2, ...) to each spoken cue, which helps match
+voices to characters. Run them when the input is a video and
 `Audio hints` in the preferences is `yes`, or is `auto` and `nvidia-smi`
 works. A preferences file from an older version may say `ask` or have no
 `Audio hints` section: treat both as `auto`. On the first run, say in one
 line that it downloads a few GB of models.
 
-Run `uv run "SCRIPTS/speakers.py" run --video V --work WORK --config CONFIG`.
-Add `--no-sync-check` when the timing file came from the audio
-(`transcribe.py`): its times are the audio's own, so there is nothing to
-check.
-
-- Exit code 3 with `"skipped": "token missing"`: give the user the `fix`
-  command it printed, to run in their own terminal, and go on without
-  voices. Never ask for the token in chat.
-- Any other failure: say so in one line and go on without voices.
-- `sync.verdict` starting `subtitles are` (more than 300 ms off): move the
-  subtitles to the audio. Shift every file you passed to `build` by minus
-  `sync.median_offset_ms`, with
-  `srt.py shift "<file>" "WORK/sources/<name>_shifted.srt" --ms <minus median_offset_ms>`;
-  run `build` again with the shifted files, then `speakers.py run` once
-  more, since the voices were matched on the old times. Do not shift a
-  second time; note the shift and the second verdict for the report. Any
-  other verdict that is not `in sync` (no speech matched, or the check
-  failed): note it for the report and go on; the voices were saved either
-  way.
-
-Then run `prepare.py chunks --work WORK` again so the chunks show the voices.
-
-## 4. Film bible
-
-Start one subagent. Its prompt: the text of `${CLAUDE_SKILL_DIR}/briefs/bible.md`,
-then the paths (WORK, the preferences file) and the film facts (title,
-year, original language, IMDb id). It writes `WORK/bible.md`,
-`WORK/glossary.json` and `WORK/decisions.json`.
+1. When audio hints run, start
+   `uv run "SCRIPTS/speakers.py" run --video V --work WORK --config CONFIG`
+   in the background (the Bash tool's `run_in_background`), with its
+   `--result` file as usual. Add `--no-sync-check` when the timing file came
+   from the audio (`transcribe.py`): its times are the audio's own, so
+   there is nothing to check.
+2. Right away, without waiting for it, start the bible writer: one
+   subagent whose prompt is the text of `${CLAUDE_SKILL_DIR}/briefs/bible.md`,
+   then the paths (WORK, the preferences file), the film facts (title,
+   year, original language, IMDb id), and, when audio hints are running,
+   the line `Voices: added later.` It writes `WORK/bible.md`,
+   `WORK/glossary.json` and `WORK/decisions.json`.
+3. When both are done, read the audio step's result:
+   - Exit code 3 with `"skipped": "token missing"`: give the user the `fix`
+     command it printed, to run in their own terminal, and go on without
+     voices. Never ask for the token in chat.
+   - Any other failure: say so in one line and go on without voices.
+   - `sync.verdict` starting `subtitles are` (more than 300 ms off): move the
+     subtitles to the audio. Shift every file you passed to `build` by minus
+     `sync.median_offset_ms`, with
+     `srt.py shift "<file>" "WORK/sources/<name>_shifted.srt" --ms <minus median_offset_ms>`;
+     run `build` again with the shifted files, then `speakers.py run` once
+     more (in the foreground), since the voices were matched on the old
+     times. The bible stays: a shift moves times, not cue numbers. Do not
+     shift a second time; note the shift and the second verdict for the
+     report. Any other verdict that is not `in sync` (no speech matched, or
+     the check failed): note it for the report and go on; the voices were
+     saved either way.
+4. With voices: run `prepare.py chunks --work WORK` again so the chunks
+   show the voices. Then start one subagent with
+   `${CLAUDE_SKILL_DIR}/briefs/voices.md`, then the paths (WORK). It writes
+   `WORK/voices.json`. Run `bible.py voices --work WORK`: it adds the voice
+   decisions to `decisions.json` and the `## Voices` section to `bible.md`.
+   If it refuses `voices.json`, start the voice mapper once more with the
+   error, asking it to fix only that file, then run the command again.
+   Once only: if it still fails, say so in one line and go on without
+   voice decisions.
 
 ## 5. Check the bible
 
