@@ -62,6 +62,13 @@ def _load(path: Path):
         raise SystemExit(f"{path.name} is not valid JSON: {e}") from e
 
 
+def _load_object(path: Path) -> dict:
+    data = _load(path)
+    if not isinstance(data, dict):
+        raise SystemExit(f"{path.name} must hold a JSON object, not {type(data).__name__}")
+    return data
+
+
 def _check_answer(kind: str, answer, where: str) -> list[str]:
     if answer is None:
         return []
@@ -105,7 +112,7 @@ def check_decision(d: dict, where: str, full: bool = True, allowed: set[str] = C
 
 
 def load_decisions(work: Path) -> dict:
-    data = _load(work / "decisions.json")
+    data = _load_object(work / "decisions.json")
     problems = []
     if not isinstance(data.get("characters"), list) or not isinstance(data.get("decisions"), list):
         raise SystemExit("decisions.json needs a characters list and a decisions list")
@@ -193,9 +200,9 @@ def _side(d: dict) -> dict:
 
 def compare(work: Path) -> dict:
     data = load_decisions(work)
-    second = _load(work / "second.json")
-    answers = second.get("answers", []) if isinstance(second, dict) else None
-    extra = second.get("extra", []) if isinstance(second, dict) else None
+    second = _load_object(work / "second.json")
+    answers = second.get("answers", [])
+    extra = second.get("extra", [])
     if not isinstance(answers, list) or not isinstance(extra, list):
         raise SystemExit("second.json needs an answers list and an extra list")
     kinds = {d["id"]: d["kind"] for d in data["decisions"]}
@@ -276,7 +283,9 @@ def apply(work: Path) -> dict:
     cmp = _load(work / "compare.json")
     to_judge = {t["id"]: t for t in cmp["to_judge"]}
     judged_file = work / "judged.json"
-    judged = _load(judged_file).get("decisions", []) if to_judge or judged_file.exists() else []
+    judged = _load_object(judged_file).get("decisions", []) if to_judge or judged_file.exists() else []
+    if not isinstance(judged, list):
+        raise SystemExit("judged.json needs a decisions list")
     by_id = {d["id"]: d for d in data["decisions"]}
     problems = []
     for j in judged:

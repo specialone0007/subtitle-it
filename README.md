@@ -16,8 +16,9 @@ and a judge settle any difference, translates the film in parallel chunks,
 runs automatic checks, has one reviewer read the whole film, and saves
 `Anatomy of a Fall.tr.srt` next to the video.
 
-It does not stop to ask you anything once setup is done, and it does not
-spoil the film in chat. What it could not settle for certain goes under
+It does not stop to ask you anything once setup is done, except which
+film you mean when the name matches several different films (Alien and
+Aliens), and it does not spoil the film in chat. What it could not settle for certain goes under
 "Check after watching" in the film's `report.md`.
 
 ## Setup

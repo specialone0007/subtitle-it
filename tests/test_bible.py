@@ -271,6 +271,28 @@ def test_address_warnings_skip_invalid_json(work):
     assert bible.address_warnings(work, {1: ["Nora, sen otur."]}, {}) == []
 
 
+@pytest.mark.parametrize("text", ["[]", "null", "3"])
+def test_address_warnings_skip_a_file_that_is_not_an_object(work, text):
+    (work / "decisions.json").write_text(text, encoding="utf-8")
+    assert bible.address_warnings(work, {1: ["Nora, sen otur."]}, {}) == []
+    with pytest.raises(SystemExit, match="must hold a JSON object"):
+        bible.questions(work)
+
+
+def test_reader_files_must_be_objects(work):
+    (work / "second.json").write_text("[]", encoding="utf-8")
+    with pytest.raises(SystemExit, match="second.json must hold a JSON object"):
+        bible.compare(work)
+    write_second(work, [ans("voice:V1", "Sam")])
+    bible.compare(work)
+    (work / "judged.json").write_text("[]", encoding="utf-8")
+    with pytest.raises(SystemExit, match="judged.json must hold a JSON object"):
+        bible.apply(work)
+    (work / "judged.json").write_text('{"decisions": 3}', encoding="utf-8")
+    with pytest.raises(SystemExit, match="judged.json needs a decisions list"):
+        bible.apply(work)
+
+
 def test_a_new_compare_drops_old_verdicts(work):
     (work / "judged.json").write_text("{}", encoding="utf-8")
     write_second(
