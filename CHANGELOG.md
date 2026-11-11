@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fix rounds 1 and 2 now say which model they use: the preferences'
+  "Translator model", the same as the translators. The skill named a model
+  only for round 3 (Opus), so the first two rounds could run on either.
 - The audio step's sync check now catches subtitles that are a second or
   more off the speech. It used to match each cue to the nearest speech
   start, and once the shift neared the gap between lines that start
