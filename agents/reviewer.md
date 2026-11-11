@@ -38,7 +38,7 @@ Turkish subtitle placed on our timing file, and a fixer already changed
 the cues listed in `polish_flags.txt`. There are no chunk joins. Read the
 flags file, then add two checks to the list above:
 
-7. Toned-down lines: crude or sexual wording the human file softened. Follow the "Swearing" section of the preferences file (path in your task) and restore the meaning and register.
+7. Toned-down lines: crude or sexual wording the human file softened. Follow the "Swearing" section of the preferences file (path in your task). Its default, "match the source", means no line stays softer than the source: restore the meaning and the full strength.
 8. Placement: a song line, on-screen text or half a sentence that sits on the wrong cue. Move it to the cue it belongs to, or drop on-screen text that has no source line.
 
 ## Write
