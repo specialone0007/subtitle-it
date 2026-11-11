@@ -10,7 +10,8 @@
     uv run opensubtitles.py download --config CONFIG_DIR --file-id N --out FILE --cache DIR
 
 The key, login and token live in CONFIG_DIR/credentials.json. Only this
-script reads that file, and it never prints any of it. Searching is free;
+script and speakers.py (which keeps its Hugging Face token there) read that
+file, and neither ever prints any of it. Searching is free;
 each download uses one from the daily quota (5 with a key alone, 20 when
 logged in with a free account), so downloads are cached by file id.
 """
