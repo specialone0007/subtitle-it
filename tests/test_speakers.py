@@ -1,0 +1,75 @@
+import json
+from pathlib import Path
+
+import pytest
+
+import speakers
+import srt
+
+
+def cue(n, start, end):
+    return srt.Cue(n=n, start=start, end=end, ts="", lines=["x"])
+
+
+def test_assign_voices_by_largest_overlap_and_renames_in_order():
+    cues = [cue(1, 0, 1000), cue(2, 1000, 2000), cue(3, 2000, 3000), cue(4, 5000, 6000)]
+    turns = [(0, 900, "SPEAKER_07"), (900, 1100, "SPEAKER_02"), (1100, 2600, "SPEAKER_02"), (2600, 3000, "SPEAKER_07")]
+    # Cue 3: SPEAKER_02 covers 600 ms, SPEAKER_07 400 ms. Cue 4: nobody speaks.
+    assert speakers.assign_voices(cues, turns) == {1: "V1", 2: "V2", 3: "V2"}
+
+
+def test_assign_voices_skips_cues_mostly_without_speech():
+    assert speakers.assign_voices([cue(1, 0, 1000)], [(0, 200, "A")]) == {}
+    assert speakers.assign_voices([cue(1, 0, 1000)], [(0, 300, "A")]) == {1: "V1"}
+
+
+def test_merge_voices_keeps_labels_and_drops_old_voices():
+    old = {"1": {"label": "Sandra", "voice": "V9"}, "5": {"voice": "V9"}, "7": {"name": "Marc"}}
+    merged = speakers.merge_voices(old, {1: "V1", 2: "V2"})
+    assert merged == {"1": {"label": "Sandra", "voice": "V1"}, "2": {"voice": "V2"}, "7": {"name": "Marc"}}
+    assert list(merged) == ["1", "2", "7"]
+
+
+def test_sync_offset_reports_late_subtitles():
+    cues = [cue(i, i * 5000 + 800, i * 5000 + 2000) for i in range(1, 6)]
+    starts = [i * 5000 for i in range(1, 6)]
+    r = speakers.sync_offset(cues, starts)
+    assert r == {"matched_cues": 5, "median_offset_ms": 800, "verdict": "subtitles are 800 ms late"}
+    assert speakers.sync_offset(cues, [s + 800 for s in starts])["verdict"] == "in sync"
+    assert speakers.sync_offset(cues, [])["median_offset_ms"] is None
+
+
+def test_token_from_env_first_then_config(tmp_path: Path, monkeypatch):
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    assert speakers.load_token(tmp_path) is None
+    (tmp_path / "credentials.json").write_text(json.dumps({"api_key": "k"}), encoding="utf-8")
+    speakers.save_token(tmp_path, "hf_x")
+    creds = json.loads((tmp_path / "credentials.json").read_text(encoding="utf-8"))
+    assert creds == {"api_key": "k", "hf_token": "hf_x"}
+    assert speakers.load_token(tmp_path) == "hf_x"
+    monkeypatch.setenv("HF_TOKEN", "hf_env")
+    assert speakers.load_token(tmp_path) == "hf_env"
+
+
+def test_run_without_token_exits_3_and_touches_nothing(tmp_path: Path, monkeypatch, capsys):
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    with pytest.raises(SystemExit) as e:
+        speakers.run(tmp_path / "v.mkv", tmp_path, tmp_path, sync_check=True)
+    assert e.value.code == speakers.TOKEN_MISSING
+    assert json.loads(capsys.readouterr().out)["skipped"] == "token missing"
+    assert not (tmp_path / "speakers.json").exists()
+
+
+def test_run_writes_voices_with_models_faked(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("HF_TOKEN", "hf_x")
+    (tmp_path / "timing.srt").write_text(
+        "1\n00:00:01,000 --> 00:00:02,000\nViens.\n\n2\n00:00:03,000 --> 00:00:04,000\nNon.\n", encoding="utf-8"
+    )
+    (tmp_path / "speakers.json").write_text(json.dumps({"1": {"label": "Sandra"}}), encoding="utf-8")
+    monkeypatch.setattr(speakers, "extract_audio", lambda video, dest: dest)
+    monkeypatch.setattr(speakers, "diarize", lambda wav, token: [(900, 2100, "B"), (2900, 4100, "A")])
+    monkeypatch.setattr(speakers, "speech_starts", lambda wav: [1000, 3000])
+    r = speakers.run(tmp_path / "v.mkv", tmp_path, None, sync_check=True)
+    assert r["voices"] == {"V1": 1, "V2": 1} and r["sync"]["verdict"] == "in sync"
+    saved = json.loads((tmp_path / "speakers.json").read_text(encoding="utf-8"))
+    assert saved == {"1": {"label": "Sandra", "voice": "V1"}, "2": {"voice": "V2"}}
