@@ -186,6 +186,14 @@ def test_rebuild_drops_earlier_runs_files(work: Path, tmp_path: Path):
     assert not (work / "draft.tr.srt").exists() and not (work / "checks.json").exists()
 
 
+def test_rebuild_drops_the_earlier_bible_check(work: Path, tmp_path: Path):
+    names = ("questions.json", "second.json", "compare.json", "judged.json", "decisions.writer.json")
+    for name in names:
+        (work / name).write_text("{}", encoding="utf-8")
+    prepare.build(work, tmp_path / "fr.srt", None, tmp_path / "en.srt")
+    assert [n for n in names if (work / n).exists()] == []
+
+
 def test_force_never_ships_a_stale_draft(work: Path, tmp_path: Path):
     (work / "out" / "tr_01.txt").write_text(GOOD, encoding="utf-8")
     assert assemble.run_checks(work)["draft"]
@@ -222,3 +230,25 @@ def test_rebuild_with_another_timing_file_drops_old_speaker_labels(work: Path, t
     (tmp_path / "other.srt").write_text(other, encoding="utf-8")
     prepare.build(work, tmp_path / "other.srt", None, None)
     assert json.loads((work / "speakers.json").read_text(encoding="utf-8")) == {"2": {"label": "Marc"}}
+
+
+def test_check_warns_on_the_other_address_form(work: Path):
+    decisions = {
+        "characters": [{"name": "Sandra", "aliases": []}],
+        "decisions": [
+            {
+                "id": "address:Sandra>Daniel",
+                "kind": "address",
+                "speaker": "Sandra",
+                "listener": "Daniel",
+                "question": "Does Sandra say sen or siz to Daniel?",
+                "answer": [{"from_cue": 1, "form": "siz"}],
+                "evidence": [1],
+                "confidence": "sure",
+            }
+        ],
+    }
+    (work / "decisions.json").write_text(json.dumps(decisions), encoding="utf-8")
+    (work / "out" / "tr_01.txt").write_text(GOOD.replace("Gel.", "Sen gel."), encoding="utf-8")
+    r = assemble.run_checks(work)
+    assert [(w["cue"], w["check"]) for w in r["warnings"]] == [(1, "address form")]
