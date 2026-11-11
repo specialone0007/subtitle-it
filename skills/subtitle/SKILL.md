@@ -159,9 +159,9 @@ line that it downloads a few GB of models.
      more (in the foreground), since the voices were matched on the old
      times. The bible stays: a shift moves times, not cue numbers. Do not
      shift a second time; note the shift and the second verdict for the
-     report. Any other verdict that is not `in sync` (no speech matched, or
-     the check failed): note it for the report and go on; the voices were
-     saved either way.
+     report. Any other verdict that is not `in sync` (too little speech, no
+     clear offset, or the check failed): note it for the report and go on;
+     the voices were saved either way.
 4. With voices: run `prepare.py chunks --work WORK` again so the chunks
    show the voices. Then start one `turkish-subtitles:voice-mapper`
    subagent with the path WORK. It writes

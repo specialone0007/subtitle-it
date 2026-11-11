@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- The audio step's sync check now catches subtitles that are a second or
+  more off the speech. It used to match each cue to the nearest speech
+  start, and once the shift neared the gap between lines that start
+  belonged to the neighbouring line: on a 2-hour test film, shifts of 1.5 to 5
+  seconds either way all read as in sync. It now tries every constant
+  offset within 20 seconds and keeps the one under which most speech starts
+  land on a cue, as `srt.py fit` does for two files. On a 2-hour test film every
+  shift from 0.6 to 5 seconds is found within 5 ms of its size (measured
+  from the unshifted file, which sits 100 ms early), and the unshifted
+  file stays in sync. When no offset clearly beats the rest it
+  says so instead of guessing.
 - A polish run is faster. The polish fixer and the whole-film reviewer now
   work at the same time on one film instead of one after the other, and
   the audio step's sync check transcribes five 3-minute stretches instead
