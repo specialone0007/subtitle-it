@@ -248,10 +248,15 @@ def sync_offset(cues: list[srt.Cue], speech_starts: list[int]) -> dict:
     So, as `srt.py fit` does for two files, this tries every constant offset
     and keeps the one under which most speech starts land on a cue start;
     ties go to the smallest offset, so an in-sync file stays put. The
-    reported offset is the median gap over the starts matched at that offset."""
+    reported offset is the median gap over the starts matched at that offset.
+
+    `matched_cues` counts speech starts that landed on a cue start (two
+    starts can land on one cue), `speech_starts` all of them, and
+    `runner_up_matched` the best count of an offset more than
+    SYNC_PEAK_GAP_MS from the chosen one."""
     speech = sorted(speech_starts)
     cue_starts = sorted(c.start for c in cues)
-    base = {"matched_cues": 0, "speech_starts": len(speech), "median_offset_ms": None}
+    base = {"matched_cues": 0, "speech_starts": len(speech), "runner_up_matched": 0, "median_offset_ms": None}
     if not speech or not cue_starts:
         return {**base, "verdict": "no speech matched the cues"}
     scores = {d: len(_offset_pairs(cue_starts, speech, d)) for d in range(-SYNC_SEARCH_MS, SYNC_SEARCH_MS + 1, SYNC_STEP_MS)}
@@ -266,6 +271,7 @@ def sync_offset(cues: list[srt.Cue], speech_starts: list[int]) -> dict:
     # The 100 ms grid leaves the matched window off-centre; centre it on the
     # median once and measure again.
     diffs = _offset_pairs(cue_starts, speech, int(statistics.median(diffs))) or diffs
+    base["matched_cues"] = len(diffs)
     med = int(statistics.median(diffs))
     verdict = "in sync" if abs(med) <= SYNC_MAX_IN_SYNC_MS else f"subtitles are {abs(med)} ms {'late' if med > 0 else 'early'}"
     return {**base, "median_offset_ms": med, "verdict": verdict}
@@ -422,7 +428,13 @@ def run(video: Path, work: Path, config: Path | None, sync_check: bool) -> dict:
             try:
                 sync = sync_offset(cues, speech_starts(wav))
             except Exception as e:  # report, keep the voices
-                sync = {"matched_cues": 0, "median_offset_ms": None, "verdict": f"sync check failed: {type(e).__name__}: {e}"}
+                sync = {
+                    "matched_cues": 0,
+                    "speech_starts": 0,
+                    "runner_up_matched": 0,
+                    "median_offset_ms": None,
+                    "verdict": f"sync check failed: {type(e).__name__}: {e}",
+                }
     counts: dict[str, int] = {}
     for v in voices.values():
         counts[v] = counts.get(v, 0) + 1
