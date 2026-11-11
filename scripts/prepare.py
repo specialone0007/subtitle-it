@@ -73,7 +73,17 @@ def build(work: Path, timing_path: Path, source_path: Path | None, en_path: Path
     # fixes, draft, checks and speaker labels must never be read into this
     # one: the new timing file may number its cues differently.
     shutil.rmtree(work / "out", ignore_errors=True)
-    for name in ("draft.tr.srt", "checks.json", "speakers.json"):
+    # The bible check's files belong to the earlier run's bible too.
+    for name in (
+        "draft.tr.srt",
+        "checks.json",
+        "speakers.json",
+        "questions.json",
+        "second.json",
+        "compare.json",
+        "judged.json",
+        "decisions.writer.json",
+    ):
         (work / name).unlink(missing_ok=True)
     timing, enc = srt.parse(timing_path)
     if not timing:
