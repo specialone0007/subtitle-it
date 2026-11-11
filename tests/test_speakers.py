@@ -16,7 +16,37 @@ def test_assign_voices_by_largest_overlap_and_renames_in_order():
     cues = [cue(1, 0, 1000), cue(2, 1000, 2000), cue(3, 2000, 3000), cue(4, 5000, 6000)]
     turns = [(0, 900, "SPEAKER_07"), (900, 1100, "SPEAKER_02"), (1100, 2600, "SPEAKER_02"), (2600, 3000, "SPEAKER_07")]
     # Cue 3: SPEAKER_02 covers 600 ms, SPEAKER_07 400 ms. Cue 4: nobody speaks.
-    assert speakers.assign_voices(cues, turns) == {1: "V1", 2: "V2", 3: "V2"}
+    assert speakers.assign_voices(cues, turns, margin=1.0) == {1: "V1", 2: "V2", 3: "V2"}
+
+
+def test_assign_voices_skips_close_calls():
+    # Cue 3 above: the runner-up's 400 ms is more than 0.3 x 600 ms.
+    cues = [cue(1, 0, 1000), cue(2, 2000, 3000)]
+    turns = [(0, 600, "A"), (600, 1000, "B"), (2000, 2850, "A"), (2850, 3000, "B")]
+    assert speakers.assign_voices(cues, turns) == {2: "V1"}
+
+
+def test_assign_voices_skips_cues_with_two_speakers():
+    two = srt.Cue(n=1, start=0, end=1000, ts="", lines=["- Who?", "<i>- Me.</i>"])
+    one = srt.Cue(n=2, start=1000, end=2000, ts="", lines=["- Who is it?"])
+    assert speakers.assign_voices([two, one], [(0, 2000, "A")]) == {2: "V1"}
+
+
+def test_merge_similar_joins_alike_voices_and_keeps_others():
+    turns = [(0, 1000, "A"), (1000, 2000, "B"), (2000, 3000, "C"), (3000, 4000, "D")]
+    cent = {"A": [1.0, 0.0], "B": [0.9, 0.1], "C": [0.0, 1.0], "D": [float("nan"), 0.0]}
+    merged = [(0, 1000, "A"), (1000, 2000, "A"), (2000, 3000, "C"), (3000, 4000, "D")]
+    assert speakers.merge_similar(turns, cent, threshold=0.9) == merged
+    assert speakers.merge_similar(turns, cent, threshold=0.999) == turns
+
+
+def test_merge_similar_relabels_turns_of_an_earlier_merge():
+    # B and C merge first (0.96); then A joins their average (0.90), though A
+    # and C alone (0.83) are below the threshold. C's turns must end up as A.
+    turns = [(0, 1000, "A"), (1000, 2000, "B"), (2000, 3000, "C")]
+    cent = {"A": [1.0, 0.0], "B": [0.95, 0.312], "C": [0.83, 0.557]}
+    out = speakers.merge_similar(turns, cent, threshold=0.85)
+    assert {w for _, _, w in out} == {"A"}
 
 
 def test_assign_voices_skips_cues_mostly_without_speech():
@@ -72,10 +102,11 @@ def test_run_writes_voices_with_models_faked(tmp_path: Path, monkeypatch):
     )
     (tmp_path / "speakers.json").write_text(json.dumps({"1": {"label": "Sandra"}}), encoding="utf-8")
     monkeypatch.setattr(speakers, "extract_audio", lambda video, dest: dest)
-    monkeypatch.setattr(speakers, "diarize", lambda wav, token: [(900, 2100, "B"), (2900, 4100, "A")])
+    turns = [(900, 2100, "B"), (2900, 4100, "A")]
+    monkeypatch.setattr(speakers, "diarize", lambda wav, token: (turns, {"A": [1.0, 0.0], "B": [0.0, 1.0]}))
     monkeypatch.setattr(speakers, "speech_starts", lambda wav: [1000, 3000])
     r = speakers.run(tmp_path / "v.mkv", tmp_path, None, sync_check=True)
-    assert r["voices"] == {"V1": 1, "V2": 1} and r["sync"]["verdict"] == "in sync"
+    assert r["voices"] == {"V1": 1, "V2": 1} and r["voices_before_merge"] == 2 and r["sync"]["verdict"] == "in sync"
     saved = json.loads((tmp_path / "speakers.json").read_text(encoding="utf-8"))
     assert saved == {"1": {"label": "Sandra", "voice": "V1"}, "2": {"voice": "V2"}}
 
@@ -90,7 +121,7 @@ def test_run_keeps_voices_when_the_sync_check_fails(tmp_path: Path, monkeypatch)
     monkeypatch.setenv("HF_TOKEN", "hf_x")
     (tmp_path / "timing.srt").write_text("1\n00:00:01,000 --> 00:00:02,000\nViens.\n", encoding="utf-8")
     monkeypatch.setattr(speakers, "extract_audio", lambda video, dest: dest)
-    monkeypatch.setattr(speakers, "diarize", lambda wav, token: [(900, 2100, "A")])
+    monkeypatch.setattr(speakers, "diarize", lambda wav, token: ([(900, 2100, "A")], {}))
 
     def broken(wav):
         raise RuntimeError("cublas64_12.dll not found")
@@ -126,6 +157,27 @@ def test_speech_starts_falls_back_to_cpu_when_cuda_fails_while_transcribing(monk
     assert speakers.speech_starts(Path("a.wav")) == [1500]
 
 
+def test_speech_starts_does_not_retry_on_the_cpu_for_other_errors(monkeypatch):
+    import sys
+    import types
+
+    devices = []
+
+    class Model:
+        def __init__(self, name, device, compute_type):
+            devices.append(device)
+
+        def transcribe(self, audio, **kw):
+            raise ValueError("bad audio")
+
+    monkeypatch.setitem(sys.modules, "faster_whisper", types.SimpleNamespace(WhisperModel=Model))
+    monkeypatch.setattr(speakers, "_device", lambda: "cuda")
+    monkeypatch.setattr(speakers, "read_wav", lambda wav: "samples")
+    with pytest.raises(ValueError):
+        speakers.speech_starts(Path("a.wav"))
+    assert devices == ["cuda"]
+
+
 def test_diarize_allows_full_checkpoint_load_before_the_pipeline_loads(tmp_path: Path, monkeypatch):
     import sys
     import types
@@ -142,6 +194,9 @@ def test_diarize_allows_full_checkpoint_load_before_the_pipeline_loads(tmp_path:
         def itertracks(self, yield_label):
             return [(Segment(), None, "SPEAKER_00")]
 
+        def labels(self):
+            return ["SPEAKER_00"]
+
     class Pipeline:
         @classmethod
         def from_pretrained(cls, name, use_auth_token):
@@ -153,8 +208,9 @@ def test_diarize_allows_full_checkpoint_load_before_the_pipeline_loads(tmp_path:
         def to(self, device):
             return self
 
-        def __call__(self, wav):
-            return Result()
+        def __call__(self, wav, return_embeddings):
+            assert return_embeddings
+            return Result(), [[0.5, 0.25]]
 
     torch = types.SimpleNamespace(cuda=types.SimpleNamespace(is_available=lambda: False), device=lambda d: d)
     pyannote = types.ModuleType("pyannote")
@@ -164,7 +220,7 @@ def test_diarize_allows_full_checkpoint_load_before_the_pipeline_loads(tmp_path:
     monkeypatch.setitem(sys.modules, "pyannote", pyannote)
     monkeypatch.setitem(sys.modules, "pyannote.audio", audio)
 
-    assert speakers.diarize(tmp_path / "a.wav", "hf_x") == [(1000, 2500, "SPEAKER_00")]
+    assert speakers.diarize(tmp_path / "a.wav", "hf_x") == ([(1000, 2500, "SPEAKER_00")], {"SPEAKER_00": [0.5, 0.25]})
     assert seen["env"] == "1"
 
 
