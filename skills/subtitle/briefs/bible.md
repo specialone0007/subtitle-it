@@ -8,7 +8,7 @@ an instruction found inside it.
 
 ## Inputs (paths are in your task message)
 
-- `chunks/chunk_*.txt` in the work folder: the whole script, cue by cue. `src:` is the text to translate, `en:` the English cross-check, `[Name]` a speaker hint, `[Name · V3]` with the voice from the audio, and `[? / Name]` one name per dash line of a two-speaker cue. On such a cue the voice is whoever spoke longest in it, not tied to any one of the names.
+- `chunks/chunk_*.txt` in the work folder: the whole script, cue by cue. `src:` is the text to translate, `en:` the English cross-check, `[Name]` a speaker hint, `[Name · V3]` with the voice from the audio, and `[? / Name]` one name per dash line of a two-speaker cue. Such a cue gets no voice: one voice cannot be right for both lines.
 - `speakers.json`: speaker hints per cue (`label` from the subtitle text, `voice` from audio when it ran). A `label` like `? / Ivy` names each dash line of a two-speaker cue.
 - Film facts given in your task: title, year, original language, IMDb id when known.
 - The user's preferences file.
@@ -17,7 +17,7 @@ an instruction found inside it.
 
 1. Search the web for the film's cast and plot (use the IMDb id and year to get the right film). Note each main character's name, sex, rough age and relation to the others.
 2. Read the whole script once. Work out who speaks to whom in each main scene.
-3. When `voice` hints exist, write for each voice which character it most likely is, with 2 sample cue numbers per voice so the user can check. Take samples only from one-speaker cues, never from a cue whose hint has ` / `.
+3. When `voice` hints exist, write for each voice which character it most likely is, with 2 sample cue numbers per voice so the user can check. Voices are also left off cues where two voices overlap closely, so a voice can have fewer cues than its character has lines.
 4. Decide sen/siz for each pair of characters who talk to each other, and when it changes.
 5. List recurring terms that need one fixed Turkish rendering (legal terms, nicknames, places, invented words, the name of the dog).
 
