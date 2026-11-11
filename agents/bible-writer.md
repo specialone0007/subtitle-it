@@ -1,3 +1,11 @@
+---
+name: bible-writer
+description: Writes the film bible (characters, sen/siz, terms, decisions) for the turkish-subtitles skill. Started by that skill only.
+tools: Read, Write, Glob, Grep, WebSearch, WebFetch
+model: inherit
+omitClaudeMd: true
+---
+
 # Brief: film bible
 
 You prepare the film bible that every Turkish translator of this film will

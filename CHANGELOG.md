@@ -16,6 +16,12 @@
   split differently. The old check (`paired_share` above 0.8) refused 5 of
   7 files that fit in a test on real films, mostly because of a different
   intro length or hearing-impaired sound cues.
+- Each subagent now runs as its own agent type (`agents/`), with only the
+  tools it needs and without the general Claude Code instructions or your
+  CLAUDE.md files. Each subagent used to start with about 54k tokens of
+  context before reading anything; the instructions it actually follows
+  are about 1k. The briefs moved from `skills/subtitle/briefs/` into those
+  files.
 - The audio step now runs in the background while the bible writer works
   from the text. A voice mapper then matches each voice to a character, and
   `bible.py voices` adds those answers to the bible before it is checked.
