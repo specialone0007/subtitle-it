@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- The bible check now counts two voice answers as the same when they name
+  the same character first or read the same up to a bracket, so "Harlan
+  Pike" and "Uncle Harlan Pike" no longer go to the judge. On a 2-hour test film
+  the readers now agree on 23 of 32 voices instead of 8.
+- `learn.py scan` no longer lists an older run's work folder as edited by
+  you when a later run delivered to the same file. Only the last delivery
+  to each file counts.
+- The README's token note now gives the measured numbers.
 - A run now starts from a human-made Turkish subtitle when one fits the
   film's timing: from the video's own files, else from OpenSubtitles. It
   skips the translators. A polish fixer agent changes only the flagged
