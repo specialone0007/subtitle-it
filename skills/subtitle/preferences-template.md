@@ -1,0 +1,27 @@
+# Turkish subtitles preferences
+
+The skill reads this file at the start of every run. Edit it freely.
+Learned rules are added at the bottom only after you say yes.
+
+## Media folders
+
+Folders searched when you give a film name instead of a path, one per line.
+
+-
+
+## Translator model
+
+`session` uses the same model as your conversation. Or one of: sonnet, opus, haiku, fable.
+
+session
+
+## Swearing
+
+match the source
+
+## Titles
+
+Bayan Voyter / Bay Hartley
+
+## Learned rules
+
