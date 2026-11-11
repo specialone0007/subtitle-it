@@ -14,11 +14,12 @@ Used as a library by the other scripts and as a small command-line tool:
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+
+import result
 
 TS_RE = re.compile(
     r"^\s*(\d{1,3}):(\d{1,2}):(\d{1,2})[,.](\d{1,3})\s*-->\s*"
@@ -235,20 +236,17 @@ def chunk(cues: list[Cue], target: int = 250, window: int = 40) -> list[tuple[in
 def _cmd_info(a) -> None:
     cues, enc = parse(a.file)
     sample = [c.text for c in cues[len(cues) // 3 : len(cues) // 3 + 5]]
-    print(
-        json.dumps(
-            {
-                "file": str(a.file),
-                "encoding": enc,
-                "cues": len(cues),
-                "first_start": fmt_ms(cues[0].start) if cues else None,
-                "last_end": fmt_ms(cues[-1].end) if cues else None,
-                "last_end_ms": cues[-1].end if cues else None,
-                "sample": sample,
-            },
-            ensure_ascii=False,
-            indent=1,
-        )
+    result.emit(
+        {
+            "file": str(a.file),
+            "encoding": enc,
+            "cues": len(cues),
+            "first_start": fmt_ms(cues[0].start) if cues else None,
+            "last_end": fmt_ms(cues[-1].end) if cues else None,
+            "last_end_ms": cues[-1].end if cues else None,
+            "sample": sample,
+        },
+        a.result,
     )
 
 
@@ -256,7 +254,7 @@ def _cmd_compare(a) -> None:
     x, _ = parse(a.a)
     y, _ = parse(a.b)
     mism = [(c.n, c.ts, d.ts) for c, d in zip(x, y) if c.ts != d.ts]
-    print(json.dumps({"cues": [len(x), len(y)], "timestamp_mismatches": len(mism), "first": mism[:5], **offset_check(x, y)}))
+    result.emit({"cues": [len(x), len(y)], "timestamp_mismatches": len(mism), "first": mism[:5], **offset_check(x, y)}, a.result)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -270,7 +268,8 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("a", type=Path)
     s.add_argument("b", type=Path)
     s.set_defaults(func=_cmd_compare)
-    a = p.parse_args(argv)
+    result.add_argument(p)
+    a = result.parse(p, argv)
     a.func(a)
 
 
