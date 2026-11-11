@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- New `scripts/polish.py`, the script half of starting from an existing
+  Turkish subtitle. `seed` puts the Turkish text on the timing file's cues and
+  copies the timing file's italics and dialogue dashes where that is a
+  mechanical change. `flags` lists only the cues a fixer must change: hard
+  check fails, glossary and sen/siz warnings, long lines and lines left in
+  English. On a 2-hour test film it flags 37 of 1,838 cues. The skill does not call it
+  yet.
 - Another subtitle file is now paired onto the timing file when
   `srt.py fit` says it lines up after one constant shift, found by searching
   ±60 s. It ignores sound descriptions and songs, and allows lines that are
