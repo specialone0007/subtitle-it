@@ -8,7 +8,8 @@ propose rules.
     uv run learn.py scan --data DATA_DIR
     uv run learn.py diff --work W
 
-`scan` lists films whose delivered .tr.srt has changed since delivery.
+`scan` lists films whose delivered .tr.srt has changed since delivery. When
+several runs delivered to the same file, only the last one counts.
 `diff` prints every edited cue (before and after) and the word swaps that
 repeat, such as "Peki" -> "Tamam" in 6 cues. It never writes rules itself.
 """
@@ -19,6 +20,7 @@ import argparse
 import difflib
 import hashlib
 import json
+import os
 import re
 import sys
 from collections import Counter
@@ -44,9 +46,26 @@ def _changed(work: Path) -> bool | None:
     return hashlib.sha256(dest.read_bytes()).hexdigest() != info["sha256"]
 
 
+def _latest_deliveries(data: Path) -> list[Path]:
+    """One work folder per delivered file: the one that delivered it last.
+    A later run that delivers to the same path replaces the file, so the
+    older folder's copy no longer matches it without the user editing it."""
+    latest: dict[str, tuple[tuple[str, float], Path]] = {}
+    for work in sorted((data / "films").glob("*")):
+        info_file = work / "delivered.json"
+        if not info_file.exists():
+            continue
+        info = json.loads(info_file.read_text(encoding="utf-8"))
+        dest = os.path.normcase(str(Path(info["delivered_to"]).resolve()))
+        when = (info.get("delivered_at") or "", info_file.stat().st_mtime)
+        if dest not in latest or when > latest[dest][0]:
+            latest[dest] = (when, work)
+    return sorted(work for _, work in latest.values())
+
+
 def scan(data: Path) -> list[dict]:
     out = []
-    for work in sorted((data / "films").glob("*")):
+    for work in _latest_deliveries(data):
         if _changed(work):
             info = json.loads((work / "delivered.json").read_text(encoding="utf-8"))
             out.append({"work": str(work), "file": info["delivered_to"]})
