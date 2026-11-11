@@ -139,6 +139,8 @@ def test_is_sound_spots_descriptions_labels_and_songs():
     assert srt.is_sound(_cue(1, 0, 1, "(SIGHS)"))
     assert srt.is_sound(_cue(1, 0, 1, "JOHN:"))
     assert srt.is_sound(_cue(1, 0, 1, "♪ Coming back for me ♪"))
+    assert srt.is_sound(_cue(1, 0, 1, "# Coming back for me #"))
+    assert not srt.is_sound(_cue(1, 0, 1, "Room #4, please."))
     assert not srt.is_sound(_cue(1, 0, 1, "[sighs] Fine."))
     assert not srt.is_sound(_cue(1, 0, 1, "- Who? - Me."))
     assert not srt.is_sound(_cue(1, 0, 1, "Tamam."))
@@ -182,6 +184,30 @@ def test_fit_refuses_a_file_with_lines_missing():
     other = [c for i, c in enumerate(timing) if i % 4]  # a quarter of the lines left out
     r = srt.fit(timing, other)
     assert not r["fits"] and "covers 75%" in r["reason"]
+
+
+def test_fit_refuses_a_file_with_lines_in_the_silences():
+    timing = _film()
+    extra = [
+        _cue(5000 + i, a.end + 100, b.start - 100) for i, (a, b) in enumerate(zip(timing, timing[1:])) if b.start - a.end >= 1200
+    ]
+    r = srt.fit(timing, sorted(timing + extra, key=lambda c: c.start))
+    assert not r["fits"] and "land on speech" in r["reason"]
+    assert r["covered"] >= 0.99
+
+
+def test_fit_refuses_a_file_with_no_spoken_cues():
+    timing = _film(minutes=3)
+    sounds = [_cue(c.n, c.start, c.end, "[music]") for c in timing]
+    r = srt.fit(timing, sounds)
+    assert not r["fits"] and r["reason"] == "no spoken cues in one of the files"
+
+
+def test_fit_says_when_nothing_pairs():
+    timing = _film(minutes=3)
+    later = srt.shift(timing, 3_600_000)  # an hour away, beyond the search
+    r = srt.fit(timing, later)
+    assert not r["fits"] and "no cue pairs" in r["reason"] and "None" not in r["reason"]
 
 
 def test_fit_command_writes_the_result(tmp_path: Path):
