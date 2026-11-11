@@ -10,7 +10,8 @@ natural Turkish subtitles on the source file's own timings.
 (Plain `/subtitle` also works when no other command uses that name.)
 
 It finds the film, finds source subtitles (a track inside the video, a file
-next to it, or OpenSubtitles), builds a short "film bible" (characters, who
+next to it, or OpenSubtitles; as a last resort, it transcribes the film's
+own speech), builds a short "film bible" (characters, who
 says sen or siz to whom, fixed terms), has a second reader check it blind
 and a judge settle any difference, translates the film in parallel chunks,
 runs automatic checks, has one reviewer read the whole film, and saves
@@ -73,6 +74,11 @@ for certain goes under "Check after watching" in the film's `report.md`.
    The first run downloads a few GB (PyTorch, pyannote and a Whisper model). With an NVIDIA GPU it
    takes a few minutes per film; on the CPU about as long as the film. When the subtitles are
    out of sync with the audio, it moves them to match and says so in the report.
+
+   Speech-to-text, the last resort when no subtitle file exists anywhere, needs no setup and no
+   token. Its first use downloads a few GB: PyTorch, unless the audio hints already did, plus a
+   Whisper model of about 1.6 GB. With an NVIDIA GPU a film takes a few minutes, on the CPU about as
+   long as the film or more.
 To work on the plugin itself, load it from a clone for one session with
 `claude --plugin-dir ./turkish-subtitles`.
 
@@ -93,7 +99,8 @@ To work on the plugin itself, load it from a clone for one session with
 
 Subtitle text goes to Claude as part of your Claude Code session.
 OpenSubtitles receives the video's hash, title or IMDb id when it searches.
-Audio hints run locally and send no audio anywhere. Credentials are typed
+Audio hints and speech-to-text run locally and send no audio anywhere; the
+speech model is downloaded once from Hugging Face, with no token. Credentials are typed
 into your own terminal, never into the chat, and kept in `credentials.json`;
 the OpenSubtitles key and login go only to OpenSubtitles, and the Hugging
 Face token only to Hugging Face.
@@ -134,6 +141,7 @@ scripts/bible.py                questions, blind comparison and judging for the 
 scripts/assemble.py             assemble, checks, review file, delivery
 scripts/learn.py                find user edits for learn mode
 scripts/speakers.py             voices per cue from the audio, sync check
+scripts/transcribe.py           subtitles from the audio when no file exists, the last resort
 scripts/result.py               print each script's JSON result and save it to --result
 tests/                          pytest suite
 docs/architecture.md            how a run works

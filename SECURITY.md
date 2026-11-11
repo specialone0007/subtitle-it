@@ -17,3 +17,6 @@ What the plugin keeps and sends:
 - OpenSubtitles receives the film's hash, title or IMDb id when it searches.
 - Audio hints run on your machine. They download models from Hugging Face,
   and no audio leaves your machine.
+- Speech-to-text, the last resort when no subtitle file exists, runs on your
+  machine too. It downloads its Whisper model from Hugging Face once, needs
+  no token, and sends no audio anywhere.
