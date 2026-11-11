@@ -28,6 +28,7 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import bible  # noqa: E402
 import prepare  # noqa: E402
 import result  # noqa: E402
 import srt  # noqa: E402
@@ -132,6 +133,8 @@ def run_checks(work: Path) -> dict:
                 hits = [n for n, t in texts.items() if rx.search(" ".join(t).casefold() if fold else " ".join(t))]
                 for n in hits:
                     w(n, "term variant", f"'{alt}' used; glossary says '{preferred}'")
+
+    warn += bible.address_warnings(work, texts, rows)
 
     if not missing and not any(x["check"] == "file format" for x in hard):
         full = {c.n: texts[c.n] for c in timing}

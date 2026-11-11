@@ -18,9 +18,10 @@ session
 ## Audio hints
 
 Find who speaks each line from the film's audio (needs a free Hugging Face
-token; see the README). One of: yes, no, ask.
+token; see the README). One of: yes, no, auto. `auto` runs them when an
+NVIDIA GPU is found; without one they take about as long as the film.
 
-ask
+auto
 
 ## Swearing
 
