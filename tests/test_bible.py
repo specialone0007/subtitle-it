@@ -352,14 +352,36 @@ def test_voices_run_twice_keeps_one_voices_section(work):
 def test_voices_refuse_other_kinds_bad_ids_and_missing_answers(work):
     (work / "bible.md").write_text(BIBLE_MD, encoding="utf-8")
     term = {**voice("V1", "x"), "id": "term:sport", "kind": "term"}
-    write_voices(work, [term, {**voice("V2", "Sam"), "id": "voice:Sam"}, {**voice("V3", "Sam"), "answer": None}])
+    listed = {**voice("V4", "Sam"), "id": ["voice:V4"]}
+    write_voices(work, [term, {**voice("V2", "Sam"), "id": "voice:Sam"}, {**voice("V3", "Sam"), "answer": None}, listed])
     with pytest.raises(SystemExit) as e:
         bible.add_voices(work)
     msg = str(e.value)
     assert "term:sport: only voice decisions" in msg
     assert "voice:Sam: only voice decisions" in msg
     assert "voice:V3: every voice question needs an answer" in msg
+    assert "each entry needs a string id" in msg
     assert json.loads((work / "decisions.json").read_text(encoding="utf-8")) == decisions()
+    assert (work / "bible.md").read_text(encoding="utf-8") == BIBLE_MD
+
+
+def test_voices_refuse_lines_that_are_not_a_list(work):
+    (work / "bible.md").write_text(BIBLE_MD, encoding="utf-8")
+    (work / "voices.json").write_text(
+        json.dumps({"lines": "V1 = Nora", "decisions": [voice("V1", "Nora")]}), encoding="utf-8"
+    )
+    with pytest.raises(SystemExit, match="lines is a list of strings"):
+        bible.add_voices(work)
+    assert json.loads((work / "decisions.json").read_text(encoding="utf-8")) == decisions()
+    assert (work / "bible.md").read_text(encoding="utf-8") == BIBLE_MD
+
+
+def test_voices_go_at_the_end_without_a_characters_section(work):
+    (work / "bible.md").write_text("# Film (2024)\n## sen / siz\n- Sam → Nora: siz\n", encoding="utf-8")
+    write_voices(work, [voice("V1", "Nora")], ["V1 = Nora"])
+    bible.add_voices(work)
+    text = (work / "bible.md").read_text(encoding="utf-8")
+    assert text.endswith("- Sam → Nora: siz\n## Voices\n- V1 = Nora\n")
 
 
 def test_voices_need_the_bible(work):
