@@ -14,12 +14,27 @@
 - The skill now tries up to 3 Turkish results before translating from
   scratch. A first result cut from another version of the film no longer
   turns a polish run into a full translation.
+- A polish run now also lists the cues around a wrong sen or siz. When the
+  address check finds the wrong form on one cue, the other cues of that
+  scene that use the same form go to the fixer too, if the bible cannot say
+  who they address. A scene ends at a pause of more than 6 seconds. Human
+  files often keep one form through a whole quarrel, and the check alone
+  caught only 9 of the reviewer's 40 sen/siz changes on a 2-hour test film.
 - A polish run no longer leaves a line softer than the source's swearing.
   The toned-down check now knows strong and mild words, so "fuck" turned
   into "lanet olsun" is flagged. After the review, `polish.py soft` lists
   the lines still soft, the polish fixer restores them, and the report
   lists any left. On a 2-hour test film the human file had 52 such lines; 11 were
   left after the fixer and the reviewer, before this last pass.
+- The bible check now counts two voice answers as the same when they name
+  the same character first or read the same up to a bracket, semicolon or
+  comma, so "Harlan Pike" and "Uncle Harlan Pike" no longer go to the
+  judge. A name followed by 's, as in "Sam's mother", names no one. On a 2-hour test film
+  the readers now agree on 24 of 32 voices instead of 8.
+- `learn.py scan` no longer lists an older run's work folder as edited by
+  you when a later run delivered to the same file. Only the last delivery
+  to each file counts.
+- The README's token note now gives the measured numbers.
 - A run now starts from a human-made Turkish subtitle when one fits the
   film's timing: from the video's own files, else from OpenSubtitles. It
   skips the translators. A polish fixer agent changes only the flagged
