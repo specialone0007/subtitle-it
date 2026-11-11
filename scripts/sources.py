@@ -12,7 +12,8 @@
 `find` lists video and subtitle files whose names match the query, and
 names any listed folder that is not there (an unplugged drive, say).
 `remember` adds the folder of a film given by path to the media folders in
-preferences.md, unless a listed folder already holds it.
+preferences.md, unless a listed folder already holds it or the folder is a
+drive root or the home folder.
 `local` probes the video with ffprobe, extracts every text subtitle track
 into W/sources/, lists subtitle files next to the video, and validates each
 candidate. Image tracks (PGS, VobSub, DVB) are listed but not extracted.
@@ -184,12 +185,19 @@ def folder_to_remember(file: Path) -> Path:
 
 
 def remember(file: Path, prefs: Path) -> dict:
-    """Add the film's folder to "## Media folders" unless a listed folder already holds it."""
+    """Add the film's folder to "## Media folders" unless a listed folder already holds it.
+
+    A film lying loose at a drive root or in the home folder adds nothing:
+    searching all of that on every run would be slow. The result names the
+    folder under `too_broad` instead.
+    """
     listed = media_folders(prefs)
     for f in listed:
         if _inside(file, Path(f)):
-            return {"added": None, "covered_by": f}
+            return {"added": None, "covered_by": f, "too_broad": None}
     folder = folder_to_remember(file)
+    if _too_broad(folder):
+        return {"added": None, "covered_by": None, "too_broad": str(folder)}
     lines = prefs.read_text(encoding="utf-8").splitlines() if prefs.is_file() else []
     try:
         start = next(i for i, line in enumerate(lines) if line.strip() == MEDIA_HEADING)
@@ -208,7 +216,7 @@ def remember(file: Path, prefs: Path) -> dict:
         lines.insert(start + 1, entry)
     prefs.parent.mkdir(parents=True, exist_ok=True)
     prefs.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    return {"added": str(folder), "covered_by": None}
+    return {"added": str(folder), "covered_by": None, "too_broad": None}
 
 
 def _run(cmd: list[str]) -> str:

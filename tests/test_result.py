@@ -39,6 +39,19 @@ def test_slug_result_is_an_object_with_a_bare_name(tmp_path: Path):
     assert json.loads(path.read_text(encoding="utf-8")) == {"slug": "harbour-lights-2026"}
 
 
+def test_remember_command_writes_its_result_and_the_folder(tmp_path: Path):
+    prefs = tmp_path / "preferences.md"
+    prefs.write_text("# p\n\n## Media folders\n\n-\n", encoding="utf-8")
+    film = tmp_path / "Videos" / "Anatomy.of.a.Fall.2023.mkv"
+    film.parent.mkdir()
+    film.write_bytes(b"x")
+    path = tmp_path / "remember.json"
+    sources.main(["--result", str(path), "remember", "--file", str(film), "--prefs", str(prefs)])
+    out = json.loads(path.read_text(encoding="utf-8"))
+    assert out == {"added": str(film.parent.resolve()), "covered_by": None, "too_broad": None}
+    assert sources.media_folders(prefs) == [out["added"]]
+
+
 def test_compare_result_is_written_and_indented(tmp_path: Path):
     a = tmp_path / "a.srt"
     a.write_text("1\n00:00:01,000 --> 00:00:02,000\nHi.\n", encoding="utf-8")

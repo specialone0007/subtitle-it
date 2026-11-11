@@ -48,7 +48,7 @@ def test_remember_fills_the_empty_bullet_with_the_parent_of_a_film_folder(tmp_pa
     film.parent.mkdir(parents=True)
     film.write_bytes(b"x")
     out = sources.remember(film, prefs)
-    assert out == {"added": str((tmp_path / "E" / "Films").resolve()), "covered_by": None}
+    assert out == {"added": str((tmp_path / "E" / "Films").resolve()), "covered_by": None, "too_broad": None}
     assert sources.media_folders(prefs) == [out["added"]]
     text = prefs.read_text(encoding="utf-8")
     assert "\n-\n" not in text and "## Translator model\n\nsession" in text
@@ -74,7 +74,7 @@ def test_remember_skips_a_film_already_inside_a_listed_folder(tmp_path: Path):
     film.parent.mkdir()
     film.write_bytes(b"x")
     before = prefs.read_text(encoding="utf-8")
-    assert sources.remember(film, prefs) == {"added": None, "covered_by": str(tmp_path)}
+    assert sources.remember(film, prefs) == {"added": None, "covered_by": str(tmp_path), "too_broad": None}
     assert prefs.read_text(encoding="utf-8") == before
 
 
@@ -209,3 +209,24 @@ def test_download_uses_cache_without_a_request(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(opensubtitles, "login", no_request)
     r = opensubtitles.download(tmp_path, 42, tmp_path / "out" / "x.srt", cache)
     assert r["from_cache"] and (tmp_path / "out" / "x.srt").read_bytes() == b"cached"
+
+
+def test_remember_adds_nothing_for_a_loose_film_in_the_home_folder(monkeypatch, tmp_path: Path):
+    prefs = tmp_path / "preferences.md"
+    prefs.write_text(TEMPLATE, encoding="utf-8")
+    film = tmp_path / "Anatomy.of.a.Fall.2023.mkv"
+    film.write_bytes(b"x")
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    out = sources.remember(film, prefs)
+    assert out == {"added": None, "covered_by": None, "too_broad": str(tmp_path.resolve())}
+    assert prefs.read_text(encoding="utf-8") == TEMPLATE
+
+
+def test_remember_adds_nothing_for_a_loose_film_at_a_drive_root(monkeypatch, tmp_path: Path):
+    prefs = tmp_path / "preferences.md"
+    prefs.write_text(TEMPLATE, encoding="utf-8")
+    root = Path(tmp_path.anchor)
+    monkeypatch.setattr(sources, "folder_to_remember", lambda file: root)
+    out = sources.remember(tmp_path / "Anatomy.of.a.Fall.2023.mkv", prefs)
+    assert out == {"added": None, "covered_by": None, "too_broad": str(root)}
+    assert prefs.read_text(encoding="utf-8") == TEMPLATE
