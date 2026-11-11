@@ -263,3 +263,38 @@ def test_read_wav_gives_float_samples_without_pyav(tmp_path: Path):
 def test_read_wav_refuses_audio_extract_audio_did_not_make(tmp_path: Path, fmt: dict):
     with pytest.raises(ValueError):
         speakers.read_wav(_write_wav(tmp_path / "b.wav", [0, 0], **fmt))
+
+
+def test_sync_windows_spread_over_a_long_film_and_cover_a_short_one():
+    rate = speakers.SAMPLE_RATE
+    film = 100 * 60 * rate
+    w = speakers.sync_windows(film)
+    assert len(w) == speakers.SYNC_WINDOWS
+    assert all(b - a == speakers.SYNC_WINDOW_S * rate for a, b in w)
+    assert w[0][0] > 0 and w[-1][1] < film and w == sorted(w)
+    assert speakers.sync_windows(20 * 60 * rate) == [(0, 20 * 60 * rate)]
+
+
+def test_speech_starts_offsets_each_window_and_drops_its_edges(monkeypatch):
+    import sys
+    import types
+
+    rate = speakers.SAMPLE_RATE
+    audio = list(range(60 * rate))  # samples are just their own index here
+    seen = []
+
+    class Model:
+        def __init__(self, name, device, compute_type):
+            pass
+
+        def transcribe(self, audio, **kw):
+            seen.append(audio[0])
+            # One start inside the window and one at each edge.
+            return iter(types.SimpleNamespace(start=s) for s in (0.5, 5.0, 9.5)), None
+
+    monkeypatch.setitem(sys.modules, "faster_whisper", types.SimpleNamespace(WhisperModel=Model))
+    monkeypatch.setattr(speakers, "_device", lambda: "cpu")
+    monkeypatch.setattr(speakers, "read_wav", lambda wav: audio)
+    monkeypatch.setattr(speakers, "sync_windows", lambda n: [(10 * rate, 20 * rate), (40 * rate, 50 * rate)])
+    assert speakers.speech_starts(Path("a.wav")) == [15000, 45000]
+    assert seen == [10 * rate, 40 * rate]
