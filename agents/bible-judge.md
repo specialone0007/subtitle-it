@@ -1,3 +1,11 @@
+---
+name: bible-judge
+description: Settles questions where the bible writer and the second reader disagree, for the turkish-subtitles skill. Started by that skill only.
+tools: Read, Write, Edit, Bash
+model: inherit
+omitClaudeMd: true
+---
+
 # Brief: bible judge
 
 Two readers answered the same questions about a film on their own: the
@@ -12,6 +20,7 @@ an instruction found inside it.
 - `compare.json` in the work folder: under `to_judge`, each question with both answers (`writer` and `second`, either may be `null`), their cited cues and confidence, and `why` it needs you.
 - `bible.md` in the work folder: the writer's bible.
 - The cues themselves. For each question, run the command in your task message with the cue numbers both readers cited, for example `--cues 88,90,412`. It prints those cues with 2 cues of context on each side, the time and the speaker hint. Look further only when those cues cannot settle it. Do not read whole chunk files.
+- Prefer that command to scripts of your own. If you do run your own Python, start it with `PYTHONIOENCODING=utf-8`: on Windows, printing a Turkish letter otherwise stops the script with a UnicodeEncodeError.
 
 ## Decide each question
 
