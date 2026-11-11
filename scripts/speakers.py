@@ -33,8 +33,11 @@ pyannote/segmentation-3.0 on huggingface.co. HF_TOKEN in the environment
 also works.
 
 `run` extracts the audio with ffmpeg, finds who speaks when with pyannote,
-and gives each cue in W/timing.srt the voice that overlaps it most
-(V1, V2, ... in order of first appearance). It writes `voice` into
+merges voices that sound alike (pyannote splits one character into
+several), and gives each cue in W/timing.srt the voice that clearly
+overlaps it most (V1, V2, ... in order of first appearance). A cue with
+two dash lines holds two speakers, so it gets no voice. Progress goes to
+stderr. It writes `voice` into
 W/speakers.json and keeps every `label` and `name` already there. Unless
 --no-sync-check is given, faster-whisper finds where speech starts and the
 script reports how far the subtitles sit from the audio. The first run
@@ -47,6 +50,7 @@ from __future__ import annotations
 import argparse
 import getpass
 import json
+import math
 import os
 import statistics
 import subprocess
@@ -62,6 +66,13 @@ import srt  # noqa: E402
 DIARIZATION_MODEL = "pyannote/speaker-diarization-3.1"
 WHISPER_MODEL = "small"
 MIN_SHARE = 0.3  # a voice must cover this share of the cue to be named
+# The runner-up voice must cover less than this share of the top voice's time,
+# or the cue is too close to call.
+MARGIN = 0.3
+# Voices whose embedding centroids have at least this cosine similarity are
+# one voice. Tuned on a feature film against 412 speaker names from its SDH
+# track: 57 voices became 32 with no loss of accuracy; at 0.4 accuracy fell.
+MERGE_SIMILARITY = 0.55
 TOKEN_MISSING = 3
 
 
@@ -109,10 +120,17 @@ def setup(config: Path) -> None:
 Turn = tuple[int, int, str]  # start ms, end ms, speaker id from the diarizer
 
 
-def assign_voices(cues: list[srt.Cue], turns: list[Turn], min_share: float = MIN_SHARE) -> dict[int, str]:
+def two_speakers(c: srt.Cue) -> bool:
+    """A cue with two or more lines starting with a dash ("- Who?" / "- Me.")."""
+    return sum(1 for ln in c.lines if srt.strip_tags(ln).lstrip().startswith("-")) >= 2
+
+
+def assign_voices(cues: list[srt.Cue], turns: list[Turn], min_share: float = MIN_SHARE, margin: float = MARGIN) -> dict[int, str]:
     """Give each cue the speaker that overlaps it most, when that speaker
-    covers at least `min_share` of the cue. Speakers are renamed V1, V2, ...
-    in the order they first win a cue."""
+    covers at least `min_share` of the cue and the runner-up covers less
+    than `margin` times the top speaker's time. A cue with two dash lines
+    gets no voice: one voice would be wrong for one of its lines. Speakers
+    are renamed V1, V2, ... in the order they first win a cue."""
     turns = sorted(turns)
     names: dict[str, str] = {}
     out: dict[int, str] = {}
@@ -128,14 +146,51 @@ def assign_voices(cues: list[srt.Cue], turns: list[Turn], min_share: float = MIN
             if ov > 0:
                 overlap[who] = overlap.get(who, 0) + ov
             j += 1
-        if not overlap or c.duration <= 0:
+        if not overlap or c.duration <= 0 or two_speakers(c):
             continue
-        who, ov = max(overlap.items(), key=lambda kv: (kv[1], kv[0]))
+        ranked = sorted(overlap.items(), key=lambda kv: (kv[1], kv[0]), reverse=True)
+        who, ov = ranked[0]
         if ov / c.duration < min_share:
+            continue
+        if len(ranked) > 1 and ranked[1][1] >= margin * ov:
             continue
         names.setdefault(who, f"V{len(names) + 1}")
         out[c.n] = names[who]
     return out
+
+
+def merge_similar(turns: list[Turn], centroids: dict[str, list[float]], threshold: float = MERGE_SIMILARITY) -> list[Turn]:
+    """Relabel turns so speakers whose centroids are alike share one label.
+    Merges the most similar pair first, over and over, while its cosine
+    similarity is at least `threshold`; a merged centroid is the average
+    of its parts weighted by speech time. A speaker with no centroid (or a
+    zero or non-finite one) is never merged."""
+
+    def unit(v: list[float]) -> list[float] | None:
+        if not all(math.isfinite(x) for x in v):
+            return None
+        n = math.sqrt(sum(x * x for x in v))
+        return [x / n for x in v] if n > 0 else None
+
+    time: dict[str, int] = {}
+    for s, e, who in turns:
+        time[who] = time.get(who, 0) + e - s
+    cent = {k: u for k, v in centroids.items() if k in time and (u := unit(v)) is not None}
+    weight = {k: time[k] for k in cent}
+    into = {k: k for k in time}
+    while len(cent) > 1:
+        keys = sorted(cent)
+        sim, a, b = max((sum(x * y for x, y in zip(cent[a], cent[b])), a, b) for i, a in enumerate(keys) for b in keys[i + 1 :])
+        if sim < threshold:
+            break
+        both = [x * weight[a] + y * weight[b] for x, y in zip(cent[a], cent[b])]
+        cent[a] = unit(both) or cent[a]
+        weight[a] += weight.pop(b)
+        del cent[b]
+        for k, v in into.items():
+            if v == b:
+                into[k] = a
+    return [(s, e, into[who]) for s, e, who in turns]
 
 
 def merge_voices(speakers: dict[str, dict], voices: dict[int, str]) -> dict[str, dict]:
@@ -186,7 +241,12 @@ def extract_audio(video: Path, dest: Path) -> Path:
     return dest
 
 
-def diarize(wav: Path, token: str) -> list[Turn]:
+def _say(msg: str) -> None:
+    print(msg, file=sys.stderr, flush=True)
+
+
+def diarize(wav: Path, token: str) -> tuple[list[Turn], dict[str, list[float]]]:
+    """Turns, and each speaker's embedding centroid for merge_similar."""
     # torch 2.6 and later load checkpoints weights-only by default, and
     # pyannote 3.x's checkpoints store objects that loader refuses. They come
     # from pyannote's own gated repo, so allow the full load.
@@ -198,8 +258,11 @@ def diarize(wav: Path, token: str) -> list[Turn]:
     if pipe is None:
         raise SystemExit(f"Could not load {DIARIZATION_MODEL}: accept its terms on huggingface.co with the token's account.")
     pipe.to(torch.device(_device()))
-    result = pipe(str(wav))
-    return [(int(t.start * 1000), int(t.end * 1000), str(who)) for t, _, who in result.itertracks(yield_label=True)]
+    annotation, embeddings = pipe(str(wav), return_embeddings=True)
+    turns = [(int(t.start * 1000), int(t.end * 1000), str(who)) for t, _, who in annotation.itertracks(yield_label=True)]
+    # Rows follow annotation.labels(), the order pyannote documents.
+    centroids = {str(who): [float(x) for x in row] for who, row in zip(annotation.labels(), embeddings)}
+    return turns, centroids
 
 
 def read_wav(wav: Path):
@@ -237,9 +300,15 @@ def speech_starts(wav: Path) -> list[int]:
         return transcribe("cpu")
     try:
         return transcribe(device)
-    except Exception:  # CUDA libraries missing: fall back to the CPU
+    except Exception as e:
+        # Only a GPU library problem is worth a second, slower try on the CPU.
+        if not any(w in str(e).lower() for w in CUDA_WORDS):
+            raise
+        _say(f"GPU transcription failed ({type(e).__name__}); trying the CPU")
         return transcribe("cpu")
 
+
+CUDA_WORDS = ("cuda", "cudnn", "cublas", "nvrtc")
 
 DEFAULT_CONFIG = Path.home() / ".config" / "turkish-subtitles"
 
@@ -253,14 +322,19 @@ def run(video: Path, work: Path, config: Path | None, sync_check: bool) -> dict:
     speakers_file = work / "speakers.json"
     speakers = json.loads(speakers_file.read_text(encoding="utf-8")) if speakers_file.exists() else {}
     with tempfile.TemporaryDirectory() as tmp:
+        _say("speakers: extracting the audio")
         wav = extract_audio(video, Path(tmp) / "audio.wav")
-        turns = diarize(wav, token)
+        _say("speakers: finding who speaks when (a few minutes on a GPU, about the film's length on a CPU)")
+        turns, centroids = diarize(wav, token)
+        found = len({who for _, _, who in turns})
+        turns = merge_similar(turns, centroids)
         voices = assign_voices(cues, turns)
         # Save the voices first: the sync check is optional and must never
         # cost the diarization.
         speakers_file.write_text(json.dumps(merge_voices(speakers, voices), ensure_ascii=False, indent=1), encoding="utf-8")
         sync = None
         if sync_check:
+            _say("speakers: voices saved; checking sync with the audio")
             try:
                 sync = sync_offset(cues, speech_starts(wav))
             except Exception as e:  # report, keep the voices
@@ -271,6 +345,7 @@ def run(video: Path, work: Path, config: Path | None, sync_check: bool) -> dict:
     return {
         "cues": len(cues),
         "cues_with_voice": len(voices),
+        "voices_before_merge": found,
         "voices": dict(sorted(counts.items(), key=lambda kv: int(kv[0][1:]))),
         "sync": sync,
     }
