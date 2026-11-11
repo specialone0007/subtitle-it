@@ -103,3 +103,19 @@ def test_chunk_cuts_at_longest_pause():
 def test_chunk_small_film_is_one_chunk():
     cues = [_cue(i, i * 2000, i * 2000 + 1000) for i in range(1, 120)]
     assert srt.chunk(cues) == [(1, 119)]
+
+
+def test_shift_moves_cues_and_stops_at_zero():
+    cues = srt.parse_text("1\n00:00:00,200 --> 00:00:01,000\nHi\n\n2\n00:00:05,000 --> 00:00:06,500\nBye\n")
+    out = srt.shift(cues, -500)
+    assert [c.ts for c in out] == ["00:00:00,000 --> 00:00:00,500", "00:00:04,500 --> 00:00:06,000"]
+    assert [c.lines for c in out] == [["Hi"], ["Bye"]]
+    assert cues[0].start == 200  # the input is left as it was
+
+
+def test_shift_command_writes_the_moved_file(tmp_path: Path):
+    src = tmp_path / "in.srt"
+    src.write_text("1\n00:00:01,000 --> 00:00:02,000\nHi\n", encoding="utf-8")
+    dest = tmp_path / "out.srt"
+    srt.main(["shift", str(src), str(dest), "--ms", "-500"])
+    assert srt.parse(dest)[0][0].ts == "00:00:00,500 --> 00:00:01,500"

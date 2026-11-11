@@ -7,7 +7,6 @@ from pathlib import Path
 import pytest
 
 import bible
-import srt
 
 
 def cue_row(n: int, en: str) -> dict:
@@ -230,9 +229,59 @@ def test_address_warnings_need_decisions(tmp_path):
     assert bible.address_warnings(tmp_path, {1: ["Sen"]}, {}) == []
 
 
-def test_shift_moves_cues_and_stops_at_zero():
-    cues = srt.parse_text("1\n00:00:00,200 --> 00:00:01,000\nHi\n\n2\n00:00:05,000 --> 00:00:06,500\nBye\n")
-    out = srt.shift(cues, -500)
-    assert [c.ts for c in out] == ["00:00:00,000 --> 00:00:00,500", "00:00:04,500 --> 00:00:06,000"]
-    assert [c.lines for c in out] == [["Hi"], ["Bye"]]
-    assert cues[0].start == 200  # the input is left as it was
+def test_questions_and_apply_accept_a_stored_tie(work):
+    data = decisions()
+    data["decisions"][2]["confidence"] = "tie"
+    (work / "decisions.json").write_text(json.dumps(data), encoding="utf-8")
+    assert bible.questions(work)["questions"] == 3
+
+
+def test_readers_may_not_write_a_tie(work):
+    write_second(work, [ans("address:Sam>Nora", [{"from_cue": 1, "form": "siz"}], confidence="tie")])
+    with pytest.raises(SystemExit, match="confidence must be one of"):
+        bible.compare(work)
+
+
+def test_load_refuses_bad_characters(work):
+    data = decisions()
+    data["characters"][0]["aliases"] = None
+    (work / "decisions.json").write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(SystemExit, match="aliases is a list of strings"):
+        bible.questions(work)
+
+
+@pytest.mark.parametrize(
+    "broken",
+    [
+        lambda d: d["characters"][0].update(aliases=None),
+        lambda d: d["decisions"][0].pop("speaker"),
+        lambda d: d["decisions"][0].update(answer=[{"from_cue": 1, "form": "siz"}, {"from_cue": "9", "form": "sen"}]),
+    ],
+)
+def test_address_warnings_skip_a_broken_decisions_file(work, broken):
+    data = decisions()
+    broken(data)
+    (work / "decisions.json").write_text(json.dumps(data), encoding="utf-8")
+    rows = {r["n"]: r for r in json.loads((work / "cues.json").read_text(encoding="utf-8"))}
+    assert bible.address_warnings(work, {1: ["Nora, sen otur."]}, rows) == []
+
+
+def test_address_warnings_skip_invalid_json(work):
+    (work / "decisions.json").write_text("{not json", encoding="utf-8")
+    assert bible.address_warnings(work, {1: ["Nora, sen otur."]}, {}) == []
+
+
+def test_a_new_compare_drops_old_verdicts(work):
+    (work / "judged.json").write_text("{}", encoding="utf-8")
+    write_second(
+        work, [ans("address:Sam>Nora", [{"from_cue": 1, "form": "siz"}]), ans("voice:V1", "Sam"), ans("term:sport", "koçum")]
+    )
+    bible.compare(work)
+    assert not (work / "judged.json").exists()
+    assert bible.apply(work)["agreed"] == 3
+
+
+def test_cli_writes_questions_and_the_result_file(work, tmp_path):
+    out = tmp_path / "res" / "q.json"
+    bible.main(["--result", str(out), "questions", "--work", str(work)])
+    assert json.loads(out.read_text(encoding="utf-8"))["questions"] == 3

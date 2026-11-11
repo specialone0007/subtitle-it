@@ -43,6 +43,8 @@ import result  # noqa: E402
 KINDS = {"address", "voice", "name", "term"}
 FORMS = {"sen", "siz"}
 CONFIDENCE = {"sure", "likely", "guess"}
+# `apply` marks a judge's safe default as a tie. Readers never write it.
+STORED_CONFIDENCE = CONFIDENCE | {"tie"}
 # Two readers rarely put a sen-to-siz switch on the same cue. Switches this
 # many cues apart or fewer are taken as the same scene.
 ADDRESS_TOLERANCE = 40
@@ -81,7 +83,7 @@ def _check_answer(kind: str, answer, where: str) -> list[str]:
     return []
 
 
-def check_decision(d: dict, where: str, full: bool = True) -> list[str]:
+def check_decision(d: dict, where: str, full: bool = True, allowed: set[str] = CONFIDENCE) -> list[str]:
     """Problems with one decision. `full` is False for the second reader's
     answers, which carry only id, answer, evidence and confidence."""
     if not isinstance(d, dict) or not isinstance(d.get("id"), str):
@@ -97,8 +99,8 @@ def check_decision(d: dict, where: str, full: bool = True) -> list[str]:
             problems.append(f"{where}: an address decision names its speaker and listener")
     if not isinstance(d.get("evidence"), list) or not all(isinstance(n, int) for n in d.get("evidence", [None])):
         problems.append(f"{where}: evidence is a list of cue numbers")
-    if d.get("confidence") not in CONFIDENCE:
-        problems.append(f"{where}: confidence must be one of {sorted(CONFIDENCE)}")
+    if d.get("confidence") not in allowed:
+        problems.append(f"{where}: confidence must be one of {sorted(allowed)}")
     return problems
 
 
@@ -107,9 +109,15 @@ def load_decisions(work: Path) -> dict:
     problems = []
     if not isinstance(data.get("characters"), list) or not isinstance(data.get("decisions"), list):
         raise SystemExit("decisions.json needs a characters list and a decisions list")
+    for c in data["characters"]:
+        aliases = c.get("aliases", []) if isinstance(c, dict) else None
+        if not isinstance(c, dict) or not isinstance(c.get("name"), str) or not c["name"].strip():
+            problems.append("decisions.json: each character needs a non-empty string name")
+        elif not isinstance(aliases, list) or not all(isinstance(a, str) for a in aliases):
+            problems.append(f"decisions.json character {c['name']}: aliases is a list of strings")
     ids = set()
     for d in data["decisions"]:
-        problems += check_decision(d, "decisions.json")
+        problems += check_decision(d, "decisions.json", allowed=STORED_CONFIDENCE)
         if isinstance(d, dict):
             problems += _check_answer(d.get("kind"), d.get("answer"), f"decisions.json {d.get('id')}")
             if d.get("answer") is None:
@@ -227,6 +235,8 @@ def compare(work: Path) -> dict:
         to_judge.append(item)
 
     out = {"agreed": agreed, "to_judge": to_judge}
+    # A new comparison makes any earlier verdicts stale.
+    (work / "judged.json").unlink(missing_ok=True)
     (work / "compare.json").write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
     return {
         "decisions": len(data["decisions"]),
@@ -356,9 +366,11 @@ class AddressBook:
             if d.get("kind") == "voice" and isinstance(d.get("answer"), str) and d["id"].startswith("voice:"):
                 self.voice[d["id"].split(":", 1)[1]] = self.name(d["answer"]) or d["answer"]
             elif d.get("kind") == "address" and isinstance(d.get("answer"), list):
-                sp, li = self.name(d["speaker"]), self.name(d["listener"])
-                if sp and li:
-                    self.address[(sp, li)] = d["answer"]
+                # A listener need not be a listed character ("the jury"):
+                # keep its own name so the speaker's other forms still count.
+                sp = self.name(d["speaker"]) or d["speaker"].strip()
+                li = self.name(d["listener"]) or d["listener"].strip()
+                self.address[(sp, li)] = d["answer"]
         self._mention = [(re.compile(r"\b" + re.escape(a) + r"\b"), n) for a, n in self.alias.items()]
 
     def name(self, s: str | None) -> str | None:
@@ -387,10 +399,15 @@ def address_warnings(work: Path, texts: dict[int, list[str]], rows: dict[int, di
     """Cues whose Turkish uses the other form than the bible gives for that
     speaker. With no listener named in the line, only sen where the bible
     says siz is flagged, since siz is also the plural you."""
-    path = work / "decisions.json"
-    if not path.exists():
+    if not (work / "decisions.json").exists():
         return []
-    book = AddressBook(json.loads(path.read_text(encoding="utf-8")))
+    try:
+        data = load_decisions(work)
+    except SystemExit:
+        # The bible check reports a broken file; the Turkish checks go on
+        # without address warnings rather than stop the film.
+        return []
+    book = AddressBook(data)
     if not book.address:
         return []
     speakers_file = work / "speakers.json"
