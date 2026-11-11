@@ -94,6 +94,56 @@ def test_compare_agrees_on_same_answers_and_case(work):
     assert out["agreed"] == 3 and out["to_judge"] == 0
 
 
+CAST = [{"name": "Sam", "aliases": ["Sammy"]}, {"name": "Nora"}, {"name": "Harlan Pike"}]
+
+
+@pytest.mark.parametrize(
+    ("a", "b"),
+    [
+        ("Harlan Pike", "Uncle Harlan Pike"),
+        ("Sam", "Sammy, on the phone; a few background lines in 25-26"),
+        ("Nora", "Nora (also a background voice in 40-42, and Sam once)"),
+        ("shop clerk", "Shop clerk (the tall one)"),
+    ],
+)
+def test_voice_answers_agree_when_they_name_the_same_character(a, b):
+    assert bible.agree("voice", a, b, CAST)
+    assert bible.agree("voice", b, a, CAST)
+
+
+@pytest.mark.parametrize(
+    ("a", "b"),
+    [
+        ("Sam", "Nora (talking Sam into the trip)"),
+        ("bus driver", "Mabel, the woman driving the bus"),
+        ("the guard", "The guard captain"),
+        ("Sam", "Samuel"),
+        ("Sam", "Sam's mother"),
+        ("Sam", "Sam’s mother"),
+        ("Sam", "Leo (Sam's friend)"),
+        ("Sam", "a clerk, Sam's cousin"),
+    ],
+)
+def test_voice_answers_differ_when_they_name_someone_else(a, b):
+    assert not bible.agree("voice", a, b, CAST)
+
+
+def test_tolerant_matching_is_only_for_voices():
+    assert not bible.agree("term", "koçum", "koçum (friendly)", CAST)
+
+
+def test_compare_agrees_on_a_voice_described_two_ways(work):
+    write_second(
+        work,
+        [
+            ans("address:Sam>Nora", [{"from_cue": 1, "form": "siz"}]),
+            ans("voice:V1", "SAM (on the phone)"),
+            ans("term:sport", "koçum"),
+        ],
+    )
+    assert bible.compare(work)["agreed"] == 3
+
+
 def test_compare_sends_disagreements_missing_answers_and_extras_to_the_judge(work):
     write_second(
         work,
@@ -167,6 +217,17 @@ def test_apply_records_changes_additions_and_ties(work):
     assert final["address:Sam>Nora"]["confidence"] == "sure" and final["name:judge"]["confidence"] == "tie"
     writer = json.loads((work / "decisions.writer.json").read_text(encoding="utf-8"))
     assert writer["decisions"][0]["answer"] == [{"from_cue": 1, "form": "siz"}]
+
+
+def test_apply_does_not_count_a_reworded_voice_as_changed(work):
+    write_second(
+        work,
+        [ans("address:Sam>Nora", [{"from_cue": 1, "form": "siz"}]), ans("voice:V1", "Nora"), ans("term:sport", "koçum")],
+    )
+    bible.compare(work)
+    judged = [{"id": "voice:V1", "answer": "Sam on the phone", "evidence": [1, 5], "how": "evidence"}]
+    (work / "judged.json").write_text(json.dumps({"decisions": judged}), encoding="utf-8")
+    assert bible.apply(work)["changed"] == []
 
 
 def test_apply_refuses_when_the_judge_skipped_a_question(work):
