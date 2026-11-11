@@ -253,7 +253,8 @@ def scene_address(readings: list[dict], rows: dict[int, dict]) -> dict[int, str]
         if hit is None or r["expected"] is not None:
             continue
         out[r["cue"]] = (
-            f"address form, same scene: cue {hit['cue']} uses {hit['got']} where the bible says "
+            f"address form, same scene: cue {hit['cue']} ({hit['speaker']} → {hit['listener'] or 'anyone here'}) "
+            f"uses {hit['got']} where the bible says "
             f"{hit['expected']}; check who is spoken to here"
         )
     return out

@@ -290,7 +290,7 @@ def test_scene_address_spreads_a_wrong_form_to_its_scene():
     ]
     out = polish.scene_address(readings, rows)
     assert sorted(out) == [2]
-    assert out[2] == "address form, same scene: cue 1 uses sen where the bible says siz; check who is spoken to here"
+    assert out[2] == "address form, same scene: cue 1 (Bob → Ann) uses sen where the bible says siz; check who is spoken to here"
 
 
 def test_scene_address_ignores_plural_siz_the_check_lets_through():
@@ -337,4 +337,4 @@ def test_flags_list_the_scene_of_a_wrong_address_form(tmp_path: Path):
     assert out["by_check"]["address form, same scene"] == 1  # cue 2; cue 3 is a later scene
     text = (w / polish.FLAG_FILE).read_text(encoding="utf-8")
     assert "#2 " in text and "#3 " not in text
-    assert "cue 1 uses sen where the bible says siz" in text
+    assert "cue 1 (Sam → Nora) uses sen where the bible says siz" in text
