@@ -98,8 +98,7 @@ def main(argv: list[str] | None = None) -> None:
         s = sub.add_parser(name)
         s.add_argument("--work", type=Path, required=True)
     result.add_argument(p)
-    a = p.parse_args(argv)
-    result.clear(a.result)
+    a = result.parse(p, argv)
     if a.cmd == "scan":
         result.emit(scan(a.data), a.result)
     elif a.cmd == "diff":

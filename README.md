@@ -94,6 +94,7 @@ scripts/prepare.py              build the work folder and chunks
 scripts/assemble.py             assemble, checks, review file, delivery
 scripts/learn.py                find user edits for learn mode
 scripts/speakers.py             voices per cue from the audio, sync check
+scripts/result.py               print each script's JSON result and save it to --result
 tests/                          pytest suite
 ```
 

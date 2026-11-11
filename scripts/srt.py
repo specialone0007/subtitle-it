@@ -269,8 +269,7 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("b", type=Path)
     s.set_defaults(func=_cmd_compare)
     result.add_argument(p)
-    a = p.parse_args(argv)
-    result.clear(a.result)
+    a = result.parse(p, argv)
     a.func(a)
 
 

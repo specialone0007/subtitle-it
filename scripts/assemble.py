@@ -247,8 +247,7 @@ def main(argv: list[str] | None = None) -> None:
     d.add_argument("--backups", type=Path, required=True)
     d.add_argument("--force", action="store_true")
     result.add_argument(p)
-    a = p.parse_args(argv)
-    result.clear(a.result)
+    a = result.parse(p, argv)
     if a.cmd == "check":
         result.emit(_summary(run_checks(a.work)), a.result)
     elif a.cmd == "sidebyside":

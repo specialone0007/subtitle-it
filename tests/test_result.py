@@ -3,6 +3,8 @@ from pathlib import Path
 
 import pytest
 
+import assemble
+import learn
 import result
 import sources
 import srt
@@ -45,3 +47,21 @@ def test_compare_result_is_written_and_indented(tmp_path: Path):
     text = path.read_text(encoding="utf-8")
     assert json.loads(text)["paired_share"] == 1.0
     assert text.startswith("{\n")
+
+
+def test_a_usage_error_also_removes_the_old_result(tmp_path: Path):
+    path = tmp_path / "assemble-deliver.json"
+    path.write_text('{"delivered_to": "old"}', encoding="utf-8")
+    with pytest.raises(SystemExit) as e:
+        assemble.main(["--result", str(path), "deliver", "--work", str(tmp_path)])  # no --dest
+    assert e.value.code == 2
+    assert not path.exists()
+
+
+def test_learn_done_result_says_marked(tmp_path: Path):
+    srt_file = tmp_path / "film.tr.srt"
+    srt_file.write_text("1\n00:00:01,000 --> 00:00:02,000\nMerhaba.\n", encoding="utf-8")
+    (tmp_path / "delivered.json").write_text(json.dumps({"delivered_to": str(srt_file)}), encoding="utf-8")
+    path = tmp_path / "learn-done.json"
+    learn.main(["--result", str(path), "done", "--work", str(tmp_path)])
+    assert json.loads(path.read_text(encoding="utf-8")) == {"marked": "learned"}
