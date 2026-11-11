@@ -237,7 +237,7 @@ Wait for all of them.
 Run `assemble.py check --work WORK`. Its result has counts and the first hard
 fails.
 
-- Hard fails: group the failing cues by chunk. For each affected chunk start one `turkish-subtitles:translator` subagent with the first five lines of that chunk's prompt from step 6 (language pack, bible, preferences, chunk, neighbour chunks), never its two `Write` lines, plus: "Fix only these cues: <numbers and the failed check>. Write only those cues to WORK/out/fix_r<round>_<NN>.txt. Write flags to WORK/out/flags_r<round>_<NN>.txt." The chunk's first output and flags stay as they are. Then run `check` again. At most 2 rounds.
+- Hard fails: group the failing cues by chunk. For each affected chunk start one `turkish-subtitles:translator` subagent with the first five lines of that chunk's prompt from step 6 (language pack, bible, preferences, chunk, neighbour chunks), never its two `Write` lines, plus: "Fix only these cues: <numbers and the failed check>. Write only those cues to WORK/out/fix_r<round>_<NN>.txt. Write flags to WORK/out/flags_r<round>_<NN>.txt." Use the same model as in step 6: the preferences' "Translator model" (`session` means do not set a model). The chunk's first output and flags stay as they are. Then run `check` again. At most 2 rounds.
 - Still failing after 2 rounds: one more round the same way, with the model set to `opus`.
 - Still failing after that: go on. Step 11 delivers with `--force` and lists the failing cues in the report. If `check` wrote no draft (a cue is missing or a file is malformed), there is nothing to deliver: stop and tell the user which cues are missing.
 - Warnings never block. They go to the reviewer.
