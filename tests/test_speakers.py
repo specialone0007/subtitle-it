@@ -1,4 +1,5 @@
 import json
+import wave
 from pathlib import Path
 
 import pytest
@@ -106,7 +107,10 @@ def test_speech_starts_falls_back_to_cpu_when_cuda_fails_while_transcribing(monk
         def __init__(self, name, device, compute_type):
             self.device = device
 
-        def transcribe(self, path, **kw):
+        def transcribe(self, audio, **kw):
+            # Samples, not a path: given a path, faster-whisper decodes with PyAV.
+            assert audio == "samples"
+
             def segments():
                 if self.device == "cuda":
                     raise RuntimeError("cudnn missing")  # raised lazily, as ctranslate2 does
@@ -116,6 +120,7 @@ def test_speech_starts_falls_back_to_cpu_when_cuda_fails_while_transcribing(monk
 
     monkeypatch.setitem(sys.modules, "faster_whisper", types.SimpleNamespace(WhisperModel=Model))
     monkeypatch.setattr(speakers, "_device", lambda: "cuda")
+    monkeypatch.setattr(speakers, "read_wav", lambda wav: "samples")
     assert speakers.speech_starts(Path("a.wav")) == [1500]
 
 
@@ -159,3 +164,23 @@ def test_diarize_allows_full_checkpoint_load_before_the_pipeline_loads(tmp_path:
 
     assert speakers.diarize(tmp_path / "a.wav", "hf_x") == [(1000, 2500, "SPEAKER_00")]
     assert seen["env"] == "1"
+
+
+def _write_wav(path: Path, samples: list[int], rate: int = 16000, channels: int = 1) -> Path:
+    with wave.open(str(path), "wb") as f:
+        f.setnchannels(channels)
+        f.setsampwidth(2)
+        f.setframerate(rate)
+        f.writeframes(b"".join(s.to_bytes(2, "little", signed=True) for s in samples))
+    return path
+
+
+def test_read_wav_gives_float_samples_without_pyav(tmp_path: Path):
+    audio = speakers.read_wav(_write_wav(tmp_path / "a.wav", [0, 16384, -32768, 32767]))
+    assert audio.dtype.name == "float32"
+    assert audio.tolist() == [0.0, 0.5, -1.0, 32767 / 32768]
+
+
+def test_read_wav_refuses_audio_extract_audio_did_not_make(tmp_path: Path):
+    with pytest.raises(ValueError):
+        speakers.read_wav(_write_wav(tmp_path / "b.wav", [0, 0], rate=44100))

@@ -4,6 +4,7 @@
 #   "charset-normalizer>=3.3",
 #   "faster-whisper>=1.1",
 #   "huggingface_hub>=0.21,<1",
+#   "numpy>=1.24",
 #   "pyannote.audio>=3.3,<4",
 #   "torch>=2.4,<2.9",
 #   "torchaudio>=2.4,<2.9",
@@ -51,6 +52,7 @@ import statistics
 import subprocess
 import sys
 import tempfile
+import wave
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -199,12 +201,28 @@ def diarize(wav: Path, token: str) -> list[Turn]:
     return [(int(t.start * 1000), int(t.end * 1000), str(who)) for t, _, who in result.itertracks(yield_label=True)]
 
 
+def read_wav(wav: Path):
+    """The 16 kHz mono 16-bit wav from extract_audio as float32 samples in
+    [-1, 1], the form faster-whisper takes. Handing faster-whisper a path
+    makes it decode with PyAV, whose newer releases reject an argument
+    faster-whisper passes, so the sync check never ran."""
+    import numpy as np
+
+    with wave.open(str(wav), "rb") as f:
+        if f.getnchannels() != 1 or f.getsampwidth() != 2 or f.getframerate() != 16000:
+            raise ValueError(f"{wav} is not 16 kHz mono 16-bit audio")
+        frames = f.readframes(f.getnframes())
+    return np.frombuffer(frames, dtype="<i2").astype(np.float32) / 32768.0
+
+
 def speech_starts(wav: Path) -> list[int]:
     from faster_whisper import WhisperModel
 
+    audio = read_wav(wav)
+
     def transcribe(device: str) -> list[int]:
         model = WhisperModel(WHISPER_MODEL, device=device, compute_type="float16" if device == "cuda" else "int8")
-        segments, _ = model.transcribe(str(wav), vad_filter=True, word_timestamps=False)
+        segments, _ = model.transcribe(audio, vad_filter=True, word_timestamps=False)
         # segments is lazy: CUDA library errors surface here, inside the try.
         return [int(s.start * 1000) for s in segments]
 
