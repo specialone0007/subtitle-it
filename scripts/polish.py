@@ -7,6 +7,7 @@ every line.
 
     uv run polish.py seed  --work W --tr TURKISH.srt
     uv run polish.py flags --work W
+    uv run polish.py soft  --work W
 
 Run after `prepare.py build`, with a Turkish file that `srt.py fit` accepted
 (shifted first when its offset was not 0). The film keeps its own timing
@@ -22,6 +23,10 @@ one timing cue are joined and, when that makes more than two lines, rewrapped.
 need a fix, with their English and Turkish text, in W/polish_flags.txt for
 the fixer, who writes W/out/fix_polish.txt. Reading speed is left to the
 reviewer, as in a full run, since a professional file exceeds it often.
+
+`soft` runs after the reviewer and lists the cues whose Turkish is still
+softer than the source's swearing, in W/polish_soft.txt, for one more
+fixer pass and for the report.
 """
 
 from __future__ import annotations
@@ -43,24 +48,36 @@ SEED_FILE = "tr_00.txt"
 FLAG_FILE = "polish_flags.txt"
 FIX_FILE = "fix_polish.txt"
 PLACEMENT_FILE = "polish_placement.json"
+SOFT_FILE = "polish_soft.txt"
+SOFT_FIX_FILE = "fix_soft.txt"
 # Warnings the fixer leaves to the reviewer, as a full run does.
 REVIEWER_ONLY = {"reading speed"}
 WORD_RE = re.compile(r"[^\W\d_]+")
 # Professional Turkish files often tone down crude and sexual lines, which
-# breaks "swearing at the same strength as the source". A cue whose English
-# has one of these words and whose Turkish has none of the Turkish ones goes
-# to the fixer. Short on purpose: the reviewer still reads the whole film.
-# Word starts only, so "cocktail", "götürmek" and "boks" do not match.
+# breaks "swearing at the same strength as the source". Two strengths: an
+# English word from the strong list needs a strong Turkish word, so "fuck"
+# is not matched by "lanet olsun"; a word from the mild list needs a word
+# from either Turkish list. A cue that falls short goes to the fixer. Short
+# on purpose: the reviewer still reads the whole film. Word starts only, so
+# "cocktail", "götürmek", "boks" and "kahraman" do not match.
 EN_STRONG_RE = re.compile(
-    r"(?<![^\W\d_])(?:fuck|motherfuck|shit|bullshit|bitch|cunt|asshole|dumbass|jackass|bastard|"
-    r"cocks?(?![^\W\d_])|pussy|penis|vagina|dildo|porn|whore|slut|tits|boobs|blowjob|"
-    r"handjob|masturbat|jerk(?:ing)? off|horny|orgasm|sex)",
+    r"(?<![^\W\d_])(?:fuck|motherfuck|cunt|cocks?(?![^\W\d_])|cocksucker|pussy|twat|dickhead|"
+    r"whore|slut|blowjob|handjob|jerk(?:ing)? off|wanker)",
+    re.I,
+)
+EN_MILD_RE = re.compile(
+    r"(?<![^\W\d_])(?:shit|bullshit|bitch|bastard|asshole|dumbass|jackass|goddamn|damn|crap|piss|"
+    r"prick(?!l)|penis|vagina|dildo|porn|tits|boobs|masturbat|horny|orgasm|sex)",
     re.I,
 )
 TR_STRONG_RE = re.compile(
     r"(?<![^\W\d_])(?:sik(?![iı]nt)|s[i*.]ktir|hassiktir|amk|amın|amcık|yarra|taşak|orospu|"
-    r"piç|göt(?!ür)|bok(?!s)|kahrolası|lanet|sürtük|kaltak|fahişe|puşt|şerefsiz|penis|"
-    r"vajina|seks|porno|meme|mastürbasyon|otuzbir|azgın|orgazm|pipi|çük|sakso|yatmak|yatt)",
+    r"piç|göt(?!ür)|sürtük|kaltak|puşt|sakso|otuzbir)",
+    re.I,
+)
+TR_MILD_RE = re.compile(
+    r"(?<![^\W\d_])(?:bok(?!s)|kahr(?:et|ol)|lanet|şerefsiz|fahişe|penis|vajina|seks|porno|meme|"
+    r"mastürbasyon|azgın|orgazm|pipi|çük|yatmak|yatt|işe(?:mek|yece|di))",
     re.I,
 )
 
@@ -166,12 +183,37 @@ def untranslated(tr: list[str], en: list[str] | None) -> bool:
 
 
 def toned_down(tr: list[str], en: list[str] | None) -> str | None:
-    """The English word that has no crude or sexual counterpart in the
-    Turkish line, or None."""
-    m = EN_STRONG_RE.search(srt.strip_tags(" ".join(en or [])))
-    if m and not TR_STRONG_RE.search(srt.strip_tags(" ".join(tr))):
+    """The English word that has no counterpart as strong in the Turkish
+    line, or None."""
+    en_text = srt.strip_tags(" ".join(en or []))
+    tr_text = srt.strip_tags(" ".join(tr))
+    strong = bool(TR_STRONG_RE.search(tr_text))
+    m = EN_STRONG_RE.search(en_text)
+    if m and not strong:
+        return m.group(0).lower()
+    m = EN_MILD_RE.search(en_text)
+    if m and not strong and not TR_MILD_RE.search(tr_text):
         return m.group(0).lower()
     return None
+
+
+def _toned_down_label(word: str) -> str:
+    return f'toned down: the English says "{word}", the Turkish has nothing as strong'
+
+
+def _write_flags(path: Path, header: str, reasons: dict[int, list[str]], rows: dict, texts: dict) -> None:
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(header + "\n\n")
+        for n in sorted(reasons):
+            r = rows[n]
+            f.write(f"#{n} {r['ts'][:8]}\n")
+            f.write("src: " + prepare._one_line(r["source"]) + "\n")
+            if r["en"] is not None and r["en"] != r["source"]:
+                f.write("en: " + prepare._one_line(r["en"]) + "\n")
+            f.write("tr: " + prepare._one_line(texts.get(n)) + "\n")
+            for label in reasons[n]:
+                f.write(f"flag: {label}\n")
+            f.write("\n")
 
 
 def flags(work: Path) -> dict:
@@ -193,7 +235,7 @@ def flags(work: Path) -> dict:
             reasons.setdefault(n, []).append("untranslated: same words as the English")
         word = toned_down(tr, en)
         if word:
-            reasons.setdefault(n, []).append(f'toned down: the English says "{word}", the Turkish has nothing as strong')
+            reasons.setdefault(n, []).append(_toned_down_label(word))
     placement_file = work / PLACEMENT_FILE
     if placement_file.exists():
         placement = json.loads(placement_file.read_text(encoding="utf-8"))
@@ -210,18 +252,8 @@ def flags(work: Path) -> dict:
     for labels in reasons.values():
         for label in {lab.split(":")[0] for lab in labels}:
             by_check[label] = by_check.get(label, 0) + 1
-    with open(work / FLAG_FILE, "w", encoding="utf-8") as f:
-        f.write(f"# {len(reasons)} cues to fix. Write each fixed cue to out/{FIX_FILE} as: number, then its lines.\n\n")
-        for n in sorted(reasons):
-            r = rows[n]
-            f.write(f"#{n} {r['ts'][:8]}\n")
-            f.write("src: " + prepare._one_line(r["source"]) + "\n")
-            if r["en"] is not None and r["en"] != r["source"]:
-                f.write("en: " + prepare._one_line(r["en"]) + "\n")
-            f.write("tr: " + prepare._one_line(texts.get(n)) + "\n")
-            for label in reasons[n]:
-                f.write(f"flag: {label}\n")
-            f.write("\n")
+    header = f"# {len(reasons)} cues to fix. Write each fixed cue to out/{FIX_FILE} as: number, then its lines."
+    _write_flags(work / FLAG_FILE, header, reasons, rows, texts)
     return {
         "file": str(work / FLAG_FILE),
         "cues": checks["cues"],
@@ -229,6 +261,23 @@ def flags(work: Path) -> dict:
         "by_check": dict(sorted(by_check.items(), key=lambda kv: -kv[1])),
         "reading_speed_left_to_reviewer": sum(1 for w in checks["warnings"] if w["check"] == "reading speed"),
     }
+
+
+def soft(work: Path) -> dict:
+    """The cues still softer than the source after every fix so far,
+    written to W/polish_soft.txt in the flags format, for one more fixer
+    pass and for the report."""
+    rows = {r["n"]: r for r in json.loads((work / "cues.json").read_text(encoding="utf-8"))}
+    texts, _ = assemble.load_translation(work)
+    reasons: dict[int, list[str]] = {}
+    for n, tr in texts.items():
+        if n in rows:
+            word = toned_down(tr, rows[n]["en"] or rows[n]["source"])
+            if word:
+                reasons[n] = [_toned_down_label(word)]
+    header = f"# {len(reasons)} cues still softer than the source. Write each fixed cue to out/{SOFT_FIX_FILE}."
+    _write_flags(work / SOFT_FILE, header, reasons, rows, texts)
+    return {"file": str(work / SOFT_FILE), "left": len(reasons), "cue_numbers": sorted(reasons)}
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -240,9 +289,12 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--tr", type=Path, required=True)
     f = sub.add_parser("flags", help="list the cues the fixer must change")
     f.add_argument("--work", type=Path, required=True)
+    t = sub.add_parser("soft", help="list the cues still softer than the source after the fixes")
+    t.add_argument("--work", type=Path, required=True)
     result.add_argument(p)
     a = result.parse(p, argv)
-    out = seed(a.work, a.tr) if a.cmd == "seed" else flags(a.work)
+    commands = {"seed": lambda: seed(a.work, a.tr), "flags": lambda: flags(a.work), "soft": lambda: soft(a.work)}
+    out = commands[a.cmd]()
     result.emit(out, a.result)
 
 
