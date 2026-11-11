@@ -233,11 +233,32 @@ def test_rebuild_drops_earlier_runs_files(work: Path, tmp_path: Path):
 
 
 def test_rebuild_drops_the_earlier_bible_check(work: Path, tmp_path: Path):
-    names = ("questions.json", "second.json", "compare.json", "judged.json", "decisions.writer.json")
+    names = prepare.BIBLE_CHECK_FILES
+    assert "second.voices.json" in names and "questions.voices.json" in names
     for name in names:
         (work / name).write_text("{}", encoding="utf-8")
     prepare.build(work, tmp_path / "fr.srt", None, tmp_path / "en.srt")
     assert [n for n in names if (work / n).exists()] == []
+
+
+def test_a_shift_rebuild_keeps_the_bible_check(work: Path, tmp_path: Path):
+    # The early second reader may already have answered when the sync check
+    # asks for a shift; a shift moves times, not cue numbers.
+    for name in prepare.BIBLE_CHECK_FILES:
+        (work / name).write_text("{}", encoding="utf-8")
+    (work / "checks.json").write_text("{}", encoding="utf-8")
+    prepare.build(work, tmp_path / "fr.srt", None, tmp_path / "en.srt", keep_bible_check=True)
+    assert all((work / n).exists() for n in prepare.BIBLE_CHECK_FILES)
+    assert not (work / "checks.json").exists()
+
+
+def test_rechunking_replaces_files_in_place_and_drops_extra_ones(work: Path):
+    folder = work / "chunks"
+    (folder / "chunk_09.txt").write_text("old", encoding="utf-8")
+    (work / "speakers.json").write_text(json.dumps({"1": {"voice": "V2"}}), encoding="utf-8")
+    prepare.chunks(work, target=250)
+    assert sorted(p.name for p in folder.iterdir()) == ["chunk_01.txt"]
+    assert "[V2]" in (folder / "chunk_01.txt").read_text(encoding="utf-8")
 
 
 def test_force_never_ships_a_stale_draft(work: Path, tmp_path: Path):

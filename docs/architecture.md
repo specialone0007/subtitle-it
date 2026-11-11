@@ -77,7 +77,10 @@ The numbers match the steps in `SKILL.md`.
   in step 5 covers them too.
 - **5. Check the bible.** `bible.py questions` strips the answers. A second
   reader, who never sees the bible, answers the same questions from the
-  subtitles. `bible.py compare` locks what both agree on. A judge reads only
+  subtitles. It starts as soon as the bible is written, while the audio
+  step may still run. The voice questions come from `bible.py
+  voice-questions`, and a second second reader answers them beside the
+  voice mapper. `bible.py compare` locks what both agree on. A judge reads only
   the cited cues for the rest and decides from the evidence or by a safe
   default. `bible.py apply` writes the result; anything settled by a safe
   default goes into the report.

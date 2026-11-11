@@ -4,8 +4,9 @@
 # ///
 """Check the film bible's decisions with a second, independent reader.
 
-    uv run bible.py questions --work W
-    uv run bible.py compare   --work W
+    uv run bible.py questions       --work W
+    uv run bible.py voice-questions --work W
+    uv run bible.py compare         --work W
     uv run bible.py cues      --work W --cues 12,340 [--context 2]
     uv run bible.py apply     --work W
     uv run bible.py voices    --work W
@@ -19,8 +20,12 @@ writes W/judged.json. `apply` puts the judge's answers into decisions.json and
 lists the ties: questions the cues could not settle, decided by a safe default.
 
 When the audio step runs alongside the bible writer, the writer sees no
-voices. The voice mapper then writes W/voices.json, and `voices` adds its
-decisions to decisions.json and its lines to bible.md, before `questions`.
+voices, and the second reader answers the writer's questions while the audio
+step is still running. Once it is done, `voice-questions` writes
+W/questions.voices.json, one question per voice, from speakers.json alone.
+A second second reader answers those in W/second.voices.json while the voice
+mapper writes W/voices.json, and `voices` adds the mapper's decisions to
+decisions.json and its lines to bible.md. `compare` reads both answer files.
 
 decisions.json:
 
@@ -151,10 +156,33 @@ def questions(work: Path) -> dict:
     data = load_decisions(work)
     qs = [{k: d[k] for k in QUESTION_FIELDS if k in d} for d in data["decisions"]]
     (work / "questions.json").write_text(json.dumps(qs, ensure_ascii=False, indent=1), encoding="utf-8")
+    # New questions make any earlier answers to them stale.
+    (work / "second.json").unlink(missing_ok=True)
     by_kind: dict[str, int] = {}
     for q in qs:
         by_kind[q["kind"]] = by_kind.get(q["kind"], 0) + 1
     return {"questions": len(qs), "by_kind": by_kind, "file": str(work / "questions.json")}
+
+
+# The voice mapper answers every voice with at least this many cues.
+MIN_VOICE_CUES = 3
+
+
+def voice_questions(work: Path) -> dict:
+    """One question per voice in speakers.json with at least MIN_VOICE_CUES
+    cues, for a second reader who works beside the voice mapper. The ids
+    are the ones the mapper uses, so `compare` can pair the answers."""
+    speakers = _load_object(work / "speakers.json")
+    counts: dict[str, int] = {}
+    for entry in speakers.values():
+        v = entry.get("voice") if isinstance(entry, dict) else None
+        if isinstance(v, str) and v:
+            counts[v] = counts.get(v, 0) + 1
+    voices = sorted((v for v, n in counts.items() if n >= MIN_VOICE_CUES), key=lambda v: (len(v), v))
+    qs = [{"id": f"voice:{v}", "kind": "voice", "question": f"Which character is voice {v}?"} for v in voices]
+    (work / "questions.voices.json").write_text(json.dumps(qs, ensure_ascii=False, indent=1), encoding="utf-8")
+    (work / "second.voices.json").unlink(missing_ok=True)
+    return {"questions": len(qs), "file": str(work / "questions.voices.json")}
 
 
 # --- compare -------------------------------------------------------------
@@ -236,29 +264,59 @@ def _side(d: dict) -> dict:
     return {"answer": d.get("answer"), "evidence": d.get("evidence", []), "confidence": d.get("confidence")}
 
 
-def compare(work: Path) -> dict:
-    data = load_decisions(work)
-    second = _load_object(work / "second.json")
+def _second_file(path: Path, asked: dict[str, str], taken: set[str], seen: set[str]) -> tuple[list, list]:
+    """One second reader's answers and extras. `asked` maps the ids it was
+    asked to their kind; an extra may not reuse an id in `taken`. `seen`
+    collects the ids across both answer files, so none is used twice."""
+    name = path.name
+    second = _load_object(path)
     answers = second.get("answers", [])
     extra = second.get("extra", [])
     if not isinstance(answers, list) or not isinstance(extra, list):
-        raise SystemExit("second.json needs an answers list and an extra list")
-    kinds = {d["id"]: d["kind"] for d in data["decisions"]}
+        raise SystemExit(f"{name} needs an answers list and an extra list")
     problems = []
     for a in answers:
-        problems += check_decision(a, "second.json", full=False)
-        if isinstance(a, dict) and a.get("id") in kinds:
-            problems += _check_answer(kinds[a["id"]], a.get("answer"), f"second.json {a['id']}")
-        elif isinstance(a, dict):
-            problems.append(f"second.json {a.get('id')}: not a question in questions.json; put new questions under extra")
+        problems += check_decision(a, name, full=False)
+        if not isinstance(a, dict):
+            continue
+        kind = asked.get(a.get("id"))
+        if kind:
+            problems += _check_answer(kind, a.get("answer"), f"{name} {a['id']}")
+        else:
+            problems.append(f"{name} {a.get('id')}: not a question it was asked; put new questions under extra")
+        if a.get("id") in seen:
+            problems.append(f"{name} {a.get('id')}: answered twice")
+        seen.add(a.get("id"))
     for e in extra:
-        problems += check_decision(e, "second.json extra")
-        if isinstance(e, dict):
-            problems += _check_answer(e.get("kind"), e.get("answer"), f"second.json extra {e.get('id')}")
-            if e.get("id") in kinds:
-                problems.append(f"second.json extra {e.get('id')}: this id is already a question; give it a new id")
+        problems += check_decision(e, f"{name} extra")
+        if not isinstance(e, dict):
+            continue
+        problems += _check_answer(e.get("kind"), e.get("answer"), f"{name} extra {e.get('id')}")
+        if e.get("id") in taken or e.get("id") in asked:
+            problems.append(f"{name} extra {e.get('id')}: this id is already a question; give it a new id")
+        elif e.get("id") in seen:
+            problems.append(f"{name} extra {e.get('id')}: this id is used twice; give it a new id")
+        seen.add(e.get("id"))
     if problems:
-        raise SystemExit("second.json has problems:\n" + "\n".join(problems[:20]))
+        raise SystemExit(f"{name} has problems:\n" + "\n".join(problems[:20]))
+    return answers, extra
+
+
+def compare(work: Path) -> dict:
+    data = load_decisions(work)
+    kinds = {d["id"]: d["kind"] for d in data["decisions"]}
+    seen: set[str] = set()
+    answers, extra = _second_file(work / "second.json", kinds, set(kinds), seen)
+    # The voice round, asked from speakers.json while the voice mapper worked.
+    voice_asked: dict[str, dict] = {}
+    if (work / "second.voices.json").exists():
+        qs = _load(work / "questions.voices.json")
+        if not isinstance(qs, list):
+            raise SystemExit("questions.voices.json must hold a list")
+        voice_asked = {q["id"]: q for q in qs if isinstance(q, dict) and isinstance(q.get("id"), str)}
+        asked = {i: "voice" for i in voice_asked}
+        more, more_extra = _second_file(work / "second.voices.json", asked, set(kinds), seen)
+        answers, extra = answers + more, extra + more_extra
 
     second_by_id = {a["id"]: a for a in answers}
     agreed, to_judge = [], []
@@ -272,6 +330,14 @@ def compare(work: Path) -> dict:
         item["second"] = _side(s) if s is not None and s.get("answer") is not None else None
         item["why"] = "the readers disagree" if item["second"] else "the second reader gave no answer"
         to_judge.append(item)
+    # A voice the second reader answered and the voice mapper did not.
+    for a in answers:
+        if a["id"] not in kinds and a.get("answer") is not None:
+            item = {k: voice_asked[a["id"]][k] for k in QUESTION_FIELDS if k in voice_asked[a["id"]]}
+            item["writer"] = None
+            item["second"] = _side(a)
+            item["why"] = "the voice mapper gave no answer"
+            to_judge.append(item)
     for e in extra:
         item = {k: e[k] for k in QUESTION_FIELDS if k in e}
         item["writer"] = None
@@ -569,7 +635,7 @@ def main(argv: list[str] | None = None) -> None:
     sys.stdout.reconfigure(encoding="utf-8")
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
-    for name in ("questions", "compare", "apply", "voices"):
+    for name in ("questions", "voice-questions", "compare", "apply", "voices"):
         sub.add_parser(name).add_argument("--work", type=Path, required=True)
     c = sub.add_parser("cues")
     c.add_argument("--work", type=Path, required=True)
@@ -579,6 +645,8 @@ def main(argv: list[str] | None = None) -> None:
     a = result.parse(p, argv)
     if a.cmd == "questions":
         result.emit(questions(a.work), a.result)
+    elif a.cmd == "voice-questions":
+        result.emit(voice_questions(a.work), a.result)
     elif a.cmd == "compare":
         result.emit(compare(a.work), a.result)
     elif a.cmd == "cues":
