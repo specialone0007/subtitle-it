@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- A polish run now also lists the cues around a wrong sen or siz. When the
+  address check finds the wrong form on one cue, the other cues of that
+  scene that use the same form go to the fixer too, if the bible cannot say
+  who they address. A scene ends at a pause of more than 6 seconds. Human
+  files often keep one form through a whole quarrel, and the check alone
+  caught only 9 of the reviewer's 40 sen/siz changes on a 2-hour test film.
 - A polish run no longer leaves a line softer than the source's swearing.
   The toned-down check now knows strong and mild words, so "fuck" turned
   into "lanet olsun" is flagged. After the review, `polish.py soft` lists
