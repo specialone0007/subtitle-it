@@ -196,14 +196,16 @@ def _head(s: str) -> str:
 
 def _first_character(s: str, characters: list[dict]) -> str | None:
     """The character an answer names first, by name or alias as whole words,
-    or None when it names none."""
+    or None when it names none. Only the answer's head counts, and a name
+    followed by 's does not, so "Leo (Sam's friend)" and "Sam's mother"
+    name no one."""
     best: tuple[int, str] | None = None
-    text = s.casefold()
+    text = _head(s)
     for c in characters:
         for word in [c["name"], *c.get("aliases", [])]:
             if not word.strip():
                 continue
-            m = re.search(rf"(?<!\w){re.escape(word.casefold())}(?!\w)", text)
+            m = re.search(rf"(?<!\w){re.escape(_norm(word))}(?![\w'’])", text)
             if m and (best is None or m.start() < best[0]):
                 best = (m.start(), c["name"])
     return best[1] if best else None
@@ -213,7 +215,7 @@ def agree(kind: str, a, b, characters: list[dict] | None = None) -> bool:
     """Same answer. Address answers agree when they give the same forms in
     the same order, each switch within ADDRESS_TOLERANCE cues of the other.
     Voice answers agree when they name the same character first, or read the
-    same up to a bracket: "Harlan Pike" and "Uncle Harlan Pike" agree,
+    same up to a bracket, semicolon or comma: "Harlan Pike" and "Uncle Harlan Pike" agree,
     "Edwin Van Dorn" and "Ruth Calloway (talking Sam into the trip)" do not."""
     if a is None or b is None:
         return False
