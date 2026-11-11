@@ -1,5 +1,6 @@
 import json
 import random
+import statistics
 import wave
 from pathlib import Path
 
@@ -110,6 +111,28 @@ def test_sync_offset_finds_a_shift_through_noise():
     assert r["verdict"].startswith("subtitles are") and r["verdict"].endswith("late")
 
 
+@pytest.mark.parametrize("seed", [0, 1, 3])
+def test_sync_offset_recentres_an_off_grid_shift(seed):
+    # 1550 ms is between two 100 ms grid steps, and ±280 ms of jitter is
+    # wider than the grid window can hold, so the grid's own median is
+    # 6 to 20 ms off. Recentring on it once measures every start.
+    rng = random.Random(seed)
+    speech = dialogue(200, seed=seed + 20)
+    subs = [s + 1550 + rng.randint(-280, 280) for s in speech]
+    true = statistics.median(c - s for c, s in zip(subs, speech))
+    r = speakers.sync_offset(cues_at(subs), speech)
+    assert abs(r["median_offset_ms"] - true) <= 2
+    assert r["matched_cues"] == len(speech)
+
+
+def test_sync_offset_result_keys_are_the_same_on_every_path():
+    keys = {"matched_cues", "speech_starts", "runner_up_matched", "median_offset_ms", "verdict"}
+    speech = dialogue()
+    assert set(speakers.sync_offset([], speech)) == keys
+    assert set(speakers.sync_offset(cues_at([1000, 3000]), [1000, 3000])) == keys
+    assert set(speakers.sync_offset(cues_at(speech), speech)) == keys
+
+
 def test_sync_offset_leaves_an_in_sync_file_alone():
     rng = random.Random(5)
     speech = dialogue()
@@ -196,6 +219,7 @@ def test_run_keeps_voices_when_the_sync_check_fails(tmp_path: Path, monkeypatch)
     monkeypatch.setattr(speakers, "speech_starts", broken)
     r = speakers.run(tmp_path / "v.mkv", tmp_path, None, sync_check=True)
     assert r["sync"]["verdict"].startswith("sync check failed: RuntimeError")
+    assert set(r["sync"]) == set(speakers.sync_offset([], []))
     assert json.loads((tmp_path / "speakers.json").read_text(encoding="utf-8")) == {"1": {"voice": "V1"}}
 
 
