@@ -373,8 +373,8 @@ def add_voices(work: Path) -> dict:
     ids = set()
     for d in new:
         problems += check_decision(d, "voices.json")
-        if not isinstance(d, dict):
-            continue
+        if not isinstance(d, dict) or not isinstance(d.get("id"), str):
+            continue  # check_decision already named the problem
         if d.get("kind") != "voice" or not VOICE_ID_RE.match(str(d.get("id"))):
             problems.append(f"voices.json {d.get('id')}: only voice decisions, with ids like voice:V3")
         problems += _check_answer("voice", d.get("answer"), f"voices.json {d.get('id')}")
