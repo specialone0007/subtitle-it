@@ -4,7 +4,7 @@
     "name": "Furkan Reha"
   },
   "metadata": {
-    "description": "Local development marketplace for the turkish-subtitles plugin."
+    "description": "Claude Code plugin that translates film subtitles into natural Turkish."
   },
   "plugins": [
     {
