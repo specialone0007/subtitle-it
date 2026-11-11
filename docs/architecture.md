@@ -19,7 +19,7 @@ session.
 ```mermaid
 flowchart TD
     A[0. Start: tools, preferences, edited films] --> B[1. Find the film]
-    B --> C[2. Source subtitles<br>video track, file next to it, OpenSubtitles]
+    B --> C[2. Source subtitles<br>video track, file next to it, OpenSubtitles, audio]
     C --> D[3. Speaker hints<br>voices and sync check, optional]
     D --> E[4. Film bible<br>bible.md, glossary.json, decisions.json]
     E --> F[5. Check the bible<br>blind second reader, judge on differences]
@@ -44,9 +44,11 @@ The numbers match the steps in `SKILL.md`.
 - **2. Source subtitles.** `sources.py local` reads text tracks inside the
   video, files next to it, and files in a `Subs` or `Subtitles` folder
   beside it; `opensubtitles.py` searches by the video's hash, then by IMDb
-  id or title. The timing file is the one whose timing
-  is most certain to fit this exact video. Other files are paired onto it
-  by time with `srt.py compare` only when they line up. Then
+  id or title. With nothing usable from either, `transcribe.py` writes
+  subtitles from the film's own speech with Whisper, the last resort. The
+  timing file is the one whose timing is most certain to fit this exact
+  video. Other files are paired onto it by time with `srt.py compare` only
+  when they line up. Then
   `prepare.py build` writes the work folder: `cues.json` (every cue with
   its source and English text) and `chunks.json` (about 250 cues each, cut
   at the longest pause).

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- When no usable subtitle file exists on disk or on OpenSubtitles, the run
+  makes one from the film's own speech with Whisper (`scripts/transcribe.py`),
+  the last resort. Translators are told the text may be misheard, and the
+  report says the subtitles came from the audio.
 - A film given by path from a folder that is not in your media folders adds
   that folder, so later runs find films there by name
   (`sources.py remember`). A film in its own folder adds the folder above it.
