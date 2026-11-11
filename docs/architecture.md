@@ -96,6 +96,9 @@ The numbers match the steps in `SKILL.md`.
   go to the reviewer.
 - **10. Review.** One subagent reads the whole film side by side with the
   source and fixes what the chunk translators could not see.
+  In a polish run, `polish.py soft` then lists the lines that are still
+  softer than the English swearing. The polish fixer restores them once,
+  and any line still soft goes to "Check after watching".
 - **11. Deliver.** `assemble.py deliver` writes `<film>.tr.srt` next to the
   video and moves any older Turkish file to a backups folder. `report.md`
   ends with "Check after watching": what could not be settled for

@@ -219,3 +219,28 @@ def test_flags_skip_a_fixed_cue_the_timing_file_does_not_have(work: Path, tmp_pa
     out = polish.flags(work)
     assert "#99 " not in (work / polish.FLAG_FILE).read_text(encoding="utf-8")
     assert out["flagged"] >= 1
+
+
+def test_toned_down_needs_a_strong_word_for_a_strong_one():
+    assert polish.toned_down(["Lanet olsun."], ["Fuck."]) == "fuck"
+    assert polish.toned_down(["Siktir."], ["Fuck."]) is None
+    assert polish.toned_down(["Lanet olsun."], ["Damn it."]) is None
+    assert polish.toned_down(["Kahretsin."], ["Shit."]) is None
+    assert polish.toned_down(["Siktir."], ["Shit."]) is None
+    assert polish.toned_down(["Onunla yattım."], ["I fucked her."]) == "fuck"
+
+
+def test_soft_lists_what_the_fixes_left_soft(tmp_path: Path):
+    en = "1\n00:00:01,000 --> 00:00:03,000\nFuck off.\n\n2\n00:00:05,000 --> 00:00:07,000\nShit.\n"
+    tr = "1\n00:00:01,000 --> 00:00:03,000\nDefol.\n\n2\n00:00:05,000 --> 00:00:07,000\nOlamaz.\n"
+    (tmp_path / "en.srt").write_text(en, encoding="utf-8")
+    (tmp_path / "tr.srt").write_text(tr, encoding="utf-8")
+    w = tmp_path / "work"
+    prepare.build(w, tmp_path / "en.srt", None, tmp_path / "en.srt")
+    polish.seed(w, tmp_path / "tr.srt")
+    assert polish.soft(w)["cue_numbers"] == [1, 2]
+    (w / "out" / "fix_polish.txt").write_text("1\nSiktir git.\n", encoding="utf-8")
+    out = polish.soft(w)
+    assert out["left"] == 1 and out["cue_numbers"] == [2]
+    text = (w / polish.SOFT_FILE).read_text(encoding="utf-8")
+    assert "#2 " in text and 'the English says "shit"' in text and "#1 " not in text

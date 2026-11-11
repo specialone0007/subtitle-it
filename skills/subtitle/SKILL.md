@@ -233,7 +233,15 @@ Run `assemble.py sidebyside --work WORK`. Start one
 `turkish-subtitles:reviewer` subagent with the paths: pack, bible,
 `WORK/sidebyside.tsv`, `WORK/checks.json`, `WORK/out/`, and in a polish
 run the preferences file and the line `Polish run: WORK/polish_flags.txt`. It writes
-`WORK/out/fix_review.txt` and `WORK/review.md`. Run `check` again; a new
+`WORK/out/fix_review.txt` and `WORK/review.md`.
+
+In a polish run, then run `polish.py soft --work WORK`. When `left` is
+above 0, start the `turkish-subtitles:polish-fixer` once more with the same
+paths plus the lines `Flags: WORK/polish_soft.txt` and
+`Write to: WORK/out/fix_soft.txt`, then run `soft` again and keep its
+`left` and `cue_numbers` for the report.
+
+Run `check` again; a new
 hard fail gets one fix round as in step 9, written to
 `WORK/out/fix_post_<NN>.txt`. Fix files apply in the order they were
 written, so that round's files win over `fix_review.txt`.
@@ -249,12 +257,12 @@ An old Turkish file at the destination is moved to the backups folder.
 
 Write `WORK/report.md`: sources and timing confidence (for a file made
 from the audio, say so and name the model and device; in a polish run, the
-Turkish file it started from and how many cues the fixer and the reviewer
-changed), any timing shift
+Turkish file it started from, how many cues the fixer and the reviewer
+changed, and how many lines are still softer than the source), any timing shift
 and sync verdict, the bible check (decisions, agreed, judged, ties), cue
 count, hard fails and warnings left, the reviewer's summary. End it with
 `## Check after watching`: each tie from `bible.py apply` (question,
-answer, timestamps), hard fails delivered with `--force`, translator flags
+answer, timestamps), in a polish run each cue the last `soft` still listed, hard fails delivered with `--force`, translator flags
 the reviewer left, and, when the timing confidence is not certain, 3
 timestamps spread over the film to spot-check in a player. When the text
 came from the audio, add one line saying names and quiet or overlapping
