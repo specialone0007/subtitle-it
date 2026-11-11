@@ -355,7 +355,7 @@ def apply(work: Path) -> dict:
         t = to_judge[j["id"]]
         if j["id"] in by_id:
             d = by_id[j["id"]]
-            if not agree(d["kind"], d["answer"], j["answer"]):
+            if not agree(d["kind"], d["answer"], j["answer"], data["characters"]):
                 changed.append(j["id"])
             d.update(answer=j["answer"], evidence=j["evidence"], confidence=conf)
         else:

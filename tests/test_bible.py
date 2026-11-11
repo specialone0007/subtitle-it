@@ -219,6 +219,17 @@ def test_apply_records_changes_additions_and_ties(work):
     assert writer["decisions"][0]["answer"] == [{"from_cue": 1, "form": "siz"}]
 
 
+def test_apply_does_not_count_a_reworded_voice_as_changed(work):
+    write_second(
+        work,
+        [ans("address:Sam>Nora", [{"from_cue": 1, "form": "siz"}]), ans("voice:V1", "Nora"), ans("term:sport", "koçum")],
+    )
+    bible.compare(work)
+    judged = [{"id": "voice:V1", "answer": "Sam on the phone", "evidence": [1, 5], "how": "evidence"}]
+    (work / "judged.json").write_text(json.dumps({"decisions": judged}), encoding="utf-8")
+    assert bible.apply(work)["changed"] == []
+
+
 def test_apply_refuses_when_the_judge_skipped_a_question(work):
     write_second(
         work, [ans("address:Sam>Nora", [{"from_cue": 1, "form": "sen"}]), ans("voice:V1", "Sam"), ans("term:sport", "koçum")]
