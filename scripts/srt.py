@@ -9,6 +9,7 @@ Used as a library by the other scripts and as a small command-line tool:
 
     uv run srt.py info FILE
     uv run srt.py compare A B
+    uv run srt.py shift IN OUT --ms N
 """
 
 from __future__ import annotations
@@ -239,6 +240,16 @@ def chunk(cues: list[Cue], target: int = 250, window: int = 40) -> list[tuple[in
     return [(cues[a].n, cues[b - 1].n) for a, b in zip(bounds, bounds[1:])]
 
 
+def shift(cues: list[Cue], ms: int) -> list[Cue]:
+    """The same cues moved by ms (negative is earlier), never before 0:00.
+    Timestamps are rewritten in the standard form."""
+    out = []
+    for c in cues:
+        start, end = max(c.start + ms, 0), max(c.end + ms, 0)
+        out.append(Cue(n=c.n, start=start, end=end, ts=f"{fmt_ms(start)} --> {fmt_ms(end)}", lines=list(c.lines)))
+    return out
+
+
 # --- command line --------------------------------------------------------
 
 
@@ -266,6 +277,14 @@ def _cmd_compare(a) -> None:
     result.emit({"cues": [len(x), len(y)], "timestamp_mismatches": len(mism), "first": mism[:5], **offset_check(x, y)}, a.result)
 
 
+def _cmd_shift(a) -> None:
+    cues, _ = parse(a.src)
+    if not cues:
+        raise SystemExit(f"no cues found in {a.src}")
+    write(a.dest, shift(cues, a.ms))
+    result.emit({"file": str(a.dest), "cues": len(cues), "shifted_ms": a.ms}, a.result)
+
+
 def main(argv: list[str] | None = None) -> None:
     sys.stdout.reconfigure(encoding="utf-8")
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -277,6 +296,11 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("a", type=Path)
     s.add_argument("b", type=Path)
     s.set_defaults(func=_cmd_compare)
+    s = sub.add_parser("shift", help="move every cue by the same number of ms")
+    s.add_argument("src", type=Path)
+    s.add_argument("dest", type=Path)
+    s.add_argument("--ms", type=int, required=True, help="negative moves the cues earlier")
+    s.set_defaults(func=_cmd_shift)
     result.add_argument(p)
     a = result.parse(p, argv)
     a.func(a)

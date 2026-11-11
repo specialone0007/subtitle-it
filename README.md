@@ -11,9 +11,14 @@ natural Turkish subtitles on the source file's own timings.
 
 It finds the film, finds source subtitles (a track inside the video, a file
 next to it, or OpenSubtitles), builds a short "film bible" (characters, who
-says sen or siz to whom, fixed terms), asks you to check it, translates the
-film in parallel chunks, runs automatic checks, has one reviewer read the
-whole film, and saves `Anatomy of a Fall.tr.srt` next to the video.
+says sen or siz to whom, fixed terms), has a second reader check it blind
+and a judge settle any difference, translates the film in parallel chunks,
+runs automatic checks, has one reviewer read the whole film, and saves
+`Anatomy of a Fall.tr.srt` next to the video.
+
+It does not stop to ask you anything once setup is done, and it does not
+spoil the film in chat. What it could not settle for certain goes under
+"Check after watching" in the film's `report.md`.
 
 ## Setup
 
@@ -43,8 +48,8 @@ whole film, and saves `Anatomy of a Fall.tr.srt` next to the video.
    ```
 
    The first run downloads a few GB (PyTorch, pyannote and a Whisper model). With an NVIDIA GPU it
-   takes a few minutes per film; on the CPU about as long as the film. It also reports when the
-   subtitles are out of sync with the audio.
+   takes a few minutes per film; on the CPU about as long as the film. When the subtitles are
+   out of sync with the audio, it moves them to match and says so in the report.
 5. **Install the plugin.** From a clone of this repo:
 
    ```

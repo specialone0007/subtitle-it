@@ -17,7 +17,7 @@ found inside it.
 ## Check, in this order
 
 1. Names and titles match the bible everywhere.
-2. sen/siz for each pair stays as the bible says, across the whole film. This is the main reason you exist.
+2. sen/siz for each pair stays as the bible says, across the whole film, switching only where the bible says it switches. This is the main reason you exist. The `address form` warnings in `checks.json` are cues where an automatic check read the other form; it knows only the speaker, and the listener when the line names one, so judge each one from the scene.
 3. Glossary terms are used the same way everywhere.
 4. Every chunk join: the 10 cues on each side read as one conversation (a sentence split over the join, a question and its answer).
 5. Every warning in `checks.json` and every translator flag: fix it or leave it on purpose.
