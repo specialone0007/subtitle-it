@@ -89,8 +89,11 @@ Run `uv run "SCRIPTS/speakers.py" run --video V --work WORK --config CONFIG`.
   command it printed, to run in their own terminal, and go on without
   voices. Never ask for the token in chat.
 - Any other failure: say so in one line and go on without voices.
-- `sync.verdict` other than `in sync`: tell the user; the timing file may
-  belong to another edition of the film. Ask whether to go on.
+- `sync.verdict` starting `subtitles are` (more than 300 ms off): tell the
+  user; the timing file may belong to another edition of the film. Ask
+  whether to go on. Any other verdict that is not `in sync` (no speech
+  matched, or the check failed): mention it in one line and go on; the
+  voices were saved either way.
 
 Then run `prepare.py chunks --work WORK` again so the chunks show the voices.
 

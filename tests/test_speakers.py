@@ -73,3 +73,47 @@ def test_run_writes_voices_with_models_faked(tmp_path: Path, monkeypatch):
     assert r["voices"] == {"V1": 1, "V2": 1} and r["sync"]["verdict"] == "in sync"
     saved = json.loads((tmp_path / "speakers.json").read_text(encoding="utf-8"))
     assert saved == {"1": {"label": "Sandra", "voice": "V1"}, "2": {"voice": "V2"}}
+
+
+def test_run_without_token_or_config_suggests_the_default_folder(tmp_path: Path, monkeypatch, capsys):
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    with pytest.raises(SystemExit):
+        speakers.run(tmp_path / "v.mkv", tmp_path, None, sync_check=False)
+    fix = json.loads(capsys.readouterr().out)["fix"]
+    assert str(speakers.DEFAULT_CONFIG) in fix and '"None"' not in fix
+
+
+def test_run_keeps_voices_when_the_sync_check_fails(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("HF_TOKEN", "hf_x")
+    (tmp_path / "timing.srt").write_text("1\n00:00:01,000 --> 00:00:02,000\nViens.\n", encoding="utf-8")
+    monkeypatch.setattr(speakers, "extract_audio", lambda video, dest: dest)
+    monkeypatch.setattr(speakers, "diarize", lambda wav, token: [(900, 2100, "A")])
+
+    def broken(wav):
+        raise RuntimeError("cublas64_12.dll not found")
+
+    monkeypatch.setattr(speakers, "speech_starts", broken)
+    r = speakers.run(tmp_path / "v.mkv", tmp_path, None, sync_check=True)
+    assert r["sync"]["verdict"].startswith("sync check failed: RuntimeError")
+    assert json.loads((tmp_path / "speakers.json").read_text(encoding="utf-8")) == {"1": {"voice": "V1"}}
+
+
+def test_speech_starts_falls_back_to_cpu_when_cuda_fails_while_transcribing(monkeypatch):
+    import sys
+    import types
+
+    class Model:
+        def __init__(self, name, device, compute_type):
+            self.device = device
+
+        def transcribe(self, path, **kw):
+            def segments():
+                if self.device == "cuda":
+                    raise RuntimeError("cudnn missing")  # raised lazily, as ctranslate2 does
+                yield types.SimpleNamespace(start=1.5)
+
+            return segments(), None
+
+    monkeypatch.setitem(sys.modules, "faster_whisper", types.SimpleNamespace(WhisperModel=Model))
+    monkeypatch.setattr(speakers, "_device", lambda: "cuda")
+    assert speakers.speech_starts(Path("a.wav")) == [1500]

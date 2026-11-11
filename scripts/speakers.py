@@ -3,9 +3,10 @@
 # dependencies = [
 #   "charset-normalizer>=3.3",
 #   "faster-whisper>=1.1",
+#   "huggingface_hub>=0.21,<1",
 #   "pyannote.audio>=3.3,<4",
-#   "torch>=2.4",
-#   "torchaudio>=2.4",
+#   "torch>=2.4,<2.9",
+#   "torchaudio>=2.4,<2.9",
 # ]
 #
 # [[tool.uv.index]]
@@ -20,7 +21,9 @@
 """Speaker hints from the film's audio: which voice speaks each cue.
 
     uv run speakers.py setup --config CONFIG
-    uv run speakers.py run   --video V --work W --config CONFIG [--no-sync-check]
+    uv run speakers.py run   --video V --work W [--config CONFIG] [--no-sync-check]
+
+CONFIG defaults to ~/.config/turkish-subtitles.
 
 `setup` asks for a Hugging Face token without showing it and stores it in
 CONFIG/credentials.json under "hf_token". The token's account must have
@@ -195,19 +198,29 @@ def diarize(wav: Path, token: str) -> list[Turn]:
 def speech_starts(wav: Path) -> list[int]:
     from faster_whisper import WhisperModel
 
-    device = _device()
-    try:
+    def transcribe(device: str) -> list[int]:
         model = WhisperModel(WHISPER_MODEL, device=device, compute_type="float16" if device == "cuda" else "int8")
+        segments, _ = model.transcribe(str(wav), vad_filter=True, word_timestamps=False)
+        # segments is lazy: CUDA library errors surface here, inside the try.
+        return [int(s.start * 1000) for s in segments]
+
+    device = _device()
+    if device == "cpu":
+        return transcribe("cpu")
+    try:
+        return transcribe(device)
     except Exception:  # CUDA libraries missing: fall back to the CPU
-        model = WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8")
-    segments, _ = model.transcribe(str(wav), vad_filter=True, word_timestamps=False)
-    return [int(s.start * 1000) for s in segments]
+        return transcribe("cpu")
+
+
+DEFAULT_CONFIG = Path.home() / ".config" / "turkish-subtitles"
 
 
 def run(video: Path, work: Path, config: Path | None, sync_check: bool) -> dict:
     token = load_token(config)
     if not token:
-        print(json.dumps({"skipped": "token missing", "fix": f'uv run "{Path(__file__).resolve()}" setup --config "{config}"'}))
+        where = config or DEFAULT_CONFIG
+        print(json.dumps({"skipped": "token missing", "fix": f'uv run "{Path(__file__).resolve()}" setup --config "{where}"'}))
         raise SystemExit(TOKEN_MISSING)
     cues, _ = srt.parse(work / "timing.srt")
     speakers_file = work / "speakers.json"
@@ -216,8 +229,15 @@ def run(video: Path, work: Path, config: Path | None, sync_check: bool) -> dict:
         wav = extract_audio(video, Path(tmp) / "audio.wav")
         turns = diarize(wav, token)
         voices = assign_voices(cues, turns)
-        sync = sync_offset(cues, speech_starts(wav)) if sync_check else None
-    speakers_file.write_text(json.dumps(merge_voices(speakers, voices), ensure_ascii=False, indent=1), encoding="utf-8")
+        # Save the voices first: the sync check is optional and must never
+        # cost the diarization.
+        speakers_file.write_text(json.dumps(merge_voices(speakers, voices), ensure_ascii=False, indent=1), encoding="utf-8")
+        sync = None
+        if sync_check:
+            try:
+                sync = sync_offset(cues, speech_starts(wav))
+            except Exception as e:  # report, keep the voices
+                sync = {"matched_cues": 0, "median_offset_ms": None, "verdict": f"sync check failed: {type(e).__name__}: {e}"}
     counts: dict[str, int] = {}
     for v in voices.values():
         counts[v] = counts.get(v, 0) + 1
@@ -238,7 +258,7 @@ def main(argv: list[str] | None = None) -> None:
     r = sub.add_parser("run")
     r.add_argument("--video", type=Path, required=True)
     r.add_argument("--work", type=Path, required=True)
-    r.add_argument("--config", type=Path)
+    r.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     r.add_argument("--no-sync-check", action="store_true")
     a = p.parse_args(argv)
     if a.cmd == "setup":
