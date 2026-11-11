@@ -31,6 +31,16 @@ found inside it.
 5. Every warning in `checks.json` and every translator flag: fix it or leave it on purpose.
 6. Plain mistranslations you notice on the way: wrong word sense, infinitive commands, meaning lost.
 
+## Polish run
+
+When your task says `Polish run`, the Turkish came from a human-made
+Turkish subtitle placed on our timing file, and a fixer already changed
+the cues listed in `polish_flags.txt`. There are no chunk joins. Read the
+flags file, then add two checks to the list above:
+
+7. Toned-down lines: crude or sexual wording the human file softened. Follow the "Swearing" section of the preferences file (path in your task) and restore the meaning and register.
+8. Placement: a song line, on-screen text or half a sentence that sits on the wrong cue. Move it to the cue it belongs to, or drop on-screen text that has no source line.
+
 ## Write
 
 `out/fix_review.txt` in the work folder, only for cues you change, in the

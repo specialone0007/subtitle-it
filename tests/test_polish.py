@@ -154,6 +154,7 @@ def test_match_form_drops_dashes_the_source_does_not_have():
 
 def test_sidebyside_works_without_chunks(work: Path, tmp_path: Path):
     polish.seed(work, tmp_path / "tr.srt")
+    (work / "chunks.json").unlink(missing_ok=True)
     assemble.sidebyside(work)
     text = (work / "sidebyside.tsv").read_text(encoding="utf-8")
     assert "Hava soğuk" in text and "chunk join" not in text
@@ -198,3 +199,10 @@ def test_flags_lists_toned_down_and_misplaced_cues(tmp_path: Path):
     text = (w / polish.FLAG_FILE).read_text(encoding="utf-8")
     assert 'toned down: the English says "fuck"' in text
     assert "landed on no cue: ŞEHİR MERKEZİ" in text
+
+
+def test_sidebyside_marks_no_joins_in_a_seeded_run(work: Path, tmp_path: Path):
+    prepare.chunks(work, 2)
+    polish.seed(work, tmp_path / "tr.srt")
+    assemble.sidebyside(work)
+    assert "chunk join" not in (work / "sidebyside.tsv").read_text(encoding="utf-8")

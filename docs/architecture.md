@@ -8,7 +8,8 @@ your conversation. The work is split two ways:
   translation and writing the file. They are plain Python, tested, and
   print a JSON result.
 - **Subagents** do the language work: the film bible, the second reader,
-  the judge, the voice mapper, one translator per chunk and one reviewer.
+  the judge, the voice mapper, one translator per chunk (or one polish
+  fixer) and one reviewer.
   Each runs as its own agent type from `agents/`: the file holds its
   instructions and the few tools it may use, and leaves out the general
   Claude Code instructions and your CLAUDE.md files, which it does not
@@ -58,7 +59,9 @@ The numbers match the steps in `SKILL.md`.
   `srt.py shift` first. Then
   `prepare.py build` writes the work folder: `cues.json` (every cue with
   its source and English text) and `chunks.json` (about 250 cues each, cut
-  at the longest pause).
+  at the longest pause). The step also looks for a human-made Turkish
+  subtitle. When one passes `srt.py fit`, the run is a polish run (see
+  steps 6–7).
 - **3. Speaker hints** (optional). `speakers.py` finds who speaks each line
   from the audio and checks the subtitles are in sync with it. Subtitles
   more than 300 ms off are shifted with `srt.py shift` and the voices are
@@ -79,7 +82,11 @@ The numbers match the steps in `SKILL.md`.
   default goes into the report.
 - **6–7. Translate.** One subagent per chunk, all started at once, each with
   the Turkish language pack (`pack-tr.md`), the bible, your preferences and
-  its neighbours' chunks for context.
+  its neighbours' chunks for context. In a polish run there are no
+  translators: `polish.py seed` puts the Turkish file's text on the timing
+  file's cues, `polish.py flags` lists the cues to fix (check fails, lines
+  left in English, crude lines the Turkish tones down, lines that may sit
+  on the wrong cue), and one polish fixer subagent changes only those.
 - **8–9. Assemble and check.** `assemble.py check` joins the chunks and checks
   every cue. Hard fails are missing, extra or empty cues, italics or
   dialogue dashes that differ from the source, and too many lines; they go
