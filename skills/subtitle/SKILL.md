@@ -67,12 +67,14 @@ search if you do not know them. Then collect candidates:
 
 1. If the input is a video: `sources.py local --video V --work WORK`. It extracts text tracks, finds files next to the video and in a `Subs` or `Subtitles` folder beside it (up to two levels down), and validates each.
 2. If there is no usable candidate in the original language and none in English, or only uncertain ones: `opensubtitles.py search --config CONFIG --video V --languages <orig>,en` (add `--imdb ID` when the video gives no hash match). Results are sorted best first; `moviehash_match: true` means the timing fits this exact video. Download at most 3 files with `opensubtitles.py download --config CONFIG --file-id N --out WORK/sources/os_<lang>.srt --cache "${CLAUDE_PLUGIN_DATA}/cache"`, then run `sources.py validate --file F --duration-ms D` on each. If the script says credentials are missing, give the user the setup command it printed and stop: this is one-time setup.
-3. If the input is an `.srt` alone, that file is the timing file (confidence "as the user says").
+3. If the input is a video and there is still no usable candidate in the original language or in English (none found, or all fail validation), make one from the audio as the last resort: `transcribe.py run --video V --work WORK --language <orig>`. Leave out `--language` when you do not know the original language. Say in one line that this writes subtitles from the film's speech, takes a few minutes on a GPU and about the film's length or more on a CPU, and downloads a speech model of about 1.6 GB the first time. The result's `path` is `WORK/sources/asr.<language>.srt`, with confidence "from the audio". If it fails, say so in one line and stop: there is nothing to translate.
+4. If the input is an `.srt` alone, that file is the timing file (confidence "as the user says").
 
 Pick the timing file: the candidate with the best timing confidence that
 passes validation: built-in text track (certain) > OpenSubtitles hash match
 (certain) > file next to the video or in its subtitle folder (likely) > OpenSubtitles by name or IMDb
-(uncertain). Skip forced-only and image tracks, and anything in Turkish.
+(uncertain) > transcribed from the audio (from the audio). Skip forced-only and
+image tracks, and anything in Turkish.
 
 Pick the text to translate from: the timing file itself when it is in the
 original language; otherwise the best original-language candidate. Pick
@@ -99,6 +101,9 @@ works. A preferences file from an older version may say `ask` or have no
 line that it downloads a few GB of models.
 
 Run `uv run "SCRIPTS/speakers.py" run --video V --work WORK --config CONFIG`.
+Add `--no-sync-check` when the timing file came from the audio
+(`transcribe.py`): its times are the audio's own, so there is nothing to
+check.
 
 - Exit code 3 with `"skipped": "token missing"`: give the user the `fix`
   command it printed, to run in their own terminal, and go on without
@@ -162,6 +167,11 @@ Write your translation to: <out>
 Write flags to: WORK/out/flags_<NN>.txt
 ```
 
+When the text came from the audio (`transcribe.py`), add this line to each
+prompt: `The source text was transcribed from the audio by machine. A word
+that makes no sense there may be misheard: translate the likely meaning
+and flag the cue as "may be misheard".`
+
 Wait for all of them.
 
 ## 8–9. Assemble and check
@@ -193,13 +203,16 @@ replaced by `tr`). Run
 (add `--force` when hard fails are left after the fix rounds).
 An old Turkish file at the destination is moved to the backups folder.
 
-Write `WORK/report.md`: sources and timing confidence, any timing shift
+Write `WORK/report.md`: sources and timing confidence (for a file made
+from the audio, say so and name the model and device), any timing shift
 and sync verdict, the bible check (decisions, agreed, judged, ties), cue
 count, hard fails and warnings left, the reviewer's summary. End it with
 `## Check after watching`: each tie from `bible.py apply` (question,
 answer, timestamps), hard fails delivered with `--force`, translator flags
 the reviewer left, and, when the timing confidence is not certain, 3
-timestamps spread over the film to spot-check in a player.
+timestamps spread over the film to spot-check in a player. When the text
+came from the audio, add one line saying names and quiet or overlapping
+lines may be misheard, and list the cues flagged "may be misheard".
 
 Tell the user, in a few lines and without spoilers: where the file is,
 where the old one went, how many items are in "Check after watching" and

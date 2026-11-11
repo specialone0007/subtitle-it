@@ -26,4 +26,4 @@ select = ["E", "F", "W", "I", "B", "UP"]
 ignore = ["E741", "B905"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["result", "srt", "prepare", "assemble", "learn", "sources", "opensubtitles", "speakers", "bible"]
+known-first-party = ["result", "srt", "prepare", "assemble", "learn", "sources", "opensubtitles", "speakers", "bible", "transcribe"]
