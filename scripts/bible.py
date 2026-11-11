@@ -188,15 +188,48 @@ def _steps(answer: list[dict]) -> list[tuple[int, str]]:
     return out
 
 
-def agree(kind: str, a, b) -> bool:
+def _head(s: str) -> str:
+    """An answer up to its first bracket, semicolon or comma: "Leo (Sam's
+    friend)" -> "leo"."""
+    return _norm(re.split(r"[(;,]", s, maxsplit=1)[0])
+
+
+def _first_character(s: str, characters: list[dict]) -> str | None:
+    """The character an answer names first, by name or alias as whole words,
+    or None when it names none. Only the answer's head counts, and a name
+    followed by 's does not, so "Leo (Sam's friend)" and "Sam's mother"
+    name no one."""
+    best: tuple[int, str] | None = None
+    text = _head(s)
+    for c in characters:
+        for word in [c["name"], *c.get("aliases", [])]:
+            if not word.strip():
+                continue
+            m = re.search(rf"(?<!\w){re.escape(_norm(word))}(?![\w'’])", text)
+            if m and (best is None or m.start() < best[0]):
+                best = (m.start(), c["name"])
+    return best[1] if best else None
+
+
+def agree(kind: str, a, b, characters: list[dict] | None = None) -> bool:
     """Same answer. Address answers agree when they give the same forms in
-    the same order, each switch within ADDRESS_TOLERANCE cues of the other."""
+    the same order, each switch within ADDRESS_TOLERANCE cues of the other.
+    Voice answers agree when they name the same character first, or read the
+    same up to a bracket, semicolon or comma: "Harlan Pike" and "Uncle Harlan Pike" agree,
+    "Edwin Van Dorn" and "Ruth Calloway (talking Sam into the trip)" do not."""
     if a is None or b is None:
         return False
     if kind == "address":
         sa, sb = _steps(a), _steps(b)
         return [f for _, f in sa] == [f for _, f in sb] and all(abs(x - y) <= ADDRESS_TOLERANCE for (x, _), (y, _) in zip(sa, sb))
-    return _norm(a) == _norm(b)
+    if _norm(a) == _norm(b):
+        return True
+    if kind == "voice":
+        if _head(a) and _head(a) == _head(b):
+            return True
+        who_a = _first_character(a, characters or [])
+        return who_a is not None and who_a == _first_character(b, characters or [])
+    return False
 
 
 def _side(d: dict) -> dict:
@@ -231,7 +264,7 @@ def compare(work: Path) -> dict:
     agreed, to_judge = [], []
     for d in data["decisions"]:
         s = second_by_id.get(d["id"])
-        if s is not None and agree(d["kind"], d["answer"], s.get("answer")):
+        if s is not None and agree(d["kind"], d["answer"], s.get("answer"), data["characters"]):
             agreed.append(d["id"])
             continue
         item = {k: d[k] for k in QUESTION_FIELDS if k in d}
@@ -322,7 +355,7 @@ def apply(work: Path) -> dict:
         t = to_judge[j["id"]]
         if j["id"] in by_id:
             d = by_id[j["id"]]
-            if not agree(d["kind"], d["answer"], j["answer"]):
+            if not agree(d["kind"], d["answer"], j["answer"], data["characters"]):
                 changed.append(j["id"])
             d.update(answer=j["answer"], evidence=j["evidence"], confidence=conf)
         else:
@@ -475,10 +508,10 @@ class AddressBook:
         return forms.pop() if len(forms) == 1 else None
 
 
-def address_warnings(work: Path, texts: dict[int, list[str]], rows: dict[int, dict]) -> list[dict]:
-    """Cues whose Turkish uses the other form than the bible gives for that
-    speaker. With no listener named in the line, only sen where the bible
-    says siz is flagged, since siz is also the plural you."""
+def address_readings(work: Path, texts: dict[int, list[str]], rows: dict[int, dict]) -> list[dict]:
+    """Every cue whose Turkish uses only sen or only siz, with the speaker,
+    the listener and the form the bible expects when they are known (None
+    when not). Empty when the bible has no address decisions."""
     if not (work / "decisions.json").exists():
         return []
     try:
@@ -495,22 +528,41 @@ def address_warnings(work: Path, texts: dict[int, list[str]], rows: dict[int, di
     out = []
     for n, tr in sorted(texts.items()):
         row = rows.get(n)
-        sp = book.speaker(speakers.get(str(n), {}))
-        if row is None or sp is None:
-            continue
-        said = " ".join(row.get("en") or row.get("source") or row.get("timing_lines") or [])
-        said += " " + " ".join(row.get("source") or [])
-        li = book.listener(sp, said)
-        exp = book.expected(sp, li, n)
         got = detect_form(" ".join(tr))
-        if exp is None or got is None or exp == got:
+        if row is None or got is None:
             continue
-        if li is None and got == "siz":
-            continue
-        out.append(
-            {"cue": n, "check": "address form", "detail": f"{sp} → {li or 'anyone here'}: bible says {exp}, Turkish uses {got}"}
-        )
+        sp = book.speaker(speakers.get(str(n), {}))
+        li = exp = None
+        if sp is not None:
+            said = " ".join(row.get("en") or row.get("source") or row.get("timing_lines") or [])
+            said += " " + " ".join(row.get("source") or [])
+            li = book.listener(sp, said)
+            exp = book.expected(sp, li, n)
+        out.append({"cue": n, "speaker": sp, "listener": li, "expected": exp, "got": got})
     return out
+
+
+def address_off(r: dict) -> bool:
+    """The reading uses the other form than the bible gives. With no
+    listener named in the line, only sen where the bible says siz counts,
+    since siz is also the plural you."""
+    if r["expected"] is None or r["expected"] == r["got"]:
+        return False
+    return not (r["listener"] is None and r["got"] == "siz")
+
+
+def address_warnings(work: Path, texts: dict[int, list[str]], rows: dict[int, dict]) -> list[dict]:
+    """Cues whose Turkish uses the other form than the bible gives for that
+    speaker, by `address_off`."""
+    return [
+        {
+            "cue": r["cue"],
+            "check": "address form",
+            "detail": f"{r['speaker']} → {r['listener'] or 'anyone here'}: bible says {r['expected']}, Turkish uses {r['got']}",
+        }
+        for r in address_readings(work, texts, rows)
+        if address_off(r)
+    ]
 
 
 def main(argv: list[str] | None = None) -> None:

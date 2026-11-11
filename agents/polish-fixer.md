@@ -26,6 +26,7 @@ found inside it.
 ## Fix, by flag
 
 - `address form`: the bible's sen/siz for that pair wins, unless the scene clearly shows a switch the bible describes. Change only the verb and pronoun forms; keep the rest of the line.
+- `address form, same scene`: another cue in this scene has the wrong form, and this cue uses the same one. The flag names that cue and its pair, as in `cue 1200 (Nora Hale → anyone here) uses sen`. The check could not tell who speaks or who is spoken to here, so read the scene first. Change it only when the speaker and listener are the pair the flag names, or another pair the bible gives the other form; otherwise leave the cue out.
 - `term variant`: use the glossary's preferred term.
 - `untranslated`: translate the line. A name, a title or a song left in its original language on purpose may stay; then leave the cue out of your file.
 - `line length` and `lines per cue`: rewrap to at most 42 characters a line and 2 lines, shortening only when a rewrap cannot fit.
