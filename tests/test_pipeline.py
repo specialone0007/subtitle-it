@@ -1,6 +1,7 @@
 """End-to-end over the scripts with a tiny fake film: build, chunk,
 translate (by hand), check, review file, deliver, learn."""
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -148,6 +149,36 @@ def test_deliver_backs_up_and_learn_finds_swaps(work: Path, tmp_path: Path):
     assert d["repeated_swaps"] == [{"from": "Peki", "to": "Tamam", "count": 2, "cues": [3, 4]}]
     learn.mark_learned(w2)
     assert learn.scan(tmp_path / "data") == []
+
+
+def _delivered(films: Path, name: str, dest: Path, text: str, when: str) -> Path:
+    work = films / name
+    work.mkdir(parents=True)
+    (work / "delivered.tr.srt").write_text(text, encoding="utf-8")
+    info = {"delivered_to": str(dest), "sha256": hashlib.sha256(text.encode()).hexdigest(), "delivered_at": when}
+    (work / "delivered.json").write_text(json.dumps(info), encoding="utf-8")
+    return work
+
+
+def test_learn_scan_ignores_a_file_a_later_run_replaced(tmp_path: Path):
+    films = tmp_path / "data" / "films"
+    dest = tmp_path / "Film.tr.srt"
+    _delivered(films, "film-old", dest, "first run", "2026-11-10T10:00:00")
+    newer = _delivered(films, "film-new", dest, "second run", "2026-11-11T10:00:00")
+    dest.write_text("second run", encoding="utf-8")
+    assert learn.scan(tmp_path / "data") == []
+    dest.write_text("second run, edited", encoding="utf-8")
+    assert learn.scan(tmp_path / "data") == [{"work": str(newer), "file": str(dest)}]
+
+
+def test_learn_scan_still_lists_each_film_of_its_own(tmp_path: Path):
+    films = tmp_path / "data" / "films"
+    a, b = tmp_path / "A.tr.srt", tmp_path / "B.tr.srt"
+    _delivered(films, "a", a, "A", "2026-11-10T10:00:00")
+    _delivered(films, "b", b, "B", "2026-11-11T10:00:00")
+    a.write_text("A edited", encoding="utf-8")
+    b.write_text("B edited", encoding="utf-8")
+    assert [x["file"] for x in learn.scan(tmp_path / "data")] == [str(a), str(b)]
 
 
 def test_deliver_refuses_hard_fails(work: Path, tmp_path: Path):
