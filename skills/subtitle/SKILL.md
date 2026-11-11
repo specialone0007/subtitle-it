@@ -28,9 +28,9 @@ Run every script as
 with full paths in quotes, and read that file for the result. Each script
 also prints the same JSON, but some shells shorten what a command prints
 (an output filter can turn a successful `uv run` into "ok"), so trust
-the file. A script that fails leaves no result file; read its error output
-instead. `--result` always comes before the command. The step texts below
-leave it out for brevity. Never read, print or edit `CONFIG/credentials.json`; only
+the file. A script that fails, a usage error included, leaves no result
+file; read its error output instead. `--result` always comes before the
+command. The step texts below leave it out for brevity. Never read, print or edit `CONFIG/credentials.json`; only
 `opensubtitles.py` and `speakers.py` touch it.
 
 Arguments: $ARGUMENTS

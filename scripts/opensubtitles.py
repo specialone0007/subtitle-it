@@ -261,8 +261,7 @@ def main(argv: list[str] | None = None) -> None:
             s.add_argument("--out", type=Path, required=True)
             s.add_argument("--cache", type=Path, required=True)
     result.add_argument(p)
-    a = p.parse_args(argv)
-    result.clear(a.result)
+    a = result.parse(p, argv)
     if a.cmd == "setup":
         setup(a.config)
         return

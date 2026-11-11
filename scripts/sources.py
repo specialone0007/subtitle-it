@@ -271,8 +271,7 @@ def main(argv: list[str] | None = None) -> None:
     s = sub.add_parser("slug")
     s.add_argument("name")
     result.add_argument(p)
-    a = p.parse_args(argv)
-    result.clear(a.result)
+    a = result.parse(p, argv)
     if a.cmd == "find":
         out = find(a.query, a.dirs)
     elif a.cmd == "local":

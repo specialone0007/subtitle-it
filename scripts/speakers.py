@@ -288,8 +288,7 @@ def main(argv: list[str] | None = None) -> None:
     r.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     r.add_argument("--no-sync-check", action="store_true")
     result.add_argument(p)
-    a = p.parse_args(argv)
-    result.clear(a.result)
+    a = result.parse(p, argv)
     if a.cmd == "setup":
         setup(a.config)
     else:

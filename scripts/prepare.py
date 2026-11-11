@@ -159,8 +159,7 @@ def main(argv: list[str] | None = None) -> None:
     c.add_argument("--work", type=Path, required=True)
     c.add_argument("--target", type=int, default=250)
     result.add_argument(p)
-    a = p.parse_args(argv)
-    result.clear(a.result)
+    a = result.parse(p, argv)
     if a.cmd == "build":
         result.emit(build(a.work, a.timing, a.source, a.en), a.result)
     else:

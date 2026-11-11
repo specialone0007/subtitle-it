@@ -18,10 +18,18 @@ def add_argument(p: argparse.ArgumentParser) -> None:
 
 
 def clear(path: Path | None) -> None:
-    """Remove an earlier result first, so a run that fails leaves no stale
-    file behind to be read as this run's answer."""
     if path is not None:
         path.unlink(missing_ok=True)
+
+
+def parse(p: argparse.ArgumentParser, argv: list[str] | None) -> argparse.Namespace:
+    """Remove an earlier result file, then parse the arguments. The file goes
+    first because argparse exits on a usage error, and an old file left
+    behind would be read as this run's answer."""
+    early = argparse.ArgumentParser(add_help=False)
+    add_argument(early)
+    clear(early.parse_known_args(argv)[0].result)
+    return p.parse_args(argv)
 
 
 def emit(obj, path: Path | None) -> None:
