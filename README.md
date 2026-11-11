@@ -132,7 +132,8 @@ Layout:
 .claude-plugin/marketplace.json marketplace that lists the plugin
 skills/subtitle/SKILL.md        the run (steps 0-11) and learn mode
 skills/subtitle/pack-tr.md      Turkish language rules
-skills/subtitle/briefs/         bible, second reader, judge, voice mapper, translator and reviewer instructions
+agents/                         subagent types: bible writer, second reader, judge, voice mapper,
+                                translator, reviewer (instructions and allowed tools)
 scripts/srt.py                  parse, encodings, pairing by time, chunking
 scripts/sources.py              find films, extract tracks, validate sources
 scripts/opensubtitles.py        OpenSubtitles login, search, download
