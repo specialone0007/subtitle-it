@@ -212,7 +212,12 @@ def read_wav(wav: Path):
         if f.getnchannels() != 1 or f.getsampwidth() != 2 or f.getframerate() != 16000:
             raise ValueError(f"{wav} is not 16 kHz mono 16-bit audio")
         frames = f.readframes(f.getnframes())
-    return np.frombuffer(frames, dtype="<i2").astype(np.float32) / 32768.0
+    # One float32 copy, scaled in place: a feature film is ~420 MB of
+    # samples, and a second copy for the division would double that.
+    samples = np.frombuffer(frames, dtype="<i2").astype(np.float32)
+    del frames
+    samples /= 32768.0
+    return samples
 
 
 def speech_starts(wav: Path) -> list[int]:
