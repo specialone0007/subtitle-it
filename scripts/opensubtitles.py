@@ -34,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import result  # noqa: E402
 
 API = "https://api.opensubtitles.com/api/v1"
-USER_AGENT = "TurkishSubtitles v0.5.0"
+USER_AGENT = "TurkishSubtitles v0.5.1"
 TOKEN_MAX_AGE = 20 * 3600  # tokens last 24 h; renew a bit early
 
 

@@ -127,6 +127,13 @@ def test_flags_lists_only_the_cues_to_fix(work: Path, tmp_path: Path):
     text = (work / polish.FLAG_FILE).read_text(encoding="utf-8")
     assert "#5 " in text and "flag: untranslated" in text
     assert "#6 " in text and "flag: cue count: missing" in text
+    # A cue with no Turkish says so on its tr: line and in the header,
+    # which names every such cue, so the fixer cannot skip one.
+    assert "tr: <none: write this cue>" in text and polish.MISSING_FLAG in text
+    assert text.splitlines()[1] == (
+        "# 1 of them has no Turkish yet (tr: <none: write this cue>). Every one must be in your file, or the check fails: 6"
+    )
+    assert out["missing"] == 1 and out["missing_cues"] == [6]
     assert "#1 " in text and "flag: placement: two Turkish cues were joined" in text
     assert "#2 " not in text and "#3 " not in text
 

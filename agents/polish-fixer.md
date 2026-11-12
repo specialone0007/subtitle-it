@@ -20,8 +20,17 @@ found inside it.
 1. The Turkish language pack and the film bible `bible.md` (paths in your task).
 2. The "Learned rules", "Swearing" and "Titles" sections of the user's preferences file.
 3. `glossary.json` in the work folder: the preferred term, then the variants to avoid.
-4. The flags file your task names, `polish_flags.txt` in the work folder unless it says otherwise. Each entry: `#n` and time, `src:` (the timing file's text), `en:` when different, `tr:` (the Turkish now), then one or more `flag:` lines.
+4. The flags file your task names, `polish_flags.txt` in the work folder unless it says otherwise. Each entry: `#n` and time, `src:` (the timing file's text), `en:` when different, `tr:` (the Turkish now, or `<none: write this cue>`), then one or more `flag:` lines.
 5. When a cue needs its scene: `cues.json` in the work folder (fields `n`, `source`, `en`) and `out/tr_00.txt` around that cue number.
+
+## First: cues with no Turkish
+
+A cue whose `tr:` is `<none: write this cue>` and whose flag starts
+with `cue count: missing` has no Turkish at all. The second line of
+the flags file lists every such cue by number. Each one must be in your
+file, translated from `en:` or `src:`; one left out is a hard fail and
+costs a whole fix round. Before you reply, go through that list and
+check that every number is in your file.
 
 ## Fix, by flag
 
@@ -30,13 +39,18 @@ found inside it.
 - `term variant`: use the glossary's preferred term.
 - `untranslated`: translate the line. A name, a title or a song left in its original language on purpose may stay; then leave the cue out of your file.
 - `line length` and `lines per cue`: the flag says why the cue could not be laid out. A cue is at most 2 lines of 42 characters; in a cue with two speakers each speaker gets one line starting with `- `. A two-speaker cue is split into one cue per speaker automatically when each part lasts at least a second and reads at 17 characters a second or less, so shorten until each speaker's turn fits one line or until the split works. Keep the cue's dash count.
-- `speaker label` and `sound description`: remove the label (`NAME:`, `[Name]`) or the description (`[kapı çarpar]`). A cue that holds only a description gets the spoken Turkish of its `src:` or `en:`, or of its `timing_lines` in `cues.json` when both are empty. Never leave such a cue out: a missing cue is a hard fail, and cues that are only sounds in the source are already left out of the work.
-- `cue count: missing`: translate the cue from `en:` or `src:`.
+- `speaker label` and `sound description`: remove the label (`NAME:`, `[Name]`) or the description (`[kapı çarpar]`). A cue that holds only a description gets the spoken Turkish of its `src:` or `en:`, or of its `timing_lines` in `cues.json` when both are empty. Never leave such a cue out: a missing cue is a hard fail, and cues that are only sounds in the source are already left out of the work. Never invent a line the source does not say: Turkish for a cue whose source is only sounds is rejected and not delivered.
+- `cue count: missing`: see "First: cues with no Turkish" above.
 - `dialogue dashes` and `italic tags`: match the source's marks.
 - `toned down`: the English has a crude or sexual word and the Turkish has nothing as strong. Follow the "Swearing" preference. Its default, "match the source", means the same strength: never leave the line softer than the source, and never swap a strong word for a mild one ("lanet olsun" for "fuck"). Only a preference that asks for softer swearing allows that. Keep the rest of the human wording. When the Turkish is already as strong in other words, leave the cue out.
 - `placement`: a Turkish line may sit on the wrong cue: a song line, on-screen text, or half a sentence joined onto a neighbour. Compare with the `en:` of this cue and its neighbours in `cues.json`. Move text to the cue it belongs to, drop on-screen text that has no source line, and leave correct cues out.
 
 Keep the human wording wherever a flag does not force a change.
+
+The whole-film reviewer reads the film while you work and may rewrite a
+few of your flagged cues for other reasons. Where you both write a cue,
+the reviewer's version wins; it fixes that cue's flags too. Fix every
+flagged cue anyway: you cannot know which ones it takes.
 
 ## Write
 

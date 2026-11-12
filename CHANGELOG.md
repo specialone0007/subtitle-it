@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.5.1 (2026-11-13)
+
+- A sound description that runs over two lines (`[Woman calling out,` /
+  `indistinct]`) is now read as one and taken out. Before, each
+  half was read alone, matched nothing, and the cue stayed in the work as
+  if it were speech. Parentheses get the same treatment in a
+  hearing-impaired file, unless the whole of them reads as speech.
+- When the source is a separate file that has only sounds on a cue, the
+  cue is now left out even if the timing file's text there is a sound in
+  parentheses that a plain file keeps (`(Laughs)`).
+- `assemble.py check` now cleans the text of every cue again, so a cue
+  that holds only sounds is caught even in a work folder built by an
+  older version. Turkish text for such a cue is rejected: it is never
+  delivered and is no longer sent to the polish fixer.
+- In a polish run, a cue with no Turkish now shows
+  `tr: <none: write this cue>`, its flag says to write it, and the second
+  line of `polish_flags.txt` lists every such cue by number. `polish.py
+  flags` returns them as `missing_cues`, and so does `assemble.py check`,
+  which before named only the first 30 hard fails. The polish fixer's
+  brief starts with these cues and has it check the list before it
+  replies.
+- When the reviewer and the polish fixer both write a cue, the
+  reviewer's version now wins, whichever of them finished first. The
+  reviewer fixes that cue's flags too when it rewrites one. Before, the
+  fixer won, while the fixer's brief said nothing about it.
+- A dialogue line that starts with a description, `- (Laughs) - What?`,
+  now becomes `- What?` instead of `- - What?`.
+- WAIT, NO, HEY and YES (and BEKLE, HAYIR, EVET, SON DAKİKA) before a
+  colon or in brackets are no longer read as a speaker's name. A label is
+  matched whole as well as by its first word, and in Turkish capitals too
+  (`[Dikkat]`). A place with a number (`[Pier 12]`, `[Gate 3]`) is no
+  longer a speaker either; `[Guard 2]` still is.
+
 ## 0.5.0 (2026-11-12)
 
 - Hearing-impaired text is now taken out before any agent sees it.
@@ -26,9 +59,9 @@
   rewrapped, or, when it has two speakers, split at the speaker change
   into one cue per speaker, with the time shared by length (a part that
   would get under a second gets a second) and the file's usual gap
-  between them. A split needs every part to last at least a
-  second and read at 17 characters a second or less; otherwise the cue
-  goes back to be shortened. The language pack no longer allows 3 lines.
+  between them. A split needs every part to last at least a second and
+  read at 17 characters a second or less; otherwise the cue goes back to
+  be shortened. The language pack no longer allows 3 lines.
 - The delivered file is now numbered on its own. `cue_map.json` (and
   `delivered_map.json` after delivery, and a `.map.json` beside a backed-up
   earlier delivery) leads each delivered cue back to the timing file's

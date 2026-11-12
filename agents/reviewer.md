@@ -38,9 +38,12 @@ Turkish subtitle placed on our timing file. A fixer is changing the cues
 listed in `polish_flags.txt` while you read, so `sidebyside.tsv` still
 shows their old text. Leave each flagged problem to the fixer, and judge
 the neighbours as if it were fixed. Fix a flagged cue yourself only for a
-problem its flags do not name; where the fixer also changes that cue, the
-fixer's version wins. There are no chunk joins. Read the
-flags file, then add two checks to the list above:
+problem its flags do not name. Where you and the fixer both write a cue,
+your version wins and the fixer's is dropped, so when you write a flagged
+cue, fix the problems its `flag:` lines name in the same lines too; for a
+cue with no Turkish yet (`<MISSING>` in `sidebyside.tsv`), write the
+whole cue. There are no chunk joins. Read the flags file, then add two
+checks to the list above:
 
 7. Toned-down lines: crude or sexual wording the human file softened. Follow the "Swearing" section of the preferences file (path in your task). Its default, "match the source", means no line stays softer than the source: restore the meaning and the full strength.
 8. Placement: a song line, on-screen text or half a sentence that sits on the wrong cue. Move it to the cue it belongs to, or drop on-screen text that has no source line.
