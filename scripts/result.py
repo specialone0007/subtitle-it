@@ -25,11 +25,12 @@ def path(text: str) -> Path:
 
 def write_private(dest: Path, text: str) -> None:
     """Write text to dest through a temporary file that only the owner can
-    read from the moment it exists, then move it into place."""
+    read from the moment it exists, then move it into place. Newlines are
+    written as given, so the file is the same on every platform."""
     tmp = dest.with_suffix(".tmp")
     tmp.unlink(missing_ok=True)
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
+    with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
         f.write(text)
     os.replace(tmp, dest)
 
