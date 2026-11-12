@@ -34,22 +34,29 @@ after watching.
 - Scripts: `${CLAUDE_PLUGIN_ROOT}/scripts` (call it SCRIPTS below)
 - Skill files: `${CLAUDE_SKILL_DIR}` (language pack, preferences template, `setup.md` and `learn.md`, read only when a step sends you there)
 - Data: `${CLAUDE_PLUGIN_DATA}`; each film's work folder is `${CLAUDE_PLUGIN_DATA}/films/<slug>` (WORK below)
-- User config: `$HOME/.config/turkish-subtitles` (CONFIG below): `preferences.md`, `credentials.json`, `backups/`
+- User config: `~/.config/turkish-subtitles` (CONFIG below; the scripts expand the `~` themselves, so it works inside single quotes): `preferences.md`, `credentials.json`, `backups/`
 
 Run every script as
-`uv run "SCRIPTS/<name>.py" --result "${CLAUDE_PLUGIN_DATA}/results/<name>-<command>.json" <command> ...`,
-with full paths in quotes, and read that file for the result. Each script
-also prints the same JSON, but some shells shorten what a command prints
-(an output filter can turn a successful `uv run` into "ok"), so trust
-the file. A script that fails, a usage error included, leaves no result
-file; read its error output instead. `--result` always comes before the
+`uv run 'SCRIPTS/<name>.py' --result '${CLAUDE_PLUGIN_DATA}/results/<name>-<command>.json' <command> ...`,
+and read that file for the result. Write every path in full inside single
+quotes, never double quotes: inside double quotes the shell still runs a
+`$(...)` or a backtick, so a file name holding one would run as a command.
+A single quote inside a path becomes `'\''` (close the quote, add an
+escaped quote, open it again): `'Ali'\''nin filmi.mkv'`. If a path to a
+film, subtitle file or folder holds a `$`, a backtick or a line break,
+stop and tell the user that this name cannot be passed to a command
+safely and that renaming the file or folder fixes it. Each script also
+prints the same JSON, but some shells and command wrappers shorten what a
+command prints, down to a single "ok", so trust the file. A script that
+fails, a usage error included, leaves no result file; read its error
+output instead. `--result` always comes before the
 command. The step texts below leave it out for brevity. When two or more script
 commands follow each other with no decision between them (`prepare.py build`
 then `chunks`), run them in one Bash call joined with `&&`: every call you
 make re-sends this whole conversation. Never wait with `sleep` or poll
 for a file: a background command and a subagent each send you a
 notification when they finish, so end your turn and go on when it comes.
-A `sleep` cannot be cut short, and a run once lost two minutes to one.
+A `sleep` cannot be cut short, so it only adds waiting.
 Never read, print or edit `CONFIG/credentials.json`; only
 `opensubtitles.py` and `speakers.py` touch it.
 
@@ -61,15 +68,15 @@ Arguments: $ARGUMENTS
 2. If `CONFIG/preferences.md` does not exist, copy `${CLAUDE_SKILL_DIR}/preferences-template.md` there and tell the user in one line.
 3. Read `CONFIG/preferences.md`.
 4. If the arguments start with `learn`, read `${CLAUDE_SKILL_DIR}/learn.md` and follow it instead of the steps below.
-5. Run `uv run "SCRIPTS/learn.py" scan --data "${CLAUDE_PLUGIN_DATA}"`. If it lists films whose Turkish file the user edited, say in one line that `/turkish-subtitles:subtitle learn <film>` turns those edits into rules, then continue.
+5. Run `uv run 'SCRIPTS/learn.py' scan --data '${CLAUDE_PLUGIN_DATA}'`. If it lists films whose Turkish file the user edited, say in one line that `/turkish-subtitles:subtitle learn <film>` turns those edits into rules, then continue.
 
 ## 1. Find the film
 
-- A path to a video or `.srt` that exists: use it. When it is a video, also run `sources.py remember --file "<path>" --prefs "CONFIG/preferences.md"`. When its `added` or `too_broad` is a folder, see "Media folders" in `${CLAUDE_SKILL_DIR}/setup.md`.
-- Otherwise run `sources.py find --query "<name>" --dirs <media folders from preferences>`. No media folders yet: this is setup, see "Media folders" in `setup.md`.
+- A path to a video or `.srt` that exists: use it. When it is a video, also run `sources.py remember --file '<path>' --prefs 'CONFIG/preferences.md'`. When its `added` or `too_broad` is a folder, see "Media folders" in `${CLAUDE_SKILL_DIR}/setup.md`.
+- Otherwise run `sources.py find --query '<name>' --dirs <media folders from preferences>`. No media folders yet: this is setup, see "Media folders" in `setup.md`.
 - Several `matches`: keep the ones whose `kind` is `video` and that do not `looks_like_extra`. When they all sit in one folder, or their file names give the same title once the year, resolution and other tags in the file name are left out, they are copies of one film: take the first (the biggest) and name it in one line. Otherwise they are different films (Alien and Aliens): list them and ask which one, the one question a run may ask, since translating the wrong film would put the file next to the wrong video. No such match: stop and ask for the path. When `missing_folders` is not empty, name those folders in the same message, for example "D:\Films was not there to search; is the drive connected?", since the film may be on it.
 
-Set SLUG to the `slug` field of `sources.py slug "<film title>"` and WORK to `${CLAUDE_PLUGIN_DATA}/films/SLUG`.
+Set SLUG to the `slug` field of `sources.py slug '<film title>'` and WORK to `${CLAUDE_PLUGIN_DATA}/films/SLUG`.
 
 ## 2. Source subtitles
 
@@ -77,7 +84,7 @@ Find the film's title, year, original language and IMDb id with one web
 search if you do not know them. Then collect candidates:
 
 1. If the input is a video: `sources.py local --video V --work WORK`. It extracts text tracks, finds files next to the video and in a `Subs` or `Subtitles` folder beside it (up to two levels down), and validates each.
-2. If there is no usable candidate in the original language and none in English, or only uncertain ones: `opensubtitles.py search --config CONFIG --video V --languages <orig>,en` (add `--imdb ID` when the video gives no hash match). Results are sorted best first; `moviehash_match: true` means the timing fits this exact video. Download at most 3 files with `opensubtitles.py download --config CONFIG --file-id N --out WORK/sources/os_<lang>.srt --cache "${CLAUDE_PLUGIN_DATA}/cache"`, then run `sources.py validate --file F --duration-ms D` on each. If the script says credentials are missing, this is one-time setup: see "OpenSubtitles credentials" in `setup.md`.
+2. If there is no usable candidate in the original language and none in English, or only uncertain ones: `opensubtitles.py search --config CONFIG --video V --languages <orig>,en` (add `--imdb ID` when the video gives no hash match). Results are sorted best first; `moviehash_match: true` means the timing fits this exact video. Download at most 3 files with `opensubtitles.py download --config 'CONFIG' --file-id N --out 'WORK/sources/os_<lang>.srt' --cache '${CLAUDE_PLUGIN_DATA}/cache'`, then run `sources.py validate --file F --duration-ms D` on each. If the script says credentials are missing, this is one-time setup: see "OpenSubtitles credentials" in `setup.md`.
 3. If the input is a video and there is still no usable candidate in the original language or in English (none found, or all fail validation), make one from the audio as the last resort: `transcribe.py run --video V --work WORK --language <orig>`. Leave out `--language` when you do not know the original language. Say in one line that this writes subtitles from the film's speech, takes a few minutes on a GPU and about the film's length or more on a CPU, and the first time downloads a few GB: PyTorch, unless the audio hints already did, plus a Whisper model of about 1.6 GB. The result's `path` is `WORK/sources/asr.<language>.srt`, with confidence "from the audio". If it fails, or its `cues` is 0 (no speech found: a music-only track, or the wrong `--language`), say so in one line and stop: there is nothing to translate. Otherwise run `sources.py validate` on it like any candidate; it is used even when validation lists issues, since nothing else exists, and those issues go in the report.
 4. If the input is an `.srt` alone, that file is the timing file (confidence "as the user says").
 
@@ -99,7 +106,7 @@ Before pairing another file onto the timing file, run
 files up (editions often differ by a logo or intro of several seconds) and
 ignores sound descriptions and songs. Pair only when `fits` is true. When
 `offset_ms` is not 0, first run
-`srt.py shift "OTHER" "WORK/sources/<name>_fit.srt" --ms <offset_ms>` and
+`srt.py shift 'OTHER' 'WORK/sources/<name>_fit.srt' --ms <offset_ms>` and
 pair the shifted file. When `fits` is false, leave that file out and say
 why in one line, from its `reason`.
 
@@ -136,7 +143,7 @@ works. A preferences file from an older version may say `ask` or have no
 line that it downloads a few GB of models.
 
 1. When audio hints run, start
-   `uv run "SCRIPTS/speakers.py" run --video V --work WORK --config CONFIG`
+   `uv run 'SCRIPTS/speakers.py' run --video 'V' --work 'WORK' --config 'CONFIG'`
    in the background (the Bash tool's `run_in_background`), with its
    `--result` file as usual. Add `--no-sync-check` when the timing file came
    from the audio (`transcribe.py`): its times are the audio's own, so
@@ -157,7 +164,7 @@ line that it downloads a few GB of models.
    - `sync.verdict` starting `subtitles are` (more than 300 ms off): move the
      subtitles to the audio. Shift every file you passed to `build` by minus
      `sync.median_offset_ms`, with
-     `srt.py shift "<file>" "WORK/sources/<name>_shifted.srt" --ms <minus median_offset_ms>`;
+     `srt.py shift '<file>' 'WORK/sources/<name>_shifted.srt' --ms <minus median_offset_ms>`;
      run `build` again with the shifted files and `--keep-bible-check`, then `speakers.py run` once
      more (in the foreground), since the voices were matched on the old
      times. The bible stays: a shift moves times, not cue numbers. Do not
@@ -189,7 +196,7 @@ from the cited cues.
 
 1. The second reader: one `turkish-subtitles:second-reader` subagent with the paths (WORK, `WORK/questions.json`) and the film facts, started in item 3 above. It writes `WORK/second.json`. With voices, the voice round from item 5 writes `WORK/second.voices.json`.
 2. When the second reader is done, and with voices also the voice round and `bible.py voices`, run `bible.py compare --work WORK`. It reads both answer files and writes `WORK/compare.json`. If `bible.py voices` gave up in item 5, delete `WORK/second.voices.json` first, after the voice round is done, so the judge is not handed every voice.
-3. If `to_judge` is above 0, start one `turkish-subtitles:bible-judge` subagent with the paths (WORK, `WORK/compare.json`) and this command for reading cues, with the paths filled in: `uv run "SCRIPTS/bible.py" --result "${CLAUDE_PLUGIN_DATA}/results/bible-cues.json" cues --work "WORK" --cues <numbers>`, and the note that it must read the result file, not the printed output. It writes `WORK/judged.json` and updates `bible.md`.
+3. If `to_judge` is above 0, start one `turkish-subtitles:bible-judge` subagent with the paths (WORK, `WORK/compare.json`) and this command for reading cues, with the paths filled in: `uv run 'SCRIPTS/bible.py' --result '${CLAUDE_PLUGIN_DATA}/results/bible-cues.json' cues --work 'WORK' --cues <numbers>`, and the note that it must read the result file, not the printed output. It writes `WORK/judged.json` and updates `bible.md`.
 4. Run `bible.py apply --work WORK`. Keep its `ties` for the report.
 
 When `questions`, `compare` or `apply` refuses a file it reads, start one
@@ -275,7 +282,7 @@ written, so that round's files win over `fix_review.txt`.
 Destination: next to the video as `<video file name without extension>.tr.srt`
 (for an `.srt` input: the same folder, with the language part of the name
 replaced by `tr`). Run
-`assemble.py deliver --work WORK --dest "<destination>" --backups "CONFIG/backups"`
+`assemble.py deliver --work 'WORK' --dest '<destination>' --backups 'CONFIG/backups'`
 (add `--force` when hard fails are left after the fix rounds).
 An old Turkish file at the destination is moved to the backups folder.
 

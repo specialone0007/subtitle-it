@@ -2,7 +2,8 @@
 # the top of each file and run with `uv run scripts/<name>.py`.
 [project]
 name = "turkish-subtitles-dev"
-version = "0.1.0"
+version = "0.4.0"
+license = "Apache-2.0"
 requires-python = ">=3.11"
 dependencies = []
 

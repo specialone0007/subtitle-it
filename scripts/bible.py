@@ -636,9 +636,9 @@ def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     for name in ("questions", "voice-questions", "compare", "apply", "voices"):
-        sub.add_parser(name).add_argument("--work", type=Path, required=True)
+        sub.add_parser(name).add_argument("--work", type=result.path, required=True)
     c = sub.add_parser("cues")
-    c.add_argument("--work", type=Path, required=True)
+    c.add_argument("--work", type=result.path, required=True)
     c.add_argument("--cues", required=True, help="comma-separated cue numbers")
     c.add_argument("--context", type=int, default=2)
     result.add_argument(p)

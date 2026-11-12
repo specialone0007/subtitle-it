@@ -213,17 +213,17 @@ def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     b = sub.add_parser("build")
-    b.add_argument("--work", type=Path, required=True)
-    b.add_argument("--timing", type=Path, required=True)
-    b.add_argument("--source", type=Path, help="original-language file, if the timing file is in another language")
-    b.add_argument("--en", type=Path, help="English file for cross-check and speaker labels")
+    b.add_argument("--work", type=result.path, required=True)
+    b.add_argument("--timing", type=result.path, required=True)
+    b.add_argument("--source", type=result.path, help="original-language file, if the timing file is in another language")
+    b.add_argument("--en", type=result.path, help="English file for cross-check and speaker labels")
     b.add_argument(
         "--keep-bible-check",
         action="store_true",
         help="keep the bible check's files: the rebuild only shifts the times of the same cues",
     )
     c = sub.add_parser("chunks")
-    c.add_argument("--work", type=Path, required=True)
+    c.add_argument("--work", type=result.path, required=True)
     c.add_argument("--target", type=int, default=250)
     result.add_argument(p)
     a = result.parse(p, argv)

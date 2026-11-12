@@ -1,7 +1,7 @@
 {
   "name": "turkish-subtitles",
   "displayName": "Turkish Subtitles",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Translate a film's subtitles from any language into natural Turkish, on the source file's own timings.",
   "author": { "name": "Furkan Reha", "url": "https://www.linkedin.com/in/furkanreha/" },
   "repository": "https://github.com/specialone0007/turkish-subtitles",
