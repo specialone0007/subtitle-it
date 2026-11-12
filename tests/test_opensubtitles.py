@@ -67,13 +67,18 @@ def test_saved_credentials_are_readable_only_by_the_owner(tmp_path: Path):
     ("host", "base"),
     [
         ("vip-api.opensubtitles.com", "https://vip-api.opensubtitles.com/api/v1"),
+        ("opensubtitles.com", "https://opensubtitles.com/api/v1"),
         (None, opensubtitles.API),
+        ("", opensubtitles.API),
+        ("other.example", opensubtitles.API),
+        ("opensubtitles.com.evil.example", opensubtitles.API),
+        ("evilopensubtitles.com", opensubtitles.API),
         ("http://other.example", opensubtitles.API),
         ("other.example/x?y=", opensubtitles.API),
         ("user@other.example", opensubtitles.API),
     ],
 )
-def test_the_login_host_is_used_only_as_a_plain_host_over_https(host, base):
+def test_the_login_host_is_used_only_when_it_is_opensubtitles_over_https(host, base):
     assert opensubtitles._base({"base_url": host}) == base
 
 

@@ -100,10 +100,13 @@ def _request(method: str, url: str, creds: dict, body: dict | None = None, auth:
 
 
 def _base(creds: dict) -> str:
-    """The API root on the host the login named, always over https. A host
-    that is not a plain host name falls back to the default API."""
-    host = creds.get("base_url")
-    return f"https://{host}/api/v1" if host and re.fullmatch(r"[A-Za-z0-9.-]+", host) else API
+    """The API root on the host the login named, always over https. Only
+    opensubtitles.com or one of its subdomains is used, since the key and
+    login token go to that host; any other falls back to the default API."""
+    host = (creds.get("base_url") or "").lower()
+    plain = re.fullmatch(r"[a-z0-9.-]+", host)
+    ours = host == "opensubtitles.com" or host.endswith(".opensubtitles.com")
+    return f"https://{host}/api/v1" if plain and ours else API
 
 
 def _https(url: str) -> str:

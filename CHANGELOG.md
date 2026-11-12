@@ -13,8 +13,9 @@
   break.
 - The credentials file is created readable only by you from the start,
   not made private after it is written. OpenSubtitles download links must
-  be https, and the API host from the login is used only when it is a
-  plain host name.
+  be https, and the API host from the login is used only when it is
+  `opensubtitles.com` or one of its subdomains, so your key and login
+  token never go to another host.
 - The bible writer and second reader no longer have the web-fetch tool;
   a web search is enough for cast and plot.
 - `SECURITY.md` now says the credentials file is plain text and that the
