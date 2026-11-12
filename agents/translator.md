@@ -3,6 +3,7 @@ name: translator
 description: Translates one chunk of a film's subtitles into Turkish, for the turkish-subtitles skill. Started by that skill only.
 tools: Read, Write
 model: inherit
+effort: low
 omitClaudeMd: true
 ---
 
