@@ -10,4 +10,12 @@ uv.lock
 *.vtt
 *.mkv
 *.mp4
+*.avi
+*.sub
+*.idx
+*.sup
+*.wav
+.env
+preferences.md
+.claude/
 credentials.json
