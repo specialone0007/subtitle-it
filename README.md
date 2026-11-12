@@ -108,8 +108,9 @@ Measured on one 2-hour film on Windows: about 17 minutes per run, and about
 $8 at API list prices with Opus. On a Claude subscription a run uses your
 plan's usage instead. Other films, models and machines will differ.
 
-Full runs have only been tested on Windows. The test suite also passes on
-Linux in CI; macOS is untested. Without an NVIDIA GPU, audio hints and
+Full runs have only been tested on Windows. On macOS and Linux, CI runs the
+test suite, including one test that builds a short video and reads its
+subtitle track with the real ffmpeg; a full run there is untested. Without an NVIDIA GPU, audio hints and
 speech-to-text still work but take about as long as the film, or more for
 speech-to-text.
 
@@ -152,7 +153,8 @@ uv run --group dev ruff check .
 uv run --group dev ruff format --check .
 ```
 
-CI runs the same three commands on Linux and Windows. See
+CI runs the same three commands on Linux, macOS and Windows, with ffmpeg
+installed. See
 [CONTRIBUTING.md](CONTRIBUTING.md) to send a change, and
 [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 
