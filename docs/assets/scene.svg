@@ -82,7 +82,7 @@
 <text x="640" y="400" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#8a8578">“Sağ” is the right-hand side.</text>
 <rect x="864" y="96" width="376" height="252" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
 <rect x="864" y="96" width="376" height="6" rx="3" fill="#c9a227"/>
-<text x="882" y="130" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" letter-spacing="3" fill="#c9a227">TURKISH SUBTITLES</text>
+<text x="882" y="130" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" letter-spacing="3" fill="#c9a227">SUBTITLE IT</text>
 <text x="1222" y="130" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="12" fill="#55535c">00:41:07</text>
 <rect x="1100" y="152" width="92" height="104" rx="2" fill="#23232d"/>
 <line x1="1146" y1="152" x2="1146" y2="256" stroke="#15151b" stroke-width="3"/>
