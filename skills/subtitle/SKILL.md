@@ -32,7 +32,7 @@ after watching.
 ## Fixed paths
 
 - Scripts: `${CLAUDE_PLUGIN_ROOT}/scripts` (call it SCRIPTS below)
-- Skill files: `${CLAUDE_SKILL_DIR}` (language pack, preferences template)
+- Skill files: `${CLAUDE_SKILL_DIR}` (language pack, preferences template, `setup.md` and `learn.md`, read only when a step sends you there)
 - Data: `${CLAUDE_PLUGIN_DATA}`; each film's work folder is `${CLAUDE_PLUGIN_DATA}/films/<slug>` (WORK below)
 - User config: `$HOME/.config/turkish-subtitles` (CONFIG below): `preferences.md`, `credentials.json`, `backups/`
 
@@ -60,13 +60,13 @@ Arguments: $ARGUMENTS
 1. Check the tools: `uv --version` and `ffprobe -version`. If one is missing, point the user to the README's Setup section and stop.
 2. If `CONFIG/preferences.md` does not exist, copy `${CLAUDE_SKILL_DIR}/preferences-template.md` there and tell the user in one line.
 3. Read `CONFIG/preferences.md`.
-4. If the arguments start with `learn`, go to "Learn mode" below.
+4. If the arguments start with `learn`, read `${CLAUDE_SKILL_DIR}/learn.md` and follow it instead of the steps below.
 5. Run `uv run "SCRIPTS/learn.py" scan --data "${CLAUDE_PLUGIN_DATA}"`. If it lists films whose Turkish file the user edited, say in one line that `/turkish-subtitles:subtitle learn <film>` turns those edits into rules, then continue.
 
 ## 1. Find the film
 
-- A path to a video or `.srt` that exists: use it. When it is a video, also run `sources.py remember --file "<path>" --prefs "CONFIG/preferences.md"`. When its `added` is a folder, say in one line that later runs search it too. When its `too_broad` is a folder (a drive root or your home folder), say in one line that it was not added because searching all of it would be slow, and that a film folder can be added under "Media folders" in the preferences.
-- Otherwise run `sources.py find --query "<name>" --dirs <media folders from preferences>`. No media folders yet: this is setup, so ask the user for the folder, save it under "Media folders", and go on.
+- A path to a video or `.srt` that exists: use it. When it is a video, also run `sources.py remember --file "<path>" --prefs "CONFIG/preferences.md"`. When its `added` or `too_broad` is a folder, see "Media folders" in `${CLAUDE_SKILL_DIR}/setup.md`.
+- Otherwise run `sources.py find --query "<name>" --dirs <media folders from preferences>`. No media folders yet: this is setup, see "Media folders" in `setup.md`.
 - Several `matches`: keep the ones whose `kind` is `video` and that do not `looks_like_extra`. When they all sit in one folder, or their file names give the same title once the year, resolution and other tags in the file name are left out, they are copies of one film: take the first (the biggest) and name it in one line. Otherwise they are different films (Alien and Aliens): list them and ask which one, the one question a run may ask, since translating the wrong film would put the file next to the wrong video. No such match: stop and ask for the path. When `missing_folders` is not empty, name those folders in the same message, for example "D:\Films was not there to search; is the drive connected?", since the film may be on it.
 
 Set SLUG to the `slug` field of `sources.py slug "<film title>"` and WORK to `${CLAUDE_PLUGIN_DATA}/films/SLUG`.
@@ -77,7 +77,7 @@ Find the film's title, year, original language and IMDb id with one web
 search if you do not know them. Then collect candidates:
 
 1. If the input is a video: `sources.py local --video V --work WORK`. It extracts text tracks, finds files next to the video and in a `Subs` or `Subtitles` folder beside it (up to two levels down), and validates each.
-2. If there is no usable candidate in the original language and none in English, or only uncertain ones: `opensubtitles.py search --config CONFIG --video V --languages <orig>,en` (add `--imdb ID` when the video gives no hash match). Results are sorted best first; `moviehash_match: true` means the timing fits this exact video. Download at most 3 files with `opensubtitles.py download --config CONFIG --file-id N --out WORK/sources/os_<lang>.srt --cache "${CLAUDE_PLUGIN_DATA}/cache"`, then run `sources.py validate --file F --duration-ms D` on each. If the script says credentials are missing, give the user the setup command it printed and stop: this is one-time setup.
+2. If there is no usable candidate in the original language and none in English, or only uncertain ones: `opensubtitles.py search --config CONFIG --video V --languages <orig>,en` (add `--imdb ID` when the video gives no hash match). Results are sorted best first; `moviehash_match: true` means the timing fits this exact video. Download at most 3 files with `opensubtitles.py download --config CONFIG --file-id N --out WORK/sources/os_<lang>.srt --cache "${CLAUDE_PLUGIN_DATA}/cache"`, then run `sources.py validate --file F --duration-ms D` on each. If the script says credentials are missing, this is one-time setup: see "OpenSubtitles credentials" in `setup.md`.
 3. If the input is a video and there is still no usable candidate in the original language or in English (none found, or all fail validation), make one from the audio as the last resort: `transcribe.py run --video V --work WORK --language <orig>`. Leave out `--language` when you do not know the original language. Say in one line that this writes subtitles from the film's speech, takes a few minutes on a GPU and about the film's length or more on a CPU, and the first time downloads a few GB: PyTorch, unless the audio hints already did, plus a Whisper model of about 1.6 GB. The result's `path` is `WORK/sources/asr.<language>.srt`, with confidence "from the audio". If it fails, or its `cues` is 0 (no speech found: a music-only track, or the wrong `--language`), say so in one line and stop: there is nothing to translate. Otherwise run `sources.py validate` on it like any candidate; it is used even when validation lists issues, since nothing else exists, and those issues go in the report.
 4. If the input is an `.srt` alone, that file is the timing file (confidence "as the user says").
 
@@ -152,9 +152,7 @@ line that it downloads a few GB of models.
    step is already done, start it in the same message as the voice
    mapper, after item 5's `chunks`.
 4. When the bible writer and the audio step are both done, read the audio step's result:
-   - Exit code 3 with `"skipped": "token missing"`: give the user the `fix`
-     command it printed, to run in their own terminal, and go on without
-     voices. Never ask for the token in chat.
+   - Exit code 3 with `"skipped": "token missing"`: see "Hugging Face token" in `setup.md`.
    - Any other failure: say so in one line and go on without voices.
    - `sync.verdict` starting `subtitles are` (more than 300 ms off): move the
      subtitles to the audio. Shift every file you passed to `build` by minus
@@ -299,14 +297,3 @@ where the old one went, how many items are in "Check after watching" and
 that `report.md` (give its path) lists them for after watching.
 End with: after watching, they can fix lines in the file and run
 `/turkish-subtitles:subtitle learn <film>` so the next film gets it right.
-
-## Learn mode
-
-`learn <film>`: find WORK for the film (`sources.py slug`, or the `scan`
-list). Run `learn.py diff --work WORK`. From `repeated_swaps` and the
-edits, propose at most 5 general rules, each with its count and one
-example, for instance: "You changed 'Peki' to 'Tamam' in 6 places. Always
-use 'Tamam' for 'OK'?" Skip one-off fixes and rules already in the
-preferences. Add to "Learned rules" only the ones the user says yes to.
-Then run `learn.py done --work WORK` so the same edits are not proposed
-again.

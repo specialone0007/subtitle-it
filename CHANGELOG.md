@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Tidy-up: learn mode and the one-time setup steps (media folders,
+  OpenSubtitles credentials, the Hugging Face token) moved out of
+  `SKILL.md` into `learn.md` and `setup.md`. The skill points to the right
+  section and reads those files only when it needs them. A run does the
+  same steps as before; this keeps `SKILL.md` focused on the run itself
+  and does not change what a run costs.
 - The bible check starts earlier. The second reader now answers the bible
   writer's questions as soon as the bible is written, while the audio step
   may still be running. The voice questions come from the audio step's
