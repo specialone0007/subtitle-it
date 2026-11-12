@@ -1,7 +1,11 @@
 # Turkish Subtitles
 
+![Title card: Turkish Subtitles, a Claude Code plugin that turns a film's subtitles into natural Turkish](docs/assets/title-card.svg)
+
 A Claude Code plugin that turns a film's subtitles, in any language, into
-natural Turkish subtitles on the source file's own timings.
+natural Turkish subtitles on the source file's own timings. It is for
+Turkish speakers who want to watch a film that has no good Turkish
+subtitles, and who already use Claude Code.
 
 ```
 /turkish-subtitles:subtitle Anatomy of a Fall
@@ -22,7 +26,13 @@ film you mean when the name matches several different films (Alien and
 Aliens), and it does not spoil the film in chat. What it could not settle
 for certain goes under "Check after watching" in the film's `report.md`.
 
+![How a run goes: find the film, get subtitles, audio hints, film bible, translate, check, review, deliver](docs/assets/run-strip.svg)
+
 [How a run works](docs/architecture.md) walks through each step.
+
+You are responsible for having the right to use the films and subtitles you
+run it on. The plugin reads only the folders you give it and downloads from
+OpenSubtitles under your own account.
 
 ## What it needs
 
@@ -81,8 +91,27 @@ for certain goes under "Check after watching" in the film's `report.md`.
    token. Its first use downloads a few GB: PyTorch, unless the audio hints already did, plus a
    Whisper model of about 1.6 GB. With an NVIDIA GPU a film takes a few minutes, on the CPU about as
    long as the film or more.
+
 To work on the plugin itself, load it from a clone for one session with
 `claude --plugin-dir ./turkish-subtitles`.
+
+## First run
+
+Start a new Claude Code session and run `/turkish-subtitles:subtitle <film>`.
+The first time, it asks for the folder that holds your films and saves it
+in `preferences.md`. If a film needs OpenSubtitles or audio hints and their
+setup is not done, it prints the setup command to run in your own terminal.
+
+## Cost, time and platforms
+
+Measured on one 2-hour film on Windows: about 17 minutes per run, and about
+$8 at API list prices with Opus. On a Claude subscription a run uses your
+plan's usage instead. Other films, models and machines will differ.
+
+Full runs have only been tested on Windows. The test suite also passes on
+Linux in CI; macOS is untested. Without an NVIDIA GPU, audio hints and
+speech-to-text still work but take about as long as the film, or more for
+speech-to-text.
 
 ## Where files go
 
@@ -159,3 +188,7 @@ Copyright 2026 Furkan Reha
 
 Apache-2.0: the Apache License, version 2.0. See [LICENSE](LICENSE)
 and [NOTICE](NOTICE).
+
+## Credits
+
+Written and directed by [Furkan Reha](https://www.linkedin.com/in/furkanreha/).

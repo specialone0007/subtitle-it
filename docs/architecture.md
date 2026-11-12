@@ -1,5 +1,7 @@
 # How a run works
 
+![How a run goes: find the film, get subtitles, audio hints, film bible, translate, check, review, deliver](assets/run-strip.svg)
+
 The plugin is one skill (`skills/subtitle/SKILL.md`) that Claude follows in
 your conversation. The work is split two ways:
 
