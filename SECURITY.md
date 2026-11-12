@@ -32,5 +32,10 @@ What the plugin keeps and sends:
 - Audio hints run on your machine. They download models from Hugging Face,
   and no audio leaves your machine.
 - Speech-to-text, the last resort when no subtitle file exists, runs on your
-  machine too. It downloads its Whisper model from Hugging Face once, needs
-  no token, and sends no audio anywhere.
+  machine too. It downloads its Whisper model from Hugging Face once and
+  sends no audio anywhere. The download needs no token and sends none,
+  unless `HF_TOKEN` is set in your environment or you have logged in with
+  the Hugging Face command line tool: the Hugging Face library then sends
+  that token with it. The token in `credentials.json` is never used for it.
+- The first run of each script downloads its Python packages from PyPI,
+  and PyTorch from download.pytorch.org on Windows and Linux.
