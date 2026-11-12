@@ -4,8 +4,12 @@
 
 One command starts a run, and about a quarter of an hour later a Turkish
 subtitle file sits next to the video. This page walks through what happens
-in between, step by step. The step numbers match `skills/subtitle/SKILL.md`,
-the one skill Claude follows in your conversation.
+in between, step by step. The step numbers match `skills/translate/SKILL.md`,
+the skill Claude follows in your conversation for `/subtitle-it:translate`.
+
+Turkish is the first supported language, and more are planned. Every run
+today writes Turkish: the language rules sit in a Turkish language pack,
+`pack-tr.md`, and the agents' instructions are written for Turkish.
 
 ## Who does what
 
@@ -42,8 +46,10 @@ Read it top to bottom. A dashed gold frame means the boxes inside it run at the 
 
 ### 0. Start
 
-Checks that uv and ffprobe are installed, reads your preferences, and
-mentions any delivered file you have edited since.
+Checks that uv and ffprobe are installed, finds your settings folder
+(moving the one from before the plugin was renamed into place, once),
+reads your preferences, and mentions any delivered file you have edited
+since.
 
 ### 1. Find the film
 
@@ -228,15 +234,20 @@ no cost in money. `usage.py summary` also saves the same figures as
 
 ## Learn mode
 
-After you fix lines in a delivered file, `/turkish-subtitles:subtitle learn
-<film>` runs `learn.py diff`, proposes up to five general rules from your
-edits, and saves the ones you accept in your preferences. Every later run
-uses them. Its steps live in `skills/subtitle/learn.md`, and the one-time
-setup steps in `setup.md` beside it, so a normal run does not carry them.
+After you fix lines in a delivered file, `/subtitle-it:learn <film>`
+runs `learn.py diff`, proposes up to five general rules from your edits,
+and saves the ones you accept in your preferences. Every later run uses
+them. It is its own skill, `skills/learn/SKILL.md`, so a translate run does
+not carry its steps. It reads the language pack and the preferences
+template from `skills/translate/` rather than keeping copies. The one-time
+setup steps live in `setup.md` beside the translate skill, read only when
+a step needs them.
 
 ## Files
 
-- Your settings and credentials: `~/.config/turkish-subtitles/`.
+- Your settings and credentials: `~/.config/subtitle-it/`. A settings
+  folder from before the plugin was renamed is moved there once, by
+  `settings.py`, without opening the files in it.
 - One work folder per film, the download cache and the scripts' results:
   the plugin's data folder, which Claude Code deletes when you uninstall the
   plugin.

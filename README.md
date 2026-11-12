@@ -1,6 +1,6 @@
-# Turkish Subtitles
+# Subtitle It
 
-![Title card: Turkish Subtitles, a Claude Code plugin that turns a film's subtitles into natural Turkish](docs/assets/title-card.svg)
+![Title card: Subtitle It, a Claude Code plugin that turns a film's subtitles into natural Turkish, the first of more languages to come](docs/assets/title-card.svg)
 
 <p align="center">
   <b>Name a film. Get Turkish subtitles that sound like people talking.</b>
@@ -13,15 +13,16 @@
   <a href="ARCHITECTURE.md"><img src="docs/assets/btn-architecture.svg" alt="Architecture: every step in detail" width="190"></a>
 </p>
 
-A Claude Code plugin for Turkish speakers who want to watch a film that has
-no good Turkish subtitles. You type one command:
+A Claude Code plugin for people who want to watch a film that has no good
+subtitles in their language. Turkish is the first supported language, and
+more are planned; today every run writes Turkish. You type one command:
 
 ```
-/turkish-subtitles:subtitle Inception
+/subtitle-it:translate Inception
 ```
 
 About a quarter of an hour later, `Inception.tr.srt` sits next to
-the video, on the source file's own timings. (Plain `/subtitle` also works
+the video, on the source file's own timings. (Plain `/translate` also works
 when no other command uses that name.)
 
 ![Same line, two translations. The English line "Well... you're coming, right?" becomes "Kuyu... geliyorsun, sağ?" word for word, and "Şey... geliyorsun, değil mi?" with the plugin](docs/assets/scene.svg)
@@ -80,8 +81,8 @@ writes, and why it is there.
 1. **Install the plugin** in your shell:
 
    ```
-   claude plugin marketplace add specialone0007/turkish-subtitles
-   claude plugin install turkish-subtitles@turkish-subtitles
+   claude plugin marketplace add specialone0007/subtitle-it
+   claude plugin install subtitle-it@subtitle-it
    ```
 
    Claude Code loads plugins when a session starts, so start a new session
@@ -93,7 +94,7 @@ writes, and why it is there.
    - Windows: `winget install Gyan.FFmpeg`
    - macOS: `brew install ffmpeg` · Debian/Ubuntu: `sudo apt install ffmpeg`
 4. **Run it.** Start a new Claude Code session and run
-   `/turkish-subtitles:subtitle <film>`. The first time, it asks for the
+   `/subtitle-it:translate <film>`. The first time, it asks for the
    folder that holds your films and saves it in `preferences.md`.
 
 That is enough for any film that has subtitles on disk. Two extras are
@@ -109,7 +110,7 @@ command with the full path to run in your own terminal; it asks for the key
 and login without showing them. From a clone of this repo the command is:
 
 ```
-uv run scripts/opensubtitles.py setup --config ~/.config/turkish-subtitles
+uv run scripts/opensubtitles.py setup --config ~/.config/subtitle-it
 ```
 
 A key alone allows 5 downloads a day; with the free account login, 20.
@@ -127,7 +128,7 @@ then run the setup command in your own terminal (the plugin prints it with
 the full path; it asks for the token without showing it):
 
 ```
-uv run scripts/speakers.py setup --config ~/.config/turkish-subtitles
+uv run scripts/speakers.py setup --config ~/.config/subtitle-it
 ```
 
 The first run downloads a few GB (PyTorch, pyannote and a Whisper model).
@@ -181,8 +182,8 @@ long as the film, or more for speech-to-text.
 | Place | What is there |
 | --- | --- |
 | Next to the video | `<film>.tr.srt`. Nothing else is written into your film folders. |
-| `~/.config/turkish-subtitles/`<br>(on Windows `C:\Users\<you>\.config\turkish-subtitles\`) | `preferences.md` (media folders, translator model, audio hints, hearing-impaired tags, swearing, titles, learned rules), `credentials.json` (OpenSubtitles and Hugging Face; only the scripts read it), and `backups/` (old Turkish files replaced by a new one). Kept when the plugin is uninstalled. |
-| The plugin's data folder<br>(`~/.claude/plugins/data/turkish-subtitles-.../`) | One work folder per film with the bible, the delivered copy and a report, plus the download cache and `results/`, where each script saves its last JSON result. **Uninstalling the plugin deletes it.** |
+| `~/.config/subtitle-it/`<br>(on Windows `C:\Users\<you>\.config\subtitle-it\`) | `preferences.md` (media folders, translator model, audio hints, hearing-impaired tags, swearing, titles, learned rules), `credentials.json` (OpenSubtitles and Hugging Face; only the scripts read it), and `backups/` (old Turkish files replaced by a new one). Kept when the plugin is uninstalled. A settings folder from before the plugin was renamed is moved here, once, the first time it is needed. |
+| The plugin's data folder<br>(`~/.claude/plugins/data/subtitle-it-.../`) | One work folder per film with the bible, the delivered copy and a report, plus the download cache and `results/`, where each script saves its last JSON result. **Uninstalling the plugin deletes it.** |
 
 The skill reads the files in `results/` rather than the scripts' printed
 output, so a shell or tool that shortens command output does not get in the way.
@@ -218,7 +219,7 @@ output, so a shell or tool that shortens command output does not get in the way.
 ## Learning from your fixes
 
 After watching, fix lines in the `.tr.srt` with any editor, then run
-`/turkish-subtitles:subtitle learn Inception`. The skill proposes
+`/subtitle-it:learn Inception`. It proposes
 general rules from your edits ("Always use 'Tamam' for 'OK'?") and saves
 only the ones you accept. Each new run also checks for edited files.
 
@@ -243,10 +244,12 @@ installed. See [CONTRIBUTING.md](CONTRIBUTING.md) to send a change, and
 ```
 .claude-plugin/plugin.json      plugin manifest
 .claude-plugin/marketplace.json marketplace that lists the plugin
-skills/subtitle/SKILL.md        the run (steps 0-11)
-skills/subtitle/setup.md        one-time setup, read only when a step needs it
-skills/subtitle/learn.md        learn mode
-skills/subtitle/pack-tr.md      Turkish language rules
+skills/translate/SKILL.md       /subtitle-it:translate, the run (steps 0-11)
+skills/translate/setup.md       one-time setup, read only when a step needs it
+skills/translate/pack-tr.md     Turkish language rules, shared with learn
+skills/translate/preferences-template.md
+                                the first preferences file, shared with learn
+skills/learn/SKILL.md           /subtitle-it:learn, rules from your fixes
 agents/                         subagent types: bible writer, second reader, judge, voice mapper,
                                 translator, polish fixer, reviewer (instructions and allowed tools)
 scripts/srt.py                  parse, encodings, pairing by time, chunking
@@ -259,6 +262,7 @@ scripts/assemble.py             assemble, checks, review file, delivery
 scripts/learn.py                find user edits for learn mode
 scripts/speakers.py             voices per cue from the audio, sync check
 scripts/transcribe.py           subtitles from the audio when no file exists, the last resort
+scripts/settings.py             find the settings folder; move the one from before the rename
 scripts/result.py               print each script's JSON result and save it to --result
 tests/                          pytest suite
 ARCHITECTURE.md                 how a run works, step by step

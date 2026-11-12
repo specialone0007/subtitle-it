@@ -20,8 +20,9 @@ folder with `claude --plugin-dir .`.
 
 Scripts in `scripts/` do the exact work: parsing, timing, pairing, checks
 and delivery. Each one prints a JSON result and, with `--result <file>`,
-saves it. Language work stays with Claude: the skill in `skills/subtitle/`
-and the agent types in `agents/` that its subagents run as. [ARCHITECTURE.md](ARCHITECTURE.md)
+saves it. Language work stays with Claude: the two skills in `skills/`
+(`translate` and `learn`) and the agent types in `agents/` that the
+translate skill's subagents run as. [ARCHITECTURE.md](ARCHITECTURE.md)
 walks through a run.
 
 ## Pull requests
