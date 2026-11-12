@@ -33,6 +33,13 @@ def test_agents_keep_a_short_tool_list_and_skip_claude_md():
         assert tools <= ALLOWED_TOOLS, f"{path.name}: {tools - ALLOWED_TOOLS}"
 
 
+def test_only_the_translator_sets_its_own_effort():
+    # The translators (and the fix rounds, which use the same agent) run at
+    # low effort; every other agent takes the session's effort.
+    efforts = {p.stem: fm["effort"] for p in AGENTS.glob("*.md") if "effort" in (fm := frontmatter(p))}
+    assert efforts == {"translator": "low"}
+
+
 def test_only_the_judge_runs_commands():
     with_bash = {p.stem for p in AGENTS.glob("*.md") if "Bash" in frontmatter(p)["tools"]}
     assert with_bash == {"bible-judge"}

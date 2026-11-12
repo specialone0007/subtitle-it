@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- The translators now run at low reasoning effort (`effort: low` in
+  `agents/translator.md`), whatever effort the session uses. The fix rounds
+  use the same agent, so they do too. On a 2-hour test film this cut the translators
+  from $3.88 to $2.16 at list prices, about 17% of a film's cost, and steps
+  6 to 10 finished 1.4 minutes sooner. In a blind test of 100 cues, three
+  judges preferred the medium-effort file on 20, the low-effort file on 15
+  and found 65 equal, a gap within their disagreement (sign test p = 0.5).
+  A Translator model of `sonnet` now also runs at low effort; that pairing
+  is untested.
 - Tidy-up: learn mode and the one-time setup steps (media folders,
   OpenSubtitles credentials, the Hugging Face token) moved out of
   `SKILL.md` into `learn.md` and `setup.md`. The skill points to the right
