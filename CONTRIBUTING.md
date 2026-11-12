@@ -13,8 +13,8 @@ uv run --group dev ruff check .
 uv run --group dev ruff format --check .
 ```
 
-To try a change in Claude Code, start a session with
-`claude --plugin-dir .` from the repository folder.
+To try a change in Claude Code, start a session from the repository
+folder with `claude --plugin-dir .`.
 
 ## How the work is split
 

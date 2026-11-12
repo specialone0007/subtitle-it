@@ -112,10 +112,10 @@ def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("scan")
-    s.add_argument("--data", type=Path, required=True)
+    s.add_argument("--data", type=result.path, required=True)
     for name in ("diff", "done"):
         s = sub.add_parser(name)
-        s.add_argument("--work", type=Path, required=True)
+        s.add_argument("--work", type=result.path, required=True)
     result.add_argument(p)
     a = result.parse(p, argv)
     if a.cmd == "scan":

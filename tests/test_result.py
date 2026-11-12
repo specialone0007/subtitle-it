@@ -78,3 +78,10 @@ def test_learn_done_result_says_marked(tmp_path: Path):
     path = tmp_path / "learn-done.json"
     learn.main(["--result", str(path), "done", "--work", str(tmp_path)])
     assert json.loads(path.read_text(encoding="utf-8")) == {"marked": "learned"}
+
+
+def test_path_arguments_expand_a_tilde(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    assert result.path("~/work") == tmp_path / "work"
+    assert result.path("plain/work") == Path("plain/work")

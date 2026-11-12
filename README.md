@@ -195,8 +195,8 @@ only the ones you accept. Each new run also checks for edited files.
 
 ## Development
 
-To work on the plugin itself, load it from a clone for one session with
-`claude --plugin-dir ./turkish-subtitles`.
+To work on the plugin itself, load it from a clone for one session: in
+the repository folder, start Claude Code with `claude --plugin-dir .`.
 
 ```
 uv run --group dev pytest
@@ -244,6 +244,14 @@ Copyright 2026 Furkan Reha
 
 Apache-2.0: the Apache License, version 2.0. See [LICENSE](LICENSE)
 and [NOTICE](NOTICE).
+
+The plugin bundles no third-party code or models; the scripts download
+what they need when they first run.
+
+- The pyannote speaker models are gated on Hugging Face and come under
+  their own terms, which you accept there with your own account.
+- Whisper and faster-whisper, used for speech-to-text, are MIT-licensed.
+- ffmpeg is not bundled; you install it yourself (see Quick start).
 
 ## Credits
 

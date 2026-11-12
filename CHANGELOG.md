@@ -1,7 +1,25 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 (2026-11-12)
 
+- Path arguments that start with `~`, such as
+  `--config ~/.config/turkish-subtitles`, now mean your home folder in
+  every script, even when the shell passes the `~` through unexpanded.
+- A built-in subtitle track whose language tag is not a plain two- or
+  three-letter code is now saved as `und`, so the tag can no longer shape
+  the file name.
+- The skill now writes paths in commands inside single quotes, and stops
+  and asks you to rename a file whose path holds `$`, a backtick or a line
+  break.
+- The credentials file is created readable only by you from the start,
+  not made private after it is written. OpenSubtitles download links must
+  be https, and the API host from the login is used only when it is a
+  plain host name.
+- The bible writer and second reader no longer have the web-fetch tool;
+  a web search is enough for cast and plot.
+- `SECURITY.md` now says the credentials file is plain text and that the
+  audio hints load the pyannote checkpoints with full pickle loading. The
+  README names the third-party models and tools and their terms.
 - Docs: the README is rewritten for a first-time reader, with pictures in
   a film look (an example scene, one run's numbers, the cast, a map of the
   whole run, link buttons and end credits). The architecture doc moved
