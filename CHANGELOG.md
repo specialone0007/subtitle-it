@@ -20,6 +20,8 @@
   follow a redirect only to `opensubtitles.com` over https and stop with
   an error on any other. The subtitle file download sends no key or
   token and follows only https redirects.
+- A downloaded subtitle file larger than 5 MB is refused with an error
+  and not saved.
 - The bible writer and second reader no longer have the web-fetch tool;
   a web search is enough for cast and plot.
 - `SECURITY.md` now says the credentials file is plain text and that the

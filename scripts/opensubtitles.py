@@ -38,6 +38,10 @@ USER_AGENT = "TurkishSubtitles v0.4.0"
 TOKEN_MAX_AGE = 20 * 3600  # tokens last 24 h; renew a bit early
 
 
+# A subtitle file is a few hundred KB at most; anything far bigger is not one.
+MAX_SUBTITLE_BYTES = 5_000_000
+
+
 class ApiError(SystemExit):
     pass
 
@@ -276,7 +280,9 @@ def download(config: Path, file_id: int, out: Path, cache: Path) -> dict:
     # The file sits on whatever https host the link names, so it gets no key or token.
     req = urllib.request.Request(_https(r["link"]), headers={"User-Agent": USER_AGENT})
     with _open(req, 60, api=False) as resp:
-        raw = resp.read()
+        raw = resp.read(MAX_SUBTITLE_BYTES + 1)
+    if len(raw) > MAX_SUBTITLE_BYTES:
+        raise ApiError(f"the subtitle file is larger than {MAX_SUBTITLE_BYTES // 1_000_000} MB, so it was not saved")
     cache.mkdir(parents=True, exist_ok=True)
     cached.write_bytes(raw)
     out.write_bytes(raw)
