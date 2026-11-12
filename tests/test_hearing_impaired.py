@@ -45,7 +45,11 @@ import srt
         ("- [Laughs] -What?", "- What?", None),
         ("<i>- (sighs) - No.</i>", "<i>- No.</i>", None),
         ("- (sighs) --and then", "- --and then", None),
+        ("(sighs) --and then", "--and then", None),
+        ("[sighs] -- What?", "-- What?", None),
         ("[Pier 12] Over here.", "Over here.", None),
+        ("[Wait]: Come back.", "Come back.", None),
+        ("[Gate 3]: Over here.", "Over here.", None),
         ("[Gate 3] Over here.", "Over here.", None),
         ("[Wait] Come back.", "Come back.", None),
         ("[Dikkat] Geri çekil.", "Geri çekil.", None),
@@ -359,14 +363,30 @@ def test_check_rejects_turkish_for_a_sound_only_cue_an_older_build_kept(tmp_path
     rows[1]["source"] = rows[1]["timing_lines"] = ["[Woman calling out,", "indistinct]"]
     (w / "cues.json").write_text(json.dumps(rows), encoding="utf-8")
     (w / "out").mkdir(exist_ok=True)
-    (w / "out" / "tr_00.txt").write_text("1\nGel.\n\n2\nToplanın millet!\n\n3\nOrada mısın?\n", encoding="utf-8")
+    # Cue 2's Turkish repeats the source and uses a glossary variant, so
+    # it would be flagged as untranslated and as a term variant.
+    (w / "glossary.json").write_text(json.dumps({"Kadın": ["woman"]}), encoding="utf-8")
+    cue2 = ["Woman calling out,", "indistinct"]
+    assert polish.untranslated(cue2, rows[1]["source"])
+    tr = "1\nGel.\n\n2\n" + "\n".join(cue2) + "\n\n3\nOrada mısın?\n"
+    (w / "out" / "tr_00.txt").write_text(tr, encoding="utf-8")
     r = assemble.run_checks(w)
     assert r["hard_fail_count"] == 0 and r["sound_only_cues"] == 1 and r["delivered_cues"] == 2
-    assert [(x["cue"], x["check"]) for x in r["warnings"]] == [(2, "sound-only cue")]
-    assert "rejected" in r["warnings"][0]["detail"]
-    assert "Toplanın" not in (w / "draft.tr.srt").read_text(encoding="utf-8")
-    # The fixer is not sent to it either.
+    assert sorted((x["cue"], x["check"]) for x in r["warnings"]) == [(2, "sound-only cue"), (2, "term variant")]
+    assert "rejected" in next(x["detail"] for x in r["warnings"] if x["check"] == "sound-only cue")
+    assert "indistinct" not in (w / "draft.tr.srt").read_text(encoding="utf-8")
+    # The fixer is not sent to it, for any reason.
     assert polish.flags(w)["flagged"] == 0
+    # The reviewer's side-by-side file has no row for it.
+    lines = assemble.sidebyside(w).read_text(encoding="utf-8").splitlines()
+    assert [ln.split("\t")[0] for ln in lines] == ["n", "1", "3"]
+    # A polish run seeds no Turkish into it.
+    turkish = TWO_LINE_SOUND.replace("SANDRA: Viens.", "SANDRA: Gel.")
+    turkish = turkish.replace("[Woman calling out,\nindistinct]", "Toplanın millet!").replace("Tu es là ?", "Orada mısın?")
+    (tmp_path / "tr.srt").write_text(turkish, encoding="utf-8")
+    polish.seed(w, tmp_path / "tr.srt")
+    seeded = (w / "out" / polish.SEED_FILE).read_text(encoding="utf-8")
+    assert "Toplanın" not in seeded and "\n2\n" not in "\n" + seeded
 
 
 def test_build_leaves_out_a_cue_the_source_file_says_is_only_sounds(tmp_path: Path):

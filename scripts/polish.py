@@ -293,16 +293,18 @@ def flags(work: Path) -> dict:
     texts, _ = assemble.load_translation(work)
     reasons: dict[int, list[str]] = {}
     missing: list[int] = []
+    # A sound-only cue's Turkish is rejected and not delivered, so nothing
+    # about it goes to the fixer: no glossary or address-form warning either.
+    sound_only = assemble.sound_only_cues(work, rows)
     for item in checks["hard"] + [w for w in checks["warnings"] if w["check"] not in NOT_FOR_FIXER]:
         # A fix file can name a cue the timing file does not have; check
         # already reports that as a hard fail, and there is no cue to list.
-        if item["cue"] is not None and item["cue"] in rows:
+        if item["cue"] is not None and item["cue"] in rows and item["cue"] not in sound_only:
             label = item["check"] + (f": {item['detail']}" if item["detail"] else "")
             if item["check"] == "cue count" and item["detail"] == "missing":
                 label = MISSING_FLAG
                 missing.append(item["cue"])
             reasons.setdefault(item["cue"], []).append(label)
-    sound_only = assemble.sound_only_cues(work, rows)
     for n, tr in texts.items():
         if n not in rows or n in sound_only:
             continue
@@ -313,7 +315,8 @@ def flags(work: Path) -> dict:
         if word:
             reasons.setdefault(n, []).append(_toned_down_label(word))
     for n, label in scene_address(bible.address_readings(work, texts, rows), rows).items():
-        reasons.setdefault(n, []).append(label)
+        if n not in sound_only:
+            reasons.setdefault(n, []).append(label)
     placement_file = work / PLACEMENT_FILE
     if placement_file.exists():
         placement = json.loads(placement_file.read_text(encoding="utf-8"))
