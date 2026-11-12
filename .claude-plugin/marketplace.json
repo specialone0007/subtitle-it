@@ -1,7 +1,8 @@
 {
   "name": "turkish-subtitles",
   "owner": {
-    "name": "Furkan Reha"
+    "name": "Furkan Reha",
+    "url": "https://www.linkedin.com/in/furkanreha/"
   },
   "metadata": {
     "description": "Claude Code plugin that translates film subtitles into natural Turkish."
