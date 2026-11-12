@@ -24,7 +24,7 @@
     uv run speakers.py setup --config CONFIG
     uv run speakers.py run   --video V --work W [--config CONFIG] [--no-sync-check]
 
-CONFIG defaults to ~/.config/turkish-subtitles.
+CONFIG defaults to ~/.config/subtitle-it.
 
 `setup` asks for a Hugging Face token without showing it and stores it in
 CONFIG/credentials.json under "hf_token". The token's account must have
@@ -65,6 +65,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import result  # noqa: E402
+import settings  # noqa: E402
 import srt  # noqa: E402
 
 DIARIZATION_MODEL = "pyannote/speaker-diarization-3.1"
@@ -431,7 +432,7 @@ def speech_starts(wav: Path) -> list[int]:
 # before) refuse the float16 compute type, and the CPU uses int8 instead.
 CUDA_WORDS = ("cuda", "cudnn", "cublas", "nvrtc", "float16")
 
-DEFAULT_CONFIG = Path.home() / ".config" / "turkish-subtitles"
+DEFAULT_CONFIG = settings.default_folder()
 
 
 def run(video: Path, work: Path, config: Path | None, sync_check: bool) -> dict:
@@ -496,6 +497,7 @@ def main(argv: list[str] | None = None) -> None:
     r.add_argument("--no-sync-check", action="store_true")
     result.add_argument(p)
     a = result.parse(p, argv)
+    a.config = settings.ensure_for(a.config)
     if a.cmd == "setup":
         setup(a.config)
     else:

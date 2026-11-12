@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Reviews a whole Turkish subtitle translation side by side with the source, for the turkish-subtitles skill. Started by that skill only.
+description: Reviews a whole Turkish subtitle translation side by side with the source, for subtitle-it's translate skill. Started by that skill only.
 tools: Read, Write, Glob, Grep
 model: inherit
 omitClaudeMd: true

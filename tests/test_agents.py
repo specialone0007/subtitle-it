@@ -6,7 +6,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 AGENTS = ROOT / "agents"
-SKILL = ROOT / "skills" / "subtitle" / "SKILL.md"
+SKILL = ROOT / "skills" / "translate" / "SKILL.md"
+LEARN = ROOT / "skills" / "learn" / "SKILL.md"
 ALLOWED_TOOLS = {"Read", "Write", "Edit", "Glob", "Grep", "Bash", "WebSearch", "WebFetch"}
 
 
@@ -18,7 +19,7 @@ def frontmatter(path: Path) -> dict[str, str]:
 
 
 def test_every_agent_named_in_the_skill_exists():
-    named = set(re.findall(r"`turkish-subtitles:([a-z-]+)`", SKILL.read_text(encoding="utf-8")))
+    named = set(re.findall(r"`subtitle-it:([a-z-]+)`", SKILL.read_text(encoding="utf-8")))
     files = {p.stem for p in AGENTS.glob("*.md")}
     assert named == files
 
@@ -62,7 +63,7 @@ def test_files_the_skill_sends_you_to_exist():
     text = SKILL.read_text(encoding="utf-8")
     named = set(re.findall(r"\$\{CLAUDE_SKILL_DIR\}/([\w.-]+\.md)", text))
     named |= set(re.findall(r"`([a-z]+\.md)`", text)) - {"SKILL.md", "bible.md", "report.md", "review.md", "preferences.md"}
-    assert {"setup.md", "learn.md", "pack-tr.md", "preferences-template.md"} <= named
+    assert {"setup.md", "pack-tr.md", "preferences-template.md"} <= named
     for name in named:
         assert (SKILL.parent / name).exists(), name
     setup = (SKILL.parent / "setup.md").read_text(encoding="utf-8")
@@ -71,3 +72,18 @@ def test_files_the_skill_sends_you_to_exist():
     assert set(headings) == set(re.findall(r"^## (.+)$", setup, re.M))
     for heading in headings:
         assert f"## {heading}" in setup, heading
+
+
+def test_learn_reads_the_shared_files_from_the_translate_skill():
+    text = LEARN.read_text(encoding="utf-8")
+    assert frontmatter(LEARN)["name"] == "learn"
+    assert frontmatter(SKILL)["name"] == "translate"
+    assert "`${CLAUDE_PLUGIN_ROOT}/skills/translate`" in text
+    for name in re.findall(r"`SHARED/([\w.-]+\.md)`", text):
+        assert (SKILL.parent / name).exists(), name
+    assert sorted(p.name for p in LEARN.parent.iterdir()) == ["SKILL.md"], "learn keeps no copies of shared files"
+
+
+def test_translate_points_to_the_learn_command_by_its_full_name():
+    assert "`/subtitle-it:learn <film>`" in SKILL.read_text(encoding="utf-8")
+    assert "learn" not in frontmatter(SKILL)["argument-hint"]

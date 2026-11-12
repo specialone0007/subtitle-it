@@ -27,7 +27,7 @@ def test_find_names_folders_that_are_not_there(tmp_path: Path):
     assert [Path(h["path"]).name for h in out["matches"]] == ["Anatomy.of.a.Fall.2023.mkv"]
 
 
-TEMPLATE = """# Turkish subtitles preferences
+TEMPLATE = """# Subtitle It preferences
 
 ## Media folders
 
@@ -95,7 +95,7 @@ def test_a_media_folder_written_with_a_tilde_means_the_home_folder(monkeypatch, 
 
 def test_remember_creates_the_section_when_preferences_lack_it(tmp_path: Path):
     prefs = tmp_path / "preferences.md"
-    prefs.write_text("# Turkish subtitles preferences\n", encoding="utf-8")
+    prefs.write_text("# Subtitle It preferences\n", encoding="utf-8")
     film = tmp_path / "Videos" / "Anatomy.of.a.Fall.2023.mkv"
     film.parent.mkdir()
     film.write_bytes(b"x")

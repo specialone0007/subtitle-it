@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.6.0 (2026-11-13)
+
+- The plugin is now called subtitle-it, since Turkish is the first
+  supported language and more are planned. Every run still writes Turkish,
+  to `<film>.tr.srt`. Install it with
+  `claude plugin marketplace add specialone0007/subtitle-it` and
+  `claude plugin install subtitle-it@subtitle-it`. The plugin's data
+  folder follows the new name, so work folders from earlier runs under the
+  old name (`turkish-subtitles`) are not carried over: the learn command
+  cannot find films delivered before the rename.
+- Upgrading: the old plugin stays installed beside the new one until you
+  remove it. If you want rules from fixes to a film delivered before the
+  rename, run the old plugin's `/turkish-subtitles:subtitle learn <film>`
+  first, since uninstalling it deletes its work folders. Then run
+  `claude plugin uninstall turkish-subtitles@turkish-subtitles` and
+  `claude plugin marketplace remove turkish-subtitles`. Your settings
+  folder is kept and moves on its own.
+- The command is now `/subtitle-it:translate <film>`, and learning from
+  your fixes has its own command, `/subtitle-it:learn <film>`, instead of
+  `learn` as the first argument. With no film named, the learn command
+  lists the delivered files you edited and asks which one. It reads the
+  language pack and the preferences template from the translate skill's
+  folder.
+- Settings now live in `~/.config/subtitle-it`. The first command that
+  needs them renames `~/.config/turkish-subtitles` to it when the new
+  folder does not exist yet, without opening the files inside. If the
+  rename fails, the old folder is used and the command says why.
+- `NOTICE` carries the new name.
+
 ## 0.5.1 (2026-11-13)
 
 - A sound description that runs over two lines (`[Woman calling out,` /

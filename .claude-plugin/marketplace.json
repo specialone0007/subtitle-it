@@ -1,17 +1,17 @@
 {
-  "name": "turkish-subtitles",
+  "name": "subtitle-it",
   "owner": {
     "name": "Furkan Reha",
     "url": "https://www.linkedin.com/in/furkanreha/"
   },
   "metadata": {
-    "description": "Claude Code plugin that translates film subtitles into natural Turkish."
+    "description": "Claude Code plugin that translates film subtitles so they read like people talking. Turkish is the first supported language; more are planned."
   },
   "plugins": [
     {
-      "name": "turkish-subtitles",
+      "name": "subtitle-it",
       "source": "./",
-      "description": "Translate a film's subtitles from any language into natural Turkish."
+      "description": "Translate a film's subtitles from any language into natural Turkish, the first supported language."
     }
   ]
 }

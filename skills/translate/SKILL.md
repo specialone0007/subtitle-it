@@ -1,16 +1,16 @@
 ---
-name: subtitle
-description: Translate a film's subtitles from any language into natural Turkish (.tr.srt next to the video). Use when the user asks for Turkish subtitles for a film, gives a film name, video or .srt to translate into Turkish, or runs "/subtitle learn <film>" after editing a delivered file.
-argument-hint: "<film name | video path | .srt path>  or  learn <film>"
+name: translate
+description: Translate a film's subtitles from any language into natural Turkish (.tr.srt next to the video). Use when the user asks for Turkish subtitles for a film, or gives a film name, video or .srt to translate into Turkish. Turkish is the only target language so far. Learning from the user's edits is the separate learn skill.
+argument-hint: "<film name | video path | .srt path>"
 ---
 
-# Turkish subtitles
+# Translate a film into Turkish
 
 You run this whole skill in the user's conversation. You start the
 bible writer, the bible checkers, the translators and the reviewer as
 subagents with the Agent tool; they write files and reply with short
 summaries. Each has its own agent type in this plugin, named below
-(`turkish-subtitles:translator` and so on): its instructions and tools come
+(`subtitle-it:translator` and so on): its instructions and tools come
 with the type, so your prompt to it holds only the paths and facts listed
 for that step. Never paste instructions of your own into it. Keep your own
 context small: never read a whole subtitle file, chunk file or
@@ -24,17 +24,17 @@ A normal run never asks the user anything: it decides from the film, the
 scripts' results and the preferences, and writes what it decided into the
 report. It stops only for one-time setup (a missing tool, missing
 OpenSubtitles credentials, a media folder), when no film matches or
-several different films do, or when there is no draft to deliver. Learn
-mode is the one place you ask. The user may not have seen the film yet: in
+several different films do, or when there is no draft to deliver. The
+learn skill is the one place that asks. The user may not have seen the film yet: in
 chat, never quote its dialogue or describe its plot; `report.md` is for
 after watching.
 
 ## Fixed paths
 
 - Scripts: `${CLAUDE_PLUGIN_ROOT}/scripts` (call it SCRIPTS below)
-- Skill files: `${CLAUDE_SKILL_DIR}` (language pack, preferences template, `setup.md` and `learn.md`, read only when a step sends you there)
+- Skill files: `${CLAUDE_SKILL_DIR}` (language pack, preferences template and `setup.md`, read only when a step sends you there; the learn skill reads the same files from here)
 - Data: `${CLAUDE_PLUGIN_DATA}`; each film's work folder is `${CLAUDE_PLUGIN_DATA}/films/<slug>` (WORK below)
-- User config: `~/.config/turkish-subtitles` (CONFIG below; the scripts expand the `~` themselves, so it works inside single quotes): `preferences.md`, `credentials.json`, `backups/`
+- User config: `~/.config/subtitle-it`, or the `folder` step 0 gives (CONFIG below; the scripts expand the `~` themselves, so it works inside single quotes): `preferences.md`, `credentials.json`, `backups/`
 
 Run every script as
 `uv run 'SCRIPTS/<name>.py' --result '${CLAUDE_PLUGIN_DATA}/results/<name>-<command>.json' <command> ...`,
@@ -74,7 +74,7 @@ A subagent's completion notice ends with its usage: its tokens
 (`subagent_tokens` or `total_tokens`) and `duration_ms`. Keep them for
 each agent, and pass them with the next mark as one
 `--agent <kind>:<tokens>:<ms>` per agent, where kind is the agent type
-without `turkish-subtitles:` (`--agent translator:61234:182000`). Write
+without `subtitle-it:` (`--agent translator:61234:182000`). Write
 `-` for a number the notice did not give. Never guess one.
 
 Arguments: $ARGUMENTS
@@ -82,10 +82,10 @@ Arguments: $ARGUMENTS
 ## 0. Start
 
 1. Check the tools: `uv --version` and `ffprobe -version`. If one is missing, point the user to the README's Quick start section and stop.
-2. If `CONFIG/preferences.md` does not exist, copy `${CLAUDE_SKILL_DIR}/preferences-template.md` there and tell the user in one line.
-3. Read `CONFIG/preferences.md`.
-4. If the arguments start with `learn`, read `${CLAUDE_SKILL_DIR}/learn.md` and follow it instead of the steps below.
-5. Run `uv run 'SCRIPTS/learn.py' scan --data '${CLAUDE_PLUGIN_DATA}'`. If it lists films whose Turkish file the user edited, say in one line that `/turkish-subtitles:subtitle learn <film>` turns those edits into rules, then continue.
+2. Run `settings.py folder`, joined to item 1's commands with `&&`. CONFIG is its `folder`. When `moved_from` is set, the settings folder from before the plugin was renamed was moved into place: say so in one line. When `error` is set, say it in one line and go on.
+3. If `CONFIG/preferences.md` does not exist, copy `${CLAUDE_SKILL_DIR}/preferences-template.md` there and tell the user in one line.
+4. Read `CONFIG/preferences.md`.
+5. Run `uv run 'SCRIPTS/learn.py' scan --data '${CLAUDE_PLUGIN_DATA}'`. If it lists films whose Turkish file the user edited, say in one line that `/subtitle-it:learn <film>` turns those edits into rules, then continue.
 
 ## 1. Find the film
 
@@ -106,7 +106,7 @@ Find the film's title, year, original language and IMDb id with one web
 search if you do not know them. Then collect candidates:
 
 1. If the input is a video: `sources.py local --video V --work WORK`. It extracts text tracks, finds files next to the video and in a `Subs` or `Subtitles` folder beside it (up to two levels down), and validates each.
-2. If there is no usable candidate in the original language and none in English, or only uncertain ones: `opensubtitles.py search --config CONFIG --video V --languages <orig>,en` (add `--imdb ID` when the video gives no hash match). Results are sorted best first; `moviehash_match: true` means the timing fits this exact video. Download at most 3 files with `opensubtitles.py download --config 'CONFIG' --file-id N --out 'WORK/sources/os_<lang>.srt' --cache '${CLAUDE_PLUGIN_DATA}/cache'`, then run `sources.py validate --file F --duration-ms D` on each. If the script says credentials are missing, this is one-time setup: see "OpenSubtitles credentials" in `setup.md`.
+2. If there is no usable candidate in the original language and none in English, or only uncertain ones: `opensubtitles.py search --config 'CONFIG' --video V --languages <orig>,en` (add `--imdb ID` when the video gives no hash match). Results are sorted best first; `moviehash_match: true` means the timing fits this exact video. Download at most 3 files with `opensubtitles.py download --config 'CONFIG' --file-id N --out 'WORK/sources/os_<lang>.srt' --cache '${CLAUDE_PLUGIN_DATA}/cache'`, then run `sources.py validate --file F --duration-ms D` on each. If the script says credentials are missing, this is one-time setup: see "OpenSubtitles credentials" in `setup.md`.
 3. If the input is a video and there is still no usable candidate in the original language or in English (none found, or all fail validation), make one from the audio as the last resort: `transcribe.py run --video V --work WORK --language <orig>`. Leave out `--language` when you do not know the original language. Say in one line that this writes subtitles from the film's speech, takes a few minutes on a GPU and about the film's length or more on a CPU, and the first time downloads a few GB: PyTorch, unless the audio hints already did, plus a Whisper model of about 1.6 GB. The result's `path` is `WORK/sources/asr.<language>.srt`, with confidence "from the audio". If it fails, or its `cues` is 0 (no speech found: a music-only track, or the wrong `--language`), say so in one line and stop: there is nothing to translate. Otherwise run `sources.py validate` on it like any candidate; it is used even when validation lists issues, since nothing else exists, and those issues go in the report.
 4. If the input is an `.srt` alone, that file is the timing file (confidence "as the user says").
 
@@ -187,7 +187,7 @@ Mark `hints_bible` with this step's first command.
    from the audio (`transcribe.py`): its times are the audio's own, so
    there is nothing to check.
 2. Right away, without waiting for it, start one
-   `turkish-subtitles:bible-writer` subagent. Its prompt: the paths (WORK, the preferences file), the film facts (title,
+   `subtitle-it:bible-writer` subagent. Its prompt: the paths (WORK, the preferences file), the film facts (title,
    year, original language, IMDb id), and, when audio hints are running,
    the line `Voices: added later.` It writes `WORK/bible.md`,
    `WORK/glossary.json` and `WORK/decisions.json`.
@@ -216,9 +216,9 @@ Mark `hints_bible` with this step's first command.
 5. With voices: run `prepare.py chunks --work WORK` again so the chunks
    show the voices, then `bible.py voice-questions --work WORK`, in one
    Bash call. It writes `WORK/questions.voices.json`. In ONE message, start
-   one `turkish-subtitles:voice-mapper` subagent with the path WORK, and
+   one `subtitle-it:voice-mapper` subagent with the path WORK, and
    the voice round of the step 5 second reader: a second
-   `turkish-subtitles:second-reader` with the paths (WORK,
+   `subtitle-it:second-reader` with the paths (WORK,
    `WORK/questions.voices.json`), the film facts and the line
    `Write to: WORK/second.voices.json`. The mapper writes
    `WORK/voices.json`. Run `bible.py voices --work WORK`: it adds the voice
@@ -235,10 +235,10 @@ Nobody confirms the bible by hand. A second reader answers the same
 questions without seeing the bible, and a judge settles any difference
 from the cited cues.
 
-1. The second reader: one `turkish-subtitles:second-reader` subagent with the paths (WORK, `WORK/questions.json`) and the film facts, started in item 3 above. It writes `WORK/second.json`. With voices, the voice round from item 5 writes `WORK/second.voices.json`.
+1. The second reader: one `subtitle-it:second-reader` subagent with the paths (WORK, `WORK/questions.json`) and the film facts, started in item 3 above. It writes `WORK/second.json`. With voices, the voice round from item 5 writes `WORK/second.voices.json`.
 2. When the second reader is done, and with voices also the voice round and `bible.py voices`, run `bible.py compare --work WORK`. It reads both answer files and writes `WORK/compare.json`. If `bible.py voices` gave up in item 5, delete `WORK/second.voices.json` first, after the voice round is done, so the judge is not handed every voice.
-   When `unanswered` lists question ids, the second reader skipped them. Start the same `turkish-subtitles:second-reader` once more with the same paths and the line `Answer these questions you left out, keeping your other answers in the file: <ids>` (for a `voice:` id, point it at `WORK/second.voices.json` and `WORK/questions.voices.json` instead), then run `compare` again. Once only: questions still unanswered go to the judge as before; name them in the report.
-3. If `to_judge` is above 0, start one `turkish-subtitles:bible-judge` subagent with the paths (WORK, `WORK/compare.json`) and this command for reading cues, with the paths filled in: `uv run 'SCRIPTS/bible.py' --result '${CLAUDE_PLUGIN_DATA}/results/bible-cues.json' cues --work 'WORK' --cues <numbers>`, and the note that it must read the result file, not the printed output. It writes `WORK/judged.json` and updates `bible.md`.
+   When `unanswered` lists question ids, the second reader skipped them. Start the same `subtitle-it:second-reader` once more with the same paths and the line `Answer these questions you left out, keeping your other answers in the file: <ids>` (for a `voice:` id, point it at `WORK/second.voices.json` and `WORK/questions.voices.json` instead), then run `compare` again. Once only: questions still unanswered go to the judge as before; name them in the report.
+3. If `to_judge` is above 0, start one `subtitle-it:bible-judge` subagent with the paths (WORK, `WORK/compare.json`) and this command for reading cues, with the paths filled in: `uv run 'SCRIPTS/bible.py' --result '${CLAUDE_PLUGIN_DATA}/results/bible-cues.json' cues --work 'WORK' --cues <numbers>`, and the note that it must read the result file, not the printed output. It writes `WORK/judged.json` and updates `bible.md`.
 4. Run `bible.py apply --work WORK`. Keep its `ties` for the report.
 
 When `questions`, `compare` or `apply` refuses a file it reads, start one
@@ -263,7 +263,7 @@ how many are flagged and how many of those have no Turkish (`missing`).
 Then, in ONE message, start the fixer and the reviewer, so they work at
 the same time on different cues:
 
-- When `flagged` is above 0, one `turkish-subtitles:polish-fixer`
+- When `flagged` is above 0, one `subtitle-it:polish-fixer`
   subagent with the paths: pack, bible, preferences, WORK. It writes
   `WORK/out/fix_polish.txt`.
 - The step 10 reviewer, with the polish run's lines. It leaves the
@@ -274,7 +274,7 @@ the same time on different cues:
 Wait for both, then go on to step 8.
 
 Otherwise, read `WORK/chunks.json`. In ONE message, start one
-`turkish-subtitles:translator` subagent per chunk. Use the model from the
+`subtitle-it:translator` subagent per chunk. Use the model from the
 preferences' "Translator model" (`session` means do not set a model). Each
 prompt is:
 
@@ -301,7 +301,7 @@ Run `assemble.py check --work WORK`, joined after the `check` mark with
 the agents of steps 6–7. Its result has counts and the first hard
 fails.
 
-- Hard fails: group the failing cues by chunk. For each affected chunk start one `turkish-subtitles:translator` subagent with the first five lines of that chunk's prompt from step 6 (language pack, bible, preferences, chunk, neighbour chunks), never its two `Write` lines, plus: "Fix only these cues: <numbers and the failed check>. Write only those cues to WORK/out/fix_r<round>_<NN>.txt. Write flags to WORK/out/flags_r<round>_<NN>.txt." Use the same model as in step 6: the preferences' "Translator model" (`session` means do not set a model). The chunk's first output and flags stay as they are. Then run `check` again. At most 2 rounds.
+- Hard fails: group the failing cues by chunk. For each affected chunk start one `subtitle-it:translator` subagent with the first five lines of that chunk's prompt from step 6 (language pack, bible, preferences, chunk, neighbour chunks), never its two `Write` lines, plus: "Fix only these cues: <numbers and the failed check>. Write only those cues to WORK/out/fix_r<round>_<NN>.txt. Write flags to WORK/out/flags_r<round>_<NN>.txt." Use the same model as in step 6: the preferences' "Translator model" (`session` means do not set a model). The chunk's first output and flags stay as they are. Then run `check` again. At most 2 rounds.
 - Still failing after 2 rounds: one more round the same way, with the model set to `opus`.
 - Still failing after that: go on. Step 11 delivers with `--force` and lists the failing cues in the report. If `check` wrote no draft (a cue is missing or a file is malformed), there is nothing to deliver: stop and tell the user which cues are missing (its result's `missing_cues` names every one).
 - Warnings never block. They go to the reviewer.
@@ -323,14 +323,14 @@ checks included, uses the work folder's numbers.
 
 Mark `review` with this step's first command, passing the fix rounds'
 agents. Run `assemble.py sidebyside --work WORK`. Start one
-`turkish-subtitles:reviewer` subagent with the paths: pack, bible,
+`subtitle-it:reviewer` subagent with the paths: pack, bible,
 `WORK/sidebyside.tsv`, `WORK/checks.json`, `WORK/out/`, and in a polish
 run the preferences file and the line `Polish run: WORK/polish_flags.txt`. It writes
 `WORK/out/fix_review.txt` and `WORK/review.md`.
 
 In a polish run the reviewer already ran beside the fixer (step 6–7), so
 start no second one here: run `polish.py soft --work WORK`. When `left` is
-above 0, start the `turkish-subtitles:polish-fixer` once more with the same
+above 0, start the `subtitle-it:polish-fixer` once more with the same
 paths plus the lines `Flags: WORK/polish_soft.txt` and
 `Write to: WORK/out/fix_soft.txt`, then run `soft` again and keep its
 `left` and `cue_numbers` for the report.
@@ -381,4 +381,4 @@ Tell the user, in a few lines and without spoilers: where the file is,
 where the old one went, how many items are in "Check after watching" and
 that `report.md` (give its path) lists them for after watching.
 End with: after watching, they can fix lines in the file and run
-`/turkish-subtitles:subtitle learn <film>` so the next film gets it right.
+`/subtitle-it:learn <film>` so the next film gets it right.
