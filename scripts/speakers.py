@@ -99,11 +99,7 @@ def save_token(config: Path, token: str) -> None:
     p = _cred_path(config)
     creds = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
     creds["hf_token"] = token
-    tmp = p.with_suffix(".tmp")
-    tmp.write_text(json.dumps(creds, indent=1), encoding="utf-8")
-    if os.name != "nt":
-        os.chmod(tmp, 0o600)
-    tmp.replace(p)
+    result.write_private(p, json.dumps(creds, indent=1))
 
 
 def setup(config: Path) -> None:
@@ -452,11 +448,11 @@ def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("setup")
-    s.add_argument("--config", type=Path, required=True)
+    s.add_argument("--config", type=result.path, required=True)
     r = sub.add_parser("run")
-    r.add_argument("--video", type=Path, required=True)
-    r.add_argument("--work", type=Path, required=True)
-    r.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    r.add_argument("--video", type=result.path, required=True)
+    r.add_argument("--work", type=result.path, required=True)
+    r.add_argument("--config", type=result.path, default=DEFAULT_CONFIG)
     r.add_argument("--no-sync-check", action="store_true")
     result.add_argument(p)
     a = result.parse(p, argv)

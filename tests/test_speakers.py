@@ -1,5 +1,7 @@
 import json
+import os
 import random
+import stat
 import statistics
 import wave
 from pathlib import Path
@@ -381,3 +383,18 @@ def test_speech_starts_offsets_each_window_and_drops_its_edges(monkeypatch):
     monkeypatch.setattr(speakers, "sync_windows", lambda n: [(10 * rate, 20 * rate), (40 * rate, 50 * rate)])
     assert speakers.speech_starts(Path("a.wav")) == [15000, 45000]
     assert seen == [10 * rate, 40 * rate]
+
+
+def test_setup_config_with_a_tilde_means_the_home_folder(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    seen = []
+    monkeypatch.setattr(speakers, "setup", seen.append)
+    speakers.main(["setup", "--config", "~/cfg"])
+    assert seen == [tmp_path / "cfg"]
+
+
+def test_saved_token_is_readable_only_by_the_owner(tmp_path: Path):
+    speakers.save_token(tmp_path, "hf_x")
+    if os.name != "nt":
+        assert stat.S_IMODE((tmp_path / "credentials.json").stat().st_mode) == 0o600
