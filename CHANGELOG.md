@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- CI now also runs on macOS, and installs ffmpeg on every system. A new
+  test, `tests/test_ffmpeg.py`, builds a 5-second video with a text subtitle
+  track and reads it back with the real ffmpeg and ffprobe, so a difference
+  between systems shows up in CI rather than in a run.
 - The translators now run at low reasoning effort (`effort: low` in
   `agents/translator.md`), whatever effort the session uses. The fix rounds
   use the same agent, so they do too. On a 2-hour test film this cut the translators
