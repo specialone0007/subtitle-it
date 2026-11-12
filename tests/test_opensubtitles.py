@@ -174,6 +174,17 @@ def test_the_file_download_sends_no_key_or_token(tmp_path: Path, monkeypatch):
     assert api is False and "api-key" not in headers and "authorization" not in headers
 
 
+def test_a_download_larger_than_the_cap_is_refused_and_not_cached(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(opensubtitles, "load_creds", lambda config: {"api_key": "k"})
+    monkeypatch.setattr(opensubtitles, "login", lambda config, creds, force=False: creds)
+    monkeypatch.setattr(opensubtitles, "_request", lambda *a, **k: {"link": "https://dl.example/x.srt"})
+    big = b"x" * (opensubtitles.MAX_SUBTITLE_BYTES + 1)
+    monkeypatch.setattr(opensubtitles, "_open", lambda req, timeout, api: io.BytesIO(big))
+    with pytest.raises(opensubtitles.ApiError, match="larger than 5 MB"):
+        opensubtitles.download(tmp_path, 42, tmp_path / "x.srt", tmp_path / "cache")
+    assert not (tmp_path / "x.srt").exists() and not (tmp_path / "cache").exists()
+
+
 def test_the_file_download_follows_only_https_redirects():
     req = urllib.request.Request("https://dl.example/x.srt")
     with pytest.raises(opensubtitles.ApiError, match="not https"):
