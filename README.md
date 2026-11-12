@@ -1,5 +1,7 @@
 # Turkish Subtitles
 
+![Title card: Turkish Subtitles, a Claude Code plugin that turns a film's subtitles into natural Turkish](docs/assets/title-card.svg)
+
 A Claude Code plugin that turns a film's subtitles, in any language, into
 natural Turkish subtitles on the source file's own timings. It is for
 Turkish speakers who want to watch a film that has no good Turkish
@@ -23,6 +25,8 @@ It does not stop to ask you anything once setup is done, except which
 film you mean when the name matches several different films (Alien and
 Aliens), and it does not spoil the film in chat. What it could not settle
 for certain goes under "Check after watching" in the film's `report.md`.
+
+![How a run goes: find the film, get subtitles, audio hints, film bible, translate, check, review, deliver](docs/assets/run-strip.svg)
 
 [How a run works](docs/architecture.md) walks through each step.
 
@@ -106,7 +110,8 @@ plan's usage instead. Other films, models and machines will differ.
 
 Full runs have only been tested on Windows. The test suite also passes on
 Linux in CI; macOS is untested. Without an NVIDIA GPU, audio hints and
-speech-to-text still work but take about as long as the film.
+speech-to-text still work but take about as long as the film, or more for
+speech-to-text.
 
 ## Where files go
 
@@ -183,3 +188,7 @@ Copyright 2026 Furkan Reha
 
 Apache-2.0: the Apache License, version 2.0. See [LICENSE](LICENSE)
 and [NOTICE](NOTICE).
+
+## Credits
+
+Written and directed by [Furkan Reha](https://www.linkedin.com/in/furkanreha/).
