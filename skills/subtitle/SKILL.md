@@ -57,7 +57,7 @@ Arguments: $ARGUMENTS
 
 ## 0. Start
 
-1. Check the tools: `uv --version` and `ffprobe -version`. If one is missing, point the user to the README's Setup section and stop.
+1. Check the tools: `uv --version` and `ffprobe -version`. If one is missing, point the user to the README's Quick start section and stop.
 2. If `CONFIG/preferences.md` does not exist, copy `${CLAUDE_SKILL_DIR}/preferences-template.md` there and tell the user in one line.
 3. Read `CONFIG/preferences.md`.
 4. If the arguments start with `learn`, read `${CLAUDE_SKILL_DIR}/learn.md` and follow it instead of the steps below.

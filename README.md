@@ -10,7 +10,7 @@
   <a href="#quick-start"><img src="docs/assets/btn-quick-start.svg" alt="Quick start" width="190"></a>
   <a href="#how-a-run-goes"><img src="docs/assets/btn-how-a-run-goes.svg" alt="How a run goes" width="190"></a>
   <a href="#cost-time-and-platforms"><img src="docs/assets/btn-cost-and-time.svg" alt="Cost and time" width="190"></a>
-  <a href="ARCHITECTURE.md"><img src="docs/assets/btn-every-step.svg" alt="Every step in detail" width="190"></a>
+  <a href="ARCHITECTURE.md"><img src="docs/assets/btn-architecture.svg" alt="Architecture: every step in detail" width="190"></a>
 </p>
 
 A Claude Code plugin for Turkish speakers who want to watch a film that has

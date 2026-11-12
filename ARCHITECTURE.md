@@ -59,8 +59,8 @@ mentions any delivered file you have edited since.
 
 ### 2. Source subtitles
 
-The run needs subtitles in the film's language, and tries three places in
-order.
+The run needs source subtitles to translate from, and tries three places
+in order.
 
 1. **On disk.** `sources.py local` reads text tracks inside the video, files
    next to it, and files in a `Subs` or `Subtitles` folder beside it.
