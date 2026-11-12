@@ -53,7 +53,7 @@ jobs:
           version = plugin["version"]
           found = {"pyproject.toml": tomllib.load(open("pyproject.toml", "rb"))["project"]["version"]}
           found |= {f"marketplace.json ({p['name']})": p["version"] for p in market["plugins"] if "version" in p}
-          agent = re.search(r'USER_AGENT = "TurkishSubtitles v([^"]+)"', open("scripts/opensubtitles.py").read())
+          agent = re.search(r'USER_AGENT = "SubtitleIt v([^"]+)"', open("scripts/opensubtitles.py").read())
           found["opensubtitles.py user agent"] = agent and agent.group(1)
           heading = re.search(r"^## (\S+)", open("CHANGELOG.md").read(), re.M)
           found["CHANGELOG.md first heading"] = heading and heading.group(1)

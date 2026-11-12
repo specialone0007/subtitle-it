@@ -1,6 +1,6 @@
 ---
 name: second-reader
-description: Answers the film bible's questions without seeing the bible, for the turkish-subtitles skill. Started by that skill only.
+description: Answers the film bible's questions without seeing the bible, for subtitle-it's translate skill. Started by that skill only.
 tools: Read, Write, Glob, Grep, WebSearch
 model: inherit
 omitClaudeMd: true

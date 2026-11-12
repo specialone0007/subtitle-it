@@ -2,8 +2,8 @@
 # requires-python = ">=3.11"
 # dependencies = ["charset-normalizer>=3.3"]
 # ///
-"""Find what the user changed in a delivered Turkish file, so the skill can
-propose rules.
+"""Find what the user changed in a delivered Turkish file, so the learn skill
+can propose rules.
 
     uv run learn.py scan --data DATA_DIR
     uv run learn.py diff --work W

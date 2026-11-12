@@ -114,7 +114,7 @@ def test_a_missing_start_file_is_said_not_guessed(tmp_path: Path):
 
 
 def test_the_skill_marks_every_step_group():
-    skill = (Path(__file__).resolve().parents[1] / "skills" / "subtitle" / "SKILL.md").read_text(encoding="utf-8")
+    skill = (Path(__file__).resolve().parents[1] / "skills" / "translate" / "SKILL.md").read_text(encoding="utf-8")
     for name in [*usage.GROUPS, usage.END]:
         assert f"`{name}`" in skill, name
     assert "usage.py summary" in skill

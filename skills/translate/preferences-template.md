@@ -1,4 +1,4 @@
-# Turkish subtitles preferences
+# Subtitle It preferences
 
 The skill reads this file at the start of every run. Edit it freely.
 Learned rules are added at the bottom only after you say yes.

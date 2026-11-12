@@ -1,6 +1,6 @@
 ---
 name: bible-judge
-description: Settles questions where the bible writer and the second reader disagree, for the turkish-subtitles skill. Started by that skill only.
+description: Settles questions where the bible writer and the second reader disagree, for subtitle-it's translate skill. Started by that skill only.
 tools: Read, Write, Edit, Bash
 model: inherit
 omitClaudeMd: true

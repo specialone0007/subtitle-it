@@ -32,9 +32,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import result  # noqa: E402
+import settings  # noqa: E402
 
 API = "https://api.opensubtitles.com/api/v1"
-USER_AGENT = "TurkishSubtitles v0.5.1"
+USER_AGENT = "SubtitleIt v0.6.0"
 TOKEN_MAX_AGE = 20 * 3600  # tokens last 24 h; renew a bit early
 
 
@@ -310,6 +311,8 @@ def main(argv: list[str] | None = None) -> None:
             s.add_argument("--cache", type=result.path, required=True)
     result.add_argument(p)
     a = result.parse(p, argv)
+    if a.cmd != "hash":
+        a.config = settings.ensure_for(a.config)
     if a.cmd == "setup":
         setup(a.config)
         return

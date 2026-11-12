@@ -1,6 +1,6 @@
 ---
 name: polish-fixer
-description: Fixes the flagged cues of an existing Turkish subtitle placed on a film's timing file, for the turkish-subtitles skill. Started by that skill only.
+description: Fixes the flagged cues of an existing Turkish subtitle placed on a film's timing file, for subtitle-it's translate skill. Started by that skill only.
 tools: Read, Write, Glob, Grep
 model: inherit
 omitClaudeMd: true
