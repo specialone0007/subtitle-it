@@ -23,6 +23,17 @@ NVIDIA GPU is found; without one they take about as long as the film.
 
 auto
 
+## Hearing-impaired tags
+
+Sound descriptions (`[door slams]`) and speaker labels (`SANDRA:`,
+`[Sandra]`) from a hearing-impaired source file. `remove` takes them out
+of the text and of the Turkish, and leaves out cues that are only sounds.
+Square brackets go from every file; parentheses and labels in capitals
+only from a file that is hearing-impaired.
+`keep` leaves the text as the source has it. One of: remove, keep.
+
+remove
+
 ## Swearing
 
 match the source

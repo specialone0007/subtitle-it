@@ -106,22 +106,8 @@ def words_to_cues(words: list[Word]) -> list[tuple[int, int, str]]:
 
 
 def wrap(text: str) -> list[str]:
-    """One line when it fits in LINE characters, else two. The break goes
-    after a sentence end, then after a comma, as long as both lines fit;
-    otherwise at the space nearest the middle."""
-    if len(text) <= LINE or " " not in text:
-        return [text]
-    mid = len(text) / 2
-    spaces = [i for i, ch in enumerate(text) if ch == " "]
-    fits = [i for i in spaces if i <= LINE and len(text) - i - 1 <= LINE]
-    for marks in (".!?…", ",;:"):
-        after = [i for i in fits if text[i - 1] in marks]
-        if after:
-            cut = min(after, key=lambda i: abs(i - mid))
-            break
-    else:
-        cut = min(spaces, key=lambda i: abs(i - mid))
-    return [text[:cut], text[cut + 1 :]]
+    """One line when it fits in LINE characters, else two (`srt.wrap`)."""
+    return srt.wrap(text, LINE)
 
 
 def drop_repeats(cues: list[tuple[int, int, str]]) -> list[tuple[int, int, str]]:

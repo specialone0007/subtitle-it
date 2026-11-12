@@ -349,9 +349,18 @@ def compare(work: Path) -> dict:
     # A new comparison makes any earlier verdicts stale.
     (work / "judged.json").unlink(missing_ok=True)
     (work / "compare.json").write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
+    # Questions the second reader was asked and skipped (or answered with
+    # null). The judge would settle them from the writer's side alone, so
+    # the result names them: the skill asks the second reader once more.
+    asked_file = work / "questions.json"
+    asked = _load(asked_file) if asked_file.exists() else [{"id": i} for i, k in kinds.items() if k != "voice"]
+    asked_ids = {q["id"] for q in asked if isinstance(q, dict) and isinstance(q.get("id"), str)} | set(voice_asked)
+    answered = {a["id"] for a in answers if a.get("answer") is not None}
+    unanswered = sorted((asked_ids & (set(kinds) | set(voice_asked))) - answered)
     return {
         "decisions": len(data["decisions"]),
         "agreed": len(agreed),
+        "unanswered": unanswered,
         "to_judge": len(to_judge),
         "judge_ids": [t["id"] for t in to_judge],
         "file": str(work / "compare.json"),

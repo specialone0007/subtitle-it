@@ -1,5 +1,62 @@
 # Changelog
 
+## 0.5.0 (2026-11-12)
+
+- Hearing-impaired text is now taken out before any agent sees it.
+  Sound descriptions in square brackets (`[door slams]`) and bracketed
+  names (`[Sandra] text`, `[1. Man] text`, `[Guard 2] text`) go from every
+  file. Descriptions in parentheses (`(sighs)`) and labels in capitals
+  (`SANDRA:`) go only from a file that is hearing-impaired; elsewhere they
+  stay, since plain files use them for dialogue. Even there a parenthesis
+  that ends in ? or !, or holds a sentence with words on both sides, is
+  kept, and capitals before a colon count as a label only when they look
+  like a name: letters only, at most 3 words, and not a word such as OK,
+  WARNING, DAY or PART. Each label stays as the cue's speaker hint. A cue
+  that is only sounds is left out of the translation and of the delivered
+  file; a cue with sounds and speech keeps the speech, and song lines with
+  words stay. The new preference `Hearing-impaired tags: keep` turns this
+  off and keeps today's behaviour. With `remove`, the default, a Turkish
+  cue with square brackets is a hard fail, and so is a label or a
+  description in parentheses where the source cue had tags removed.
+- A file is now called hearing-impaired by its content, when at least 3%
+  of its cues hold such tags or labels, not only by its name or track tag.
+  The build result and the report say so.
+- Every delivered cue now has at most 2 lines of 42 characters, and a cue
+  with two speakers one line per speaker. A cue that does not fit is
+  rewrapped, or, when it has two speakers, split at the speaker change
+  into one cue per speaker, with the time shared by length (a part that
+  would get under a second gets a second) and the file's usual gap
+  between them. A split needs every part to last at least a
+  second and read at 17 characters a second or less; otherwise the cue
+  goes back to be shortened. The language pack no longer allows 3 lines.
+- The delivered file is now numbered on its own. `cue_map.json` (and
+  `delivered_map.json` after delivery, and a `.map.json` beside a backed-up
+  earlier delivery) leads each delivered cue back to the timing file's
+  cue. The new `assemble.py where` command gives a cue's delivered numbers
+  and time for the report, and `learn.py diff` names both numbers.
+- A polish run now seeds a two-speaker cue that an earlier delivery split
+  back as one line per speaker.
+- A Turkish file to polish now needs to cover 80% of the spoken cues
+  instead of 90%, and the run tries at most 2 files instead of 3, a hash
+  match first. The reason a file does not fit now reads, for example,
+  "covers 89.5% of the spoken cues, needs 80.0%". Cues the file does not
+  cover are translated by the polish fixer, as before.
+- A voice from the audio that mixes several characters (six or more
+  labelled cues, none of them two thirds) now gives no speaker hint at
+  all, so the address-form check no longer judges its cues. The audio
+  step's result counts these in `voices_dropped`.
+- `bible.py compare` now lists the questions the second reader left
+  unanswered, and the skill asks it those once more.
+- The translator and the polish fixer may now rewrite their own output
+  file when they spot a mistake in it.
+- Each run now records its time and usage. The new `scripts/usage.py`
+  marks the start of each step group and keeps each subagent's tokens and
+  time from its completion notice. `report.md` gets a "Time and usage"
+  section with the wall-clock time per step group, and the agents' count,
+  tokens and time per kind. It says which figures a run cannot see (the
+  main session's own tokens, and new against cached tokens) instead of
+  estimating them. The same figures go to `usage.json` in the work folder.
+
 ## 0.4.0 (2026-11-12)
 
 - Path arguments that start with `~`, such as

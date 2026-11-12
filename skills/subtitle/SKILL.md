@@ -60,6 +60,23 @@ A `sleep` cannot be cut short, so it only adds waiting.
 Never read, print or edit `CONFIG/credentials.json`; only
 `opensubtitles.py` and `speakers.py` touch it.
 
+## Time and usage
+
+Each run records how long its steps took and what its subagents used,
+for the report. `usage.py step --work 'WORK' --name <group>` marks the
+start of a step group; the groups are `find`, `hints_bible`, `translate`
+or `polish`, `check`, `review` and `deliver`, and `done` ends the run.
+Each step below says when to mark it. Join the mark to that step's first
+script command with `&&`, so it costs no extra call. Never make a call
+only to mark a step.
+
+A subagent's completion notice ends with its usage: its tokens
+(`subagent_tokens` or `total_tokens`) and `duration_ms`. Keep them for
+each agent, and pass them with the next mark as one
+`--agent <kind>:<tokens>:<ms>` per agent, where kind is the agent type
+without `turkish-subtitles:` (`--agent translator:61234:182000`). Write
+`-` for a number the notice did not give. Never guess one.
+
 Arguments: $ARGUMENTS
 
 ## 0. Start
@@ -77,6 +94,11 @@ Arguments: $ARGUMENTS
 - Several `matches`: keep the ones whose `kind` is `video` and that do not `looks_like_extra`. When they all sit in one folder, or their file names give the same title once the year, resolution and other tags in the file name are left out, they are copies of one film: take the first (the biggest) and name it in one line. Otherwise they are different films (Alien and Aliens): list them and ask which one, the one question a run may ask, since translating the wrong film would put the file next to the wrong video. No such match: stop and ask for the path. When `missing_folders` is not empty, name those folders in the same message, for example "D:\Films was not there to search; is the drive connected?", since the film may be on it.
 
 Set SLUG to the `slug` field of `sources.py slug '<film title>'` and WORK to `${CLAUDE_PLUGIN_DATA}/films/SLUG`.
+
+Mark `find` with step 2's first command, as
+`usage.py step --work 'WORK' --name find --new --at-file '${CLAUDE_PLUGIN_DATA}/results/learn-scan.json'`:
+`--new` starts this run's record afresh, and `--at-file` starts the clock
+at step 0's scan.
 
 ## 2. Source subtitles
 
@@ -117,15 +139,29 @@ except the destination file of step 11, else run `opensubtitles.py search`
 as above with `--languages tr` (it leaves out machine and AI translations)
 and download the first result as `WORK/sources/os_tr.srt`. Run
 `srt.py fit TIMING TURKISH` and shift it the same way when `offset_ms` is
-not 0. When it does not fit (often another cut of the film), try the next
-result, as `os_tr2.srt` and so on, up to 3 results in all. When one fits,
-this is a polish run (steps 6–7 say what changes); say so in one line.
+not 0. Try at most 2 Turkish files: a hash match (`moviehash_match: true`)
+first, then the next result as `os_tr2.srt`; stop at the first that fits.
+A file fits when it covers at least 80% of the spoken cues; the cues it
+leaves uncovered get no Turkish from it, and the fixer translates them in
+step 6–7 (`polish.py flags` lists them as `cue count: missing`). When one
+fits, this is a polish run (steps 6–7 say what changes); say so in one
+line, with its `covered` share. When a file does not fit, say why in one
+line from its `reason` (for example "covers 74.8% of the spoken cues,
+needs 80.0%").
 When nothing is found or none fits, say why in one line and translate as
 usual.
 
-Then: `prepare.py build --work WORK --timing T [--source S] [--en E]` and
-`prepare.py chunks --work WORK`. Tell the user in 2–3 lines which files you
-used and the timing confidence.
+Then: `prepare.py build --work WORK --timing T [--source S] [--en E] --hi <remove|keep>` and
+`prepare.py chunks --work WORK`. `--hi` is the preferences' "Hearing-impaired
+tags"; `remove` when the section is missing. With `remove`, `build` takes
+sound descriptions and speaker labels out of every text the agents see
+(the labels stay as speaker hints): square brackets from every file,
+parentheses and labels in capitals only from a hearing-impaired one. It
+leaves out cues that are only
+sounds; they are not in the delivered file. Keep its `hearing_impaired`,
+`cues_with_tags_or_labels_removed` and `sound_only_cues_dropped` for the
+report. Tell the user in 2–3 lines which files you used and the timing
+confidence.
 
 ## 3–5. Speaker hints, film bible and bible check, side by side
 
@@ -141,6 +177,8 @@ voices to characters. Run them when the input is a video and
 works. A preferences file from an older version may say `ask` or have no
 `Audio hints` section: treat both as `auto`. On the first run, say in one
 line that it downloads a few GB of models.
+
+Mark `hints_bible` with this step's first command.
 
 1. When audio hints run, start
    `uv run 'SCRIPTS/speakers.py' run --video 'V' --work 'WORK' --config 'CONFIG'`
@@ -171,7 +209,10 @@ line that it downloads a few GB of models.
      shift a second time; note the shift and the second verdict for the
      report. Any other verdict that is not `in sync` (no speech matched,
      too little speech, no clear offset, or the check failed): note it for the report and go on;
-     the voices were saved either way.
+     the voices were saved either way. Keep `voices_dropped` for the
+     report: voices whose labelled cues name several characters, none in
+     two thirds of them. Their cues get no voice hint, so the address-form
+     check leaves them alone.
 5. With voices: run `prepare.py chunks --work WORK` again so the chunks
    show the voices, then `bible.py voice-questions --work WORK`, in one
    Bash call. It writes `WORK/questions.voices.json`. In ONE message, start
@@ -196,6 +237,7 @@ from the cited cues.
 
 1. The second reader: one `turkish-subtitles:second-reader` subagent with the paths (WORK, `WORK/questions.json`) and the film facts, started in item 3 above. It writes `WORK/second.json`. With voices, the voice round from item 5 writes `WORK/second.voices.json`.
 2. When the second reader is done, and with voices also the voice round and `bible.py voices`, run `bible.py compare --work WORK`. It reads both answer files and writes `WORK/compare.json`. If `bible.py voices` gave up in item 5, delete `WORK/second.voices.json` first, after the voice round is done, so the judge is not handed every voice.
+   When `unanswered` lists question ids, the second reader skipped them. Start the same `turkish-subtitles:second-reader` once more with the same paths and the line `Answer these questions you left out, keeping your other answers in the file: <ids>` (for a `voice:` id, point it at `WORK/second.voices.json` and `WORK/questions.voices.json` instead), then run `compare` again. Once only: questions still unanswered go to the judge as before; name them in the report.
 3. If `to_judge` is above 0, start one `turkish-subtitles:bible-judge` subagent with the paths (WORK, `WORK/compare.json`) and this command for reading cues, with the paths filled in: `uv run 'SCRIPTS/bible.py' --result '${CLAUDE_PLUGIN_DATA}/results/bible-cues.json' cues --work 'WORK' --cues <numbers>`, and the note that it must read the result file, not the printed output. It writes `WORK/judged.json` and updates `bible.md`.
 4. Run `bible.py apply --work WORK`. Keep its `ties` for the report.
 
@@ -209,6 +251,9 @@ Tell the user in one line: how many decisions, how many both readers
 agreed on, how many the judge settled, and how many were ties.
 
 ## 6–7. Translate in parallel
+
+Mark `translate`, or `polish` in a polish run, with this step's first
+command, passing the agents of steps 3–5.
 
 In a polish run, start no translators. Run
 `polish.py seed --work WORK --tr <the fitted Turkish file>`, then
@@ -249,7 +294,8 @@ Wait for all of them.
 
 ## 8–9. Assemble and check
 
-Run `assemble.py check --work WORK`. Its result has counts and the first hard
+Run `assemble.py check --work WORK`, joined after the `check` mark with
+the agents of steps 6–7. Its result has counts and the first hard
 fails.
 
 - Hard fails: group the failing cues by chunk. For each affected chunk start one `turkish-subtitles:translator` subagent with the first five lines of that chunk's prompt from step 6 (language pack, bible, preferences, chunk, neighbour chunks), never its two `Write` lines, plus: "Fix only these cues: <numbers and the failed check>. Write only those cues to WORK/out/fix_r<round>_<NN>.txt. Write flags to WORK/out/flags_r<round>_<NN>.txt." Use the same model as in step 6: the preferences' "Translator model" (`session` means do not set a model). The chunk's first output and flags stay as they are. Then run `check` again. At most 2 rounds.
@@ -257,9 +303,23 @@ fails.
 - Still failing after that: go on. Step 11 delivers with `--force` and lists the failing cues in the report. If `check` wrote no draft (a cue is missing or a file is malformed), there is nothing to deliver: stop and tell the user which cues are missing.
 - Warnings never block. They go to the reviewer.
 
+The check also lays out each cue as it will be shown: at most 2 lines of
+42 characters, and in a two-speaker cue one line per speaker. A
+two-speaker cue that does not fit is split into one cue per speaker when
+each part lasts at least a second and stays at 17 characters a second or
+less; its result counts them in `split_cues`. A cue that cannot be laid
+out is a `line length` or `lines per cue` hard fail with the reason, and
+goes to the fix round like any other. With `remove`, square brackets in
+the Turkish are a hard fail too, and so are a speaker label or a
+description in parentheses on a cue whose source had tags removed. The draft is
+numbered from 1 as delivered; `WORK/cue_map.json` leads each delivered
+cue back to the work folder's cue number. Every other file in WORK, the
+checks included, uses the work folder's numbers.
+
 ## 10. Whole-film review
 
-Run `assemble.py sidebyside --work WORK`. Start one
+Mark `review` with this step's first command, passing the fix rounds'
+agents. Run `assemble.py sidebyside --work WORK`. Start one
 `turkish-subtitles:reviewer` subagent with the paths: pack, bible,
 `WORK/sidebyside.tsv`, `WORK/checks.json`, `WORK/out/`, and in a polish
 run the preferences file and the line `Polish run: WORK/polish_flags.txt`. It writes
@@ -283,15 +343,30 @@ Destination: next to the video as `<video file name without extension>.tr.srt`
 (for an `.srt` input: the same folder, with the language part of the name
 replaced by `tr`). Run
 `assemble.py deliver --work 'WORK' --dest '<destination>' --backups 'CONFIG/backups'`
-(add `--force` when hard fails are left after the fix rounds).
+(add `--force` when hard fails are left after the fix rounds), joined
+after the `deliver` mark with the agents of step 10.
 An old Turkish file at the destination is moved to the backups folder.
 
 Write `WORK/report.md`: sources and timing confidence (for a file made
 from the audio, say so and name the model and device; in a polish run, the
 Turkish file it started from, how many cues the fixer and the reviewer
 changed, and how many lines are still softer than the source), any timing shift
-and sync verdict, the bible check (decisions, agreed, judged, ties), cue
-count, hard fails and warnings left, the reviewer's summary. End it with
+and sync verdict, whether each source file is hearing-impaired and how
+many cues lost tags or labels and how many sound-only cues were left
+out, the voices dropped as mixed, the bible check (decisions, agreed,
+judged, ties, questions the second reader never answered), cue count
+(work folder and delivered), cues split per speaker, hard fails and
+warnings left, the reviewer's summary. The work folder numbers cues by
+the timing file; the delivered file is numbered on its own. Before
+writing any cue number into the report, convert it with
+`assemble.py where --work WORK --cues <numbers, comma separated>`: it gives
+each one's delivered numbers and start time, or says it was left out as
+sound only. Write the delivered number and time. Then run
+`usage.py step --work 'WORK' --name done && usage.py summary --work 'WORK'`
+and put its `markdown` in the report as it is: the `## Time and usage`
+section, with the time per step group, the agents and their tokens, and
+the figures a run cannot see. It also saves `WORK/usage.json`, so several
+films can be compared later. End the report with
 `## Check after watching`: each tie from `bible.py apply` (question,
 answer, timestamps), in a polish run each cue the last `soft` still listed, hard fails delivered with `--force`, translator flags
 the reviewer left, and, when the timing confidence is not certain, 3

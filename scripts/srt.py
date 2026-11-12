@@ -67,6 +67,46 @@ def dash_lines(lines: list[str]) -> int:
     return sum(1 for ln in lines if is_dash_line(ln))
 
 
+def turns(lines: list[str]) -> list[list[str]]:
+    """A cue's lines grouped by speaker: a dash line starts a turn, and a
+    line without a dash continues the turn above it. A cue with fewer than
+    two dash lines is one turn."""
+    if dash_lines(lines) < 2:
+        return [list(lines)] if lines else []
+    out: list[list[str]] = []
+    for ln in lines:
+        if is_dash_line(ln) or not out:
+            out.append([])
+        out[-1].append(ln)
+    return out
+
+
+def wrap(text: str, width: int = 42) -> list[str]:
+    """One line when it fits in `width` characters, else two. The break goes
+    after a sentence end, then after a comma, as long as both lines fit;
+    otherwise at the space nearest the middle. Tags do not count towards
+    the width, and no break falls inside one."""
+    size = len(strip_tags(text))
+    inside = {i for m in TAG_RE.finditer(text) for i in range(m.start(), m.end())}
+    spaces = [i for i, ch in enumerate(text) if ch == " " and i not in inside]
+    if size <= width or not spaces:
+        return [text]
+    mid = size / 2
+
+    def left(i: int) -> int:
+        return len(strip_tags(text[:i]))
+
+    fits = [i for i in spaces if left(i) <= width and size - left(i) - 1 <= width]
+    for marks in (".!?…", ",;:"):
+        after = [i for i in fits if strip_tags(text[:i]).endswith(tuple(marks))]
+        if after:
+            cut = min(after, key=lambda i: abs(left(i) - mid))
+            break
+    else:
+        cut = min(spaces, key=lambda i: abs(left(i) - mid))
+    return [text[:cut], text[cut + 1 :]]
+
+
 def _ms(h: str, m: str, s: str, frac: str) -> int:
     frac = (frac + "00")[:3]
     return ((int(h) * 60 + int(m)) * 60 + int(s)) * 1000 + int(frac)
@@ -214,11 +254,333 @@ def offset_check(timing: list[Cue], other: list[Cue]) -> dict:
     return {"paired_share": round(share, 3), "median_start_diff_ms": median}
 
 
+# --- hearing-impaired text: sound descriptions and speaker labels ---------
+
+# A sound description in square brackets: "[door creaks]", "[People
+# shouting]". In remove mode it goes from every file.
+SQUARE_RE = re.compile(r"\[[^\]]*\]")
+# One in parentheses: "(sighs)". Plain files use parentheses for speech too
+# ("I said (and I mean it) no."), so these go only from a hearing-impaired
+# file, and even there a parenthesis that reads as speech stays: see
+# _paren_is_speech.
+PAREN_RE = re.compile(r"\([^)]*\)")
+# Tags and a dialogue dash in front of a line: "<i>- ".
+_LEAD_RE = re.compile(r"^(?P<tags>(?:\s*(?:<[^>]+>|\{\\[^}]*\}))*)\s*(?P<dash>-\s*)?")
+# A speaker label with a colon: "SANDRA:", "[SANDRA]:", "(SANDRA):",
+# "SANDRA (whispering):" or "[Sandra]:". Without brackets the name must be in
+# capitals, so "Rule one: never lie" stays dialogue. Capitals before a colon
+# are a label only when they look like a name: see _is_name.
+_CAPS_LABEL_RE = re.compile(r"[\[(]?(?P<name>[A-ZÀ-ÝĞİŞ][A-ZÀ-ÝĞİŞ0-9 .'\-]{1,30}?)[\])]?(?:\s*\([^)]*\))?\s*:(?:\s+|$)")
+_NAME = r"[A-ZÀ-ÝĞİŞ][\w'.\-]*(?:\s+[A-ZÀ-ÝĞİŞ][\w'.\-]*){0,2}"
+# A bracketed name in front of speech, with or without a colon: "[Sandra] Hi.",
+# "[1. Man] Hi.", "[Sandra]: Hi.". Each word starts with a capital; a bracket
+# in capitals with no colon ("[DOOR SLAMS] Hi.") is a sound.
+_BRACKET_LABEL_RE = re.compile(r"\[(?:\d+\.\s*)?(?P<name>" + _NAME + r"(?:\s+\d{1,2})?)\]\s*:?\s*")
+# Capitals before a colon that name no speaker: "OK: let's go.", "WARNING:
+# HIGH VOLTAGE". Digits rule out "DAY 3:" and "BÖLÜM 1:" on their own.
+NOT_LABELS = {
+    "ACT",
+    "ATTENTION",
+    "BREAKING",
+    "BÖLÜM",
+    "CAUTION",
+    "CHAPTER",
+    "DANGER",
+    "DAY",
+    "DİKKAT",
+    "EPISODE",
+    "EXIT",
+    "FYI",
+    "GÜN",
+    "KISIM",
+    "LEVEL",
+    "LOCATION",
+    "NB",
+    "NOT",
+    "NOTE",
+    "NOTICE",
+    "OK",
+    "OKAY",
+    "P.S",
+    "PART",
+    "PHASE",
+    "PS",
+    "RE",
+    "ROUND",
+    "RULE",
+    "SAHNE",
+    "SCENE",
+    "STEP",
+    "SUBJECT",
+    "TAMAM",
+    "TEHLİKE",
+    "TITLE",
+    "UPDATE",
+    "UYARI",
+    "WARNING",
+}
+# One word of a name: letters, Turkish ones included, with ' . - inside.
+_NAME_WORD_RE = re.compile(r"[^\W\d_](?:[^\W\d_]|['.\-])*")
+# Words that sound descriptions in title case start with ("[Laughs] Yes.",
+# "[Gunshot] Get down!"): such a bracket is a sound, not a speaker. A bracket
+# whose first word is not here and that names no one, such as "[Rire] Quoi ?"
+# in another language, is still read as a name.
+SOUND_WORDS = {
+    "applause",
+    "background",
+    "barking",
+    "barks",
+    "beep",
+    "beeping",
+    "beeps",
+    "bell",
+    "bells",
+    "breathes",
+    "breathing",
+    "buzzing",
+    "car",
+    "chatter",
+    "cheering",
+    "cheers",
+    "chuckle",
+    "chuckles",
+    "chuckling",
+    "clattering",
+    "clears",
+    "coughing",
+    "coughs",
+    "crash",
+    "crashes",
+    "crowd",
+    "crying",
+    "distant",
+    "dog",
+    "dogs",
+    "door",
+    "engine",
+    "exhales",
+    "explosion",
+    "explosions",
+    "faint",
+    "footsteps",
+    "gasping",
+    "gasps",
+    "giggles",
+    "giggling",
+    "glass",
+    "groan",
+    "groans",
+    "growls",
+    "grunts",
+    "gunfire",
+    "gunshot",
+    "gunshots",
+    "heavy",
+    "horn",
+    "humming",
+    "hums",
+    "inaudible",
+    "indistinct",
+    "inhales",
+    "knock",
+    "knocking",
+    "knocks",
+    "laugh",
+    "laughing",
+    "laughs",
+    "laughter",
+    "loud",
+    "moans",
+    "muffled",
+    "music",
+    "over",
+    "panting",
+    "phone",
+    "quietly",
+    "radio",
+    "rain",
+    "ringing",
+    "rings",
+    "sarcastically",
+    "scoff",
+    "scoffs",
+    "screaming",
+    "screams",
+    "shouting",
+    "sigh",
+    "sighs",
+    "silence",
+    "singing",
+    "siren",
+    "sirens",
+    "sniffles",
+    "sniffs",
+    "snoring",
+    "sobbing",
+    "sobs",
+    "softly",
+    "static",
+    "thud",
+    "thunder",
+    "tires",
+    "whimpers",
+    "whispering",
+    "whispers",
+    "whistles",
+    "whistling",
+    "wind",
+    "yawns",
+    "yelling",
+}
+
+
+@dataclass
+class Cleaned:
+    text: str  # the line without sound descriptions and label; "" when nothing is left
+    label: str | None  # the speaker label's name as written, when the line had one
+    found: bool  # the line had a sound description or a label
+
+
+def _is_name(name: str) -> bool:
+    """Capitals before a colon read as a speaker's name: letters only, at
+    most 3 words, no digits, and not a word such as OK or WARNING."""
+    words = name.split()
+    return (
+        1 <= len(words) <= 3 and all(_NAME_WORD_RE.fullmatch(w) for w in words) and words[0].rstrip(".").upper() not in NOT_LABELS
+    )
+
+
+def _paren_is_speech(rest: str, m: re.Match) -> bool:
+    """A parenthesis that is speech, not a sound: it ends in ? or !
+    ("(Are you there?)"), or it holds a sentence of 3 words or more with
+    words on both sides of it on the line ("I said (and I mean it) no.")."""
+    inner = strip_tags(m.group(0)[1:-1]).strip()
+    if re.search(r"[?!][\"'”»…]*$", inner):
+        return True
+    before, after = strip_tags(rest[: m.start()]), strip_tags(rest[m.end() :])
+    return len(inner.split()) >= 3 and bool(re.search(r"\w", before)) and bool(re.search(r"\w", after))
+
+
+def paren_descriptions(line: str) -> list[str]:
+    """The descriptions in parentheses that a hearing-impaired file loses."""
+    plain = strip_tags(line)
+    return [m.group(0) for m in PAREN_RE.finditer(plain) if not _paren_is_speech(plain, m)]
+
+
+def _bracket_name(m: re.Match) -> str | None:
+    words = m.group("name").split()
+    # A bracket in capitals with no colon is a sound: "[IN SPANISH] Hola.",
+    # "[BANG] Get down!". "[SANDRA]: Hi." with its colon is still a label.
+    if ":" not in m.group(0) and not any(ch.islower() for ch in m.group("name")):
+        return None
+    if words[0].casefold() in SOUND_WORDS or any(w.casefold().endswith("ing") and len(w) > 5 for w in words):
+        return None
+    return m.group("name")
+
+
+def undash(line: str) -> str:
+    """The line without its dialogue dash; tags in front of it stay."""
+    lead = _LEAD_RE.match(line)
+    return lead.group("tags") + line[lead.end() :] if lead.group("dash") else line
+
+
+def clean_line(line: str, hi: bool = True) -> Cleaned:
+    """One subtitle line without its hearing-impaired parts. `hi` says
+    whether the line's file is a hearing-impaired one.
+
+    In every file: descriptions in square brackets anywhere in the line, a
+    bracketed name in front of speech ("[Sandra] Hi.", "[Guard 2] Hi.") and
+    music notes with no words. Only in a hearing-impaired file: a speaker
+    label in capitals ("- SANDRA: Hi." becomes "- Hi.") and descriptions in
+    parentheses that are not speech. In a plain file a label in capitals
+    is still returned as the speaker hint, and its text stays. Capitals
+    before a colon that do not look like a name ("OK:", "DAY 3:") are text
+    in either file. Tags and the dialogue dash stay. A line with no word
+    left becomes "". Song lines with words keep their notes."""
+    lead = _LEAD_RE.match(line)
+    head = lead.group("tags") + (lead.group("dash") or "")
+    rest = line[lead.end() :]
+    label = None
+    found = False
+    m = _CAPS_LABEL_RE.match(rest)
+    if m and _is_name(m.group("name").strip()):
+        label = m.group("name").strip()
+        if hi or rest.startswith("["):
+            rest, found = rest[m.end() :], True
+    else:
+        m = _BRACKET_LABEL_RE.match(rest)
+        name = _bracket_name(m) if m else None
+        if name and (rest[m.end() :].strip() or ":" in m.group(0)):
+            label, rest, found = name, rest[m.end() :], True
+    # A mark where each description was, so only the space it leaves is
+    # tidied: "Yes [laughs]." becomes "Yes.", while French "Quoi ?" keeps
+    # its space.
+    if SQUARE_RE.search(rest):
+        rest, found = SQUARE_RE.sub("\x00", rest), True
+    if hi:
+        drop = [m for m in PAREN_RE.finditer(rest) if not _paren_is_speech(rest, m)]
+        for m in reversed(drop):
+            rest, found = rest[: m.start()] + "\x00" + rest[m.end() :], True
+    if not re.search(r"\w", strip_tags(rest)) and re.search(r"[♪♫]", rest):
+        rest, found = "", True  # music playing, no words: a sound description too
+    if not found:
+        return Cleaned(line, label, False)
+    if lead.group("dash"):
+        head = lead.group("tags") + "- "
+    text = re.sub(r"(?:\s*\x00)+\s*(?=[.,!?;:…])", "", head + rest.lstrip())
+    text = re.sub(r"(?:\s*\x00)+\s*", " ", text)
+    text = re.sub(r"<(\w+)[^>]*>\s*</\1>", "", text)
+    # No space left between an opening tag or the dash and the words.
+    text = re.sub(r"^((?:\s*<[^/>][^>]*>)*\s*(?:-\s)?)\s+", r"\1", text).strip()
+    if not re.search(r"\w", strip_tags(text)):
+        text = ""
+    return Cleaned(text, label, True)
+
+
+def strip_hi(lines: list[str], hi: bool = True) -> tuple[list[str], list[str], bool]:
+    """A cue's lines without sound descriptions and speaker labels, as
+    clean_line removes them for a file that is (`hi`) or is not a
+    hearing-impaired one. Returns
+    (lines, label names in order, whether anything was found). Lines left
+    empty are dropped. When a two-speaker cue keeps one speaker's line only,
+    that line loses its dialogue dash: one speaker gets none."""
+    out, names, found = [], [], False
+    for ln in lines:
+        c = clean_line(ln, hi)
+        found |= c.found
+        if c.label:
+            names.append(c.label)
+        if c.text:
+            out.append(c.text)
+    if dash_lines(lines) >= 2 and dash_lines(out) == 1:
+        out = [undash(ln) for ln in out]
+    return out, names, found
+
+
+def has_hi(lines: list[str]) -> bool:
+    """The lines hold a sound description or a speaker label, read the way
+    a hearing-impaired file's are."""
+    return any(clean_line(ln, hi=True).found for ln in lines)
+
+
+HI_MIN_SHARE = 0.03
+
+
+def hearing_impaired(cues: list[Cue]) -> dict:
+    """Whether a file is a hearing-impaired one, read from its text: at
+    least HI_MIN_SHARE of its cues hold a sound description or a speaker
+    label. Plain files have a handful at most (a note in brackets, a sign);
+    hearing-impaired ones have them every few cues. 3% is 45 cues in a film
+    of 1,500."""
+    marked = sum(1 for c in cues if has_hi(c.lines))
+    share = marked / max(len(cues), 1)
+    return {"hearing_impaired": share >= HI_MIN_SHARE, "cues_with_tags_or_labels": marked, "share": round(share, 3)}
+
+
 # --- fit: does another file line up with the timing file? -----------------
 
-SOUND_RE = re.compile(r"\[[^\]]*\]|\([^)]*\)|^\s*-?\s*[A-Z][A-Z0-9 .'-]*:|[♪♫#*\-]", re.M)
 LYRIC_HASH_RE = re.compile(r"^\s*#|#\s*$", re.M)
-FIT_MIN_COVERED = 0.9  # share of the timing file's spoken cues the other file covers
+FIT_MIN_COVERED = 0.8  # share of the timing file's spoken cues the other file covers
 FIT_MIN_ON_SPEECH = 0.9  # share of the other file's spoken cues that land on timing cues
 FIT_MIN_WINDOW = 0.7  # the worst 10-minute window; a lower one means a different cut or drift
 FIT_MAX_MEDIAN_MS = 500
@@ -233,7 +595,7 @@ def is_sound(cue: Cue) -> bool:
     out, so neither counts when judging whether two files fit."""
     if "♪" in cue.plain or "♫" in cue.plain or LYRIC_HASH_RE.search(cue.plain):
         return True
-    return not re.search(r"\w", SOUND_RE.sub("", cue.plain))
+    return not strip_hi(cue.lines)[0]
 
 
 def _coverage(a: list[Cue], b: list[Cue]) -> list[float]:
@@ -315,9 +677,9 @@ def fit(timing: list[Cue], other: list[Cue], search_ms: int = 60_000) -> dict:
 
     reasons = []
     if covered < FIT_MIN_COVERED:
-        reasons.append(f"covers {covered:.0%} of the spoken cues (needs {FIT_MIN_COVERED:.0%})")
+        reasons.append(f"covers {covered:.1%} of the spoken cues, needs {FIT_MIN_COVERED:.1%}")
     if on_speech < FIT_MIN_ON_SPEECH:
-        reasons.append(f"{on_speech:.0%} of its cues land on speech (needs {FIT_MIN_ON_SPEECH:.0%})")
+        reasons.append(f"{on_speech:.1%} of its cues land on speech, needs {FIT_MIN_ON_SPEECH:.1%}")
     if windows and min(windows) < FIT_MIN_WINDOW:
         reasons.append(f"a 10-minute window covers only {min(windows):.0%}: different cut or drift")
     if median is None:

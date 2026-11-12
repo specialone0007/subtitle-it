@@ -64,8 +64,9 @@ def work(tmp_path: Path) -> Path:
 
 def test_build_pairs_english_and_finds_speaker(work: Path):
     rows = json.loads((work / "cues.json").read_text(encoding="utf-8"))
-    assert rows[0]["source"] == ["SANDRA: Viens."]
-    assert rows[0]["en"] == ["SANDRA: Come."]
+    # The label leaves the text and stays as the speaker hint.
+    assert rows[0]["source"] == ["Viens."]
+    assert rows[0]["en"] == ["Come."]
     speakers = json.loads((work / "speakers.json").read_text(encoding="utf-8"))
     assert speakers["1"]["label"] == "Sandra"
     chunk = (work / "chunks" / "chunk_01.txt").read_text(encoding="utf-8")
@@ -115,7 +116,7 @@ def test_sidebyside(work: Path):
     (work / "out" / "tr_01.txt").write_text(GOOD, encoding="utf-8")
     p = assemble.sidebyside(work)
     lines = p.read_text(encoding="utf-8").splitlines()
-    assert lines[1] == "1\tSandra\tSANDRA: Viens.\tGel."
+    assert lines[1] == "1\tSandra\tViens.\tGel."
 
 
 def test_sidebyside_result_names_the_file(work: Path):

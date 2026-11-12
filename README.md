@@ -32,13 +32,23 @@ when no other command uses that name.)
   by meaning, the way people in the scene would talk.
 - **One voice for the whole film.** A short "film bible" fixes the names, the
   terms and who says *sen* or *siz* to whom, before anyone translates a line.
-- **The original timings.** Every cue keeps its number, its time and its
-  italics. Nothing is merged, split or dropped.
+- **The original timings, easy to read.** Cues keep the source's times
+  and italics, with at most two lines of 42 characters. In a cue with two
+  speakers each speaker gets one line; when they cannot, and there is time
+  for it, the cue is split into one cue per speaker, which share its time.
+  Nothing is merged.
+- **No hearing-impaired clutter.** Sound descriptions in square brackets
+  (`[door slams]`) are taken out. From a hearing-impaired file, sound
+  descriptions in parentheses (`(sighs)`) and speaker labels (`SANDRA:`) go
+  too; in other files parentheses and capitals are often dialogue, so they
+  stay. A cue that is only a sound is left out. Set `Hearing-impaired tags`
+  to `keep` in your preferences to keep them all.
 - **No questions, no spoilers.** Once setup is done it runs to the end. The
   one question it may ask is which film you mean when a name matches several
   (Alien and Aliens). It does not discuss the plot in chat.
 - **An honest report.** What it could not settle for certain goes under
-  "Check after watching" in the film's `report.md`, with timestamps.
+  "Check after watching" in the film's `report.md`, with timestamps. The
+  report also gives the run's time per step and its subagents' tokens.
 - **It learns from you.** Fix lines after watching, and it turns your edits
   into rules for the next film.
 
@@ -56,8 +66,9 @@ A dashed gold frame means the boxes inside it run at the same time.
 When a human-made Turkish subtitle already exists, the run polishes that
 file instead of translating from scratch, which uses less. It looks on
 your disk first, then on OpenSubtitles, which leaves out machine
-translations. It tries up to three files and uses the first one that fits
-the video's timings.
+translations. It tries up to two files, a match for this exact video
+first, and uses the first one that fits the video's timings and covers at
+least 80% of the spoken lines. Lines that file lacks are translated.
 
 ![The cast: the scripts are plain Python, the local models listen to the audio on your machine, and Claude does the language work as seven kinds of agent](docs/assets/cast.svg)
 
@@ -155,7 +166,9 @@ OpenSubtitles under your own account.
 
 Measured on one 2-hour film on Windows: about 17 minutes per run, and about
 $8 at API list prices with Opus. On a Claude subscription a run uses your
-plan's usage instead. Other films, models and machines will differ.
+plan's usage instead. Other films, models and machines will differ. Each
+run's `report.md` gives its own time per step and its subagents' tokens,
+and the work folder keeps them in `usage.json`.
 
 Full runs have only been tested on Windows. On macOS and Linux, CI runs the
 test suite, including one test that builds a short video and reads its
@@ -168,7 +181,7 @@ long as the film, or more for speech-to-text.
 | Place | What is there |
 | --- | --- |
 | Next to the video | `<film>.tr.srt`. Nothing else is written into your film folders. |
-| `~/.config/turkish-subtitles/`<br>(on Windows `C:\Users\<you>\.config\turkish-subtitles\`) | `preferences.md` (media folders, translator model, audio hints, swearing, titles, learned rules), `credentials.json` (OpenSubtitles and Hugging Face; only the scripts read it), and `backups/` (old Turkish files replaced by a new one). Kept when the plugin is uninstalled. |
+| `~/.config/turkish-subtitles/`<br>(on Windows `C:\Users\<you>\.config\turkish-subtitles\`) | `preferences.md` (media folders, translator model, audio hints, hearing-impaired tags, swearing, titles, learned rules), `credentials.json` (OpenSubtitles and Hugging Face; only the scripts read it), and `backups/` (old Turkish files replaced by a new one). Kept when the plugin is uninstalled. |
 | The plugin's data folder<br>(`~/.claude/plugins/data/turkish-subtitles-.../`) | One work folder per film with the bible, the delivered copy and a report, plus the download cache and `results/`, where each script saves its last JSON result. **Uninstalling the plugin deletes it.** |
 
 The skill reads the files in `results/` rather than the scripts' printed

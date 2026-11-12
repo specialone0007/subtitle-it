@@ -13,11 +13,12 @@ override the defaults marked "(default)".
 
 ## Form of each cue
 
-- At most 2 lines per cue, at most 42 characters per line. If the source cue has 3 lines, 3 are allowed.
-- Keep `- ` dialogue dashes: same number of dash lines as the source cue, one speaker per dash line.
+- At most 2 lines per cue, at most 42 characters per line, whatever the source has.
+- Keep `- ` dialogue dashes: same number of dash lines as the source cue, one speaker per dash line. In a cue with two speakers, each speaker's turn is one line. A turn too long for one line is still written; the delivery step then splits the cue into one cue per speaker when the time allows, and otherwise the cue comes back to be shortened.
+- No speaker labels (`NAME:`, `[Name]`) and no sound descriptions (`[kapı çarpar]`, `(iç çeker)`), even when the source has them. The automatic check fails square brackets in any cue, and a label or a description in parentheses in a cue whose source had tags. Parentheses the source uses as speech (`(Orada mısın?)`) and headings such as `BÖLÜM 1:` stay. Song lines keep their `♪`.
 - Keep `<i>` and `</i>` exactly where the source has italics (voices off screen, songs, phone, thoughts). No italics where the source has none.
 - No stray byte-order marks, no `{\an8}` style tags unless the source has them.
-- Never merge or split cues, never leave one empty. Every cue number in your chunk gets text.
+- Never merge or split cues yourself, never leave one empty. Every cue number in your chunk gets text. Only the delivery step splits a two-speaker cue, as above.
 
 ## Grammar traps
 

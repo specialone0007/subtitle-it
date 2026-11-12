@@ -15,8 +15,8 @@ The work is split by one rule: anything with one right answer is a script,
 and anything that needs a feel for language is an agent.
 
 - **Scripts** (`scripts/`) read subtitle files, match timings, cut chunks,
-  check the translation and write the file. They are plain Python, tested,
-  and print a JSON result.
+  check the translation, write the file and record the run's time. They
+  are plain Python, tested, and print a JSON result.
 - **Local models** listen to the audio on your machine: pyannote finds who
   speaks when, and Whisper checks the sync or, as a last resort, writes the
   subtitles from speech.
@@ -79,9 +79,23 @@ Then it settles the timings:
 - `prepare.py build` writes the work folder: `cues.json` (every cue with its
   source and English text) and `chunks.json` (about 250 cues each, cut at
   the longest pause).
+- Unless your preferences say `Hearing-impaired tags: keep`, `build` takes
+  sound descriptions in square brackets (`[door slams]`) and bracketed
+  names (`[Sandra]`, `[1. Man]`) out of every text. From a file that is
+  hearing-impaired it also takes descriptions in parentheses (`(sighs)`)
+  and labels in capitals (`SANDRA:`), but keeps a parenthesis that ends in
+  ? or !, or holds a sentence with words on both sides, and capitals that
+  do not look like a name (`OK:`, `DAY 3:`). Each label is kept as the
+  cue's speaker hint. A cue that is only sounds is marked and left
+  out of the translation and of the delivered file. Song lines with words
+  stay. `sources.py` calls a file hearing-impaired when at least 3% of its
+  cues hold such tags or labels, whatever its name says.
 
-The step also looks for a human-made Turkish subtitle. When one passes
-`srt.py fit`, the run is a polish run (see steps 6–7).
+The step also looks for a human-made Turkish subtitle. It tries at most two
+files, a hash match first, and stops at the first one that passes
+`srt.py fit`: one constant shift lines it up, and it covers at least 80%
+of the timing file's spoken cues. Then the run is a polish run (see
+steps 6–7).
 
 ### 3. Speaker hints (optional)
 
@@ -91,6 +105,10 @@ film.
 
 - Subtitles more than 300 ms off are shifted with `srt.py shift`, and the
   voices are matched again.
+- A voice can gather several characters. When a voice has at least six
+  cues with a speaker label and no character holds two thirds of them, its
+  cues get no voice hint, and the address-form check leaves them alone.
+  A hint that is wrong in one cue out of three is worse than none.
 - Everything runs on your machine.
 - It runs in the background while the bible is written, since it takes
   several minutes.
@@ -121,7 +139,8 @@ answers the same questions without seeing it.
    audio step may still run.
 3. The voice questions come from `bible.py voice-questions`, and another
    round of the second reader answers them beside the voice mapper.
-4. `bible.py compare` locks what both agree on.
+4. `bible.py compare` locks what both agree on, and names the questions
+   the second reader skipped, so it is asked those once more.
 5. A judge reads only the cited cues for the rest and decides from the
    evidence or by a safe default.
 6. `bible.py apply` writes the result. Anything settled by a safe default
@@ -144,6 +163,8 @@ model of `sonnet` also runs at low effort; that is untested.
 **In a polish run** there are no translators:
 
 - `polish.py seed` puts the Turkish file's text on the timing file's cues.
+  Timing cues the file does not cover get no text; the check counts them
+  as missing, and the polish fixer translates them.
 - `polish.py flags` lists the cues to fix: check fails, lines left in
   English, crude lines the Turkish tones down, and lines that may sit on
   the wrong cue.
@@ -157,12 +178,26 @@ model of `sonnet` also runs at low effort; that is untested.
 `assemble.py check` joins the chunks and checks every cue.
 
 - **Hard fails** are missing, extra or empty cues, italics or dialogue
-  dashes that differ from the source, and too many lines. They go back to
-  the chunk's translator, and after two rounds one more round runs on a
-  stronger model.
-- **Warnings** are long lines, fast reading speed, glossary variants, sen or
-  siz against the bible, and a few Turkish style checks. They go to the
+  dashes that differ from the source, a cue that cannot be laid out (see
+  below), and square brackets in the Turkish, or a speaker label or a
+  description in parentheses where the source cue had tags removed. They go
+  back to the chunk's translator, and after two rounds one more round runs
+  on a stronger model.
+- **Warnings** are fast reading speed, glossary variants, sen or siz
+  against the bible, and a few Turkish style checks. They go to the
   reviewer.
+
+The last part of the check lays out every cue as it is shown
+(`layout.py`): at most 2 lines of 42 characters, and in a two-speaker cue
+one line per speaker. A cue whose text fits two lines is rewrapped. A
+two-speaker cue that does not fit is split at the speaker change into one
+cue per speaker. Its time is shared in proportion to each part's length,
+and a part that would get under a second gets a second, taken from the
+others. The file's usual gap goes between the parts. The split is made
+only when every part lasts at least a second and reads at 17 characters a
+second or less. Anything else is a hard fail. The draft is numbered from 1 as delivered, and
+`cue_map.json` leads each delivered cue back to the timing file's cue; the
+rest of the work folder keeps the timing file's numbers.
 
 ### 10. Review
 
@@ -176,9 +211,20 @@ any line still soft goes to "Check after watching".
 ### 11. Deliver
 
 `assemble.py deliver` writes `<film>.tr.srt` next to the video and moves any
-older Turkish file to a backups folder. `report.md` ends with "Check after
+older Turkish file to a backups folder. The cue map is kept with the
+delivered copy, and with a backup of an earlier delivery, so the report,
+learn mode and old files can still name each cue. `assemble.py where`
+turns a work folder cue number into its delivered number and time. `report.md` ends with "Check after
 watching": what could not be settled for certain, with timestamps, kept out
 of the chat so nothing is spoiled.
+
+Before it, a "Time and usage" section gives the run's wall-clock time and
+the time of each step group, from marks `usage.py step` made at the start
+of each group, and each agent kind's count, tokens and time, from the
+agents' completion notices. It names what a run cannot see: the main
+session's own tokens and the split into new and cached tokens, so it gives
+no cost in money. `usage.py summary` also saves the same figures as
+`usage.json` in the work folder, so several films can be compared.
 
 ## Learn mode
 

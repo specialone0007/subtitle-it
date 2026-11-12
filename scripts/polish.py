@@ -43,6 +43,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import assemble  # noqa: E402
 import bible  # noqa: E402
+import layout  # noqa: E402
 import prepare  # noqa: E402
 import result  # noqa: E402
 import srt  # noqa: E402
@@ -90,16 +91,6 @@ TR_MILD_RE = re.compile(
 )
 
 
-def _wrap(text: str, width: int = assemble.MAX_LINE) -> list[str]:
-    """One line when it fits, else two, split at the space nearest the middle."""
-    if len(srt.strip_tags(text)) <= width or " " not in text:
-        return [text]
-    mid = len(text) // 2
-    spaces = [i for i, ch in enumerate(text) if ch == " "]
-    cut = min(spaces, key=lambda i: abs(i - mid))
-    return [text[:cut].strip(), text[cut + 1 :].strip()]
-
-
 def _all_italic(lines: list[str]) -> bool:
     return bool(lines) and all(re.fullmatch(r"\s*<i>.*</i>\s*", ln, re.I) and ln.lower().count("<i>") == 1 for ln in lines)
 
@@ -129,11 +120,35 @@ def match_form(src: list[str], tr: list[str]) -> tuple[list[str], bool]:
     return out, out != tr
 
 
+def one_part_per_speaker(src: list[str], parts: list[srt.Cue]) -> bool:
+    """The timing cue has two or more speakers and the Turkish cues on it
+    are one per speaker, none with a dash of its own."""
+    turns = srt.turns(src)
+    return len(turns) >= 2 and len(parts) == len(turns) and not any(srt.dash_lines(o.lines) for o in parts)
+
+
+def _dashed(line: str) -> str:
+    return re.sub(r"^(\s*(?:<i>)?)\s*", lambda m: m.group(1).strip() + "- ", line, count=1)
+
+
 def seed(work: Path, tr_path: Path) -> dict:
     timing, _ = srt.parse(work / "timing.srt")
+    rows = {r["n"]: r for r in json.loads((work / "cues.json").read_text(encoding="utf-8"))}
+    # Cues that hold only sounds get no Turkish: a Turkish line there goes
+    # to a spoken neighbour or is listed as placed nowhere.
+    timing = [c for c in timing if not rows[c.n].get("sound_only")]
     turkish, enc = srt.parse(tr_path)
     if not turkish:
         raise SystemExit(f"no cues found in {tr_path}")
+    tags_removed = 0
+    if assemble.hi_mode(work) == "remove":
+        # Parentheses and labels in capitals go only when the Turkish file
+        # itself is a hearing-impaired one.
+        tr_hi = srt.hearing_impaired(turkish)["hearing_impaired"]
+        for o in turkish:
+            o.lines, _, found = srt.strip_hi(o.lines, tr_hi)
+            tags_removed += found
+        turkish = [o for o in turkish if o.lines]
     pairs = srt.pair(timing, turkish)
     used = {id(o) for v in pairs.values() for o in v}
     placement = {"joined": [], "unplaced": []}
@@ -158,8 +173,12 @@ def seed(work: Path, tr_path: Path) -> dict:
             if len(parts) > 1:
                 joined += 1
                 placement["joined"].append(c.n)
-                if len(lines) > max(2, len(c.lines)):
-                    lines = _wrap(" ".join(ln.strip() for ln in lines))
+                if one_part_per_speaker(c.lines, parts):
+                    # A two-speaker cue a delivery split at the speaker
+                    # change: each part is one speaker's turn again.
+                    lines = [_dashed(layout.one_line(o.lines)) for o in parts]
+                elif len(lines) > 2:
+                    lines = srt.wrap(" ".join(ln.strip() for ln in lines), assemble.MAX_LINE)
                     rewrapped += 1
             lines, changed = match_form(c.lines, lines)
             reformed += changed
@@ -172,6 +191,7 @@ def seed(work: Path, tr_path: Path) -> dict:
         "cues": len(timing),
         "seeded": seeded,
         "without_turkish": len(timing) - seeded,
+        "turkish_cues_with_tags_or_labels_removed": tags_removed,
         "joined": joined,
         "rewrapped": rewrapped,
         "form_matched": reformed,

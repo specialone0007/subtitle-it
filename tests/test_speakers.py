@@ -65,6 +65,48 @@ def test_merge_voices_keeps_labels_and_drops_old_voices():
     assert list(merged) == ["1", "2", "7"]
 
 
+def test_mixed_voices_finds_a_voice_that_speaks_for_several_characters():
+    labels = ["Sam", "Nora", "Leo", "Ivy", "Sam", "Nora", "Leo"]  # V1: four characters
+    labels += ["Sam"] * 5 + ["Nora"]  # V2: one character, one stray label
+    labels += ["Sam", "Nora", "Sam", "Nora"]  # V3: too few labelled cues to judge
+    voices = {n: v for n, v in zip(range(1, 17), ["V1"] * 7 + ["V2"] * 6 + ["V3"] * 4)}
+    spk = {str(n): {"label": lab} for n, lab in enumerate(labels, 1)}
+    spk["17"] = {"label": "Nora / Sam"}
+    voices[17] = "V2"
+    mixed = speakers.mixed_voices(spk, voices)
+    assert mixed == {"V1": {"labelled_cues": 7, "characters": 4, "top_share": 0.29}}
+
+
+def test_mixed_voices_counts_label_case_as_one_character():
+    spk = {str(n): {"label": "SAM" if n % 2 else "Sam"} for n in range(1, 9)}
+    assert speakers.mixed_voices(spk, {n: "V1" for n in range(1, 9)}) == {}
+
+
+def test_mixed_voices_needs_a_clear_majority():
+    # Four of six is exactly two thirds: the voice stays.
+    spk = {str(n): {"label": "Sam" if n <= 4 else "Nora"} for n in range(1, 7)}
+    assert speakers.mixed_voices(spk, {n: "V1" for n in range(1, 7)}) == {}
+    spk["5"] = {"label": "Leo"}
+    spk["4"] = {"label": "Ivy"}
+    assert list(speakers.mixed_voices(spk, {n: "V1" for n in range(1, 7)})) == ["V1"]
+
+
+def test_run_drops_the_hints_of_a_mixed_voice(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("HF_TOKEN", "hf_x")
+    blocks = [f"{i}\n00:00:{2 * i:02d},000 --> 00:00:{2 * i + 1:02d},000\nLine {i}.\n" for i in range(1, 10)]
+    (tmp_path / "timing.srt").write_text("\n".join(blocks), encoding="utf-8")
+    names = ["Sam", "Nora", "Leo", "Ivy", "Sam", "Nora"]
+    (tmp_path / "speakers.json").write_text(json.dumps({str(i): {"label": n} for i, n in enumerate(names, 1)}), encoding="utf-8")
+    monkeypatch.setattr(speakers, "extract_audio", lambda video, dest: dest)
+    turns = [(2000 * i, 2000 * i + 1000, "A" if i <= 6 else "B") for i in range(1, 10)]
+    monkeypatch.setattr(speakers, "diarize", lambda wav, token: (turns, {"A": [1.0, 0.0], "B": [0.0, 1.0]}))
+    r = speakers.run(tmp_path / "v.mkv", tmp_path, None, sync_check=False)
+    assert r["voices_dropped"] == 1 and list(r["mixed_voices"]) == ["V1"]
+    assert r["voices"] == {"V2": 3} and r["cues_with_voice"] == 3
+    saved = json.loads((tmp_path / "speakers.json").read_text(encoding="utf-8"))
+    assert saved["1"] == {"label": "Sam"} and saved["7"] == {"voice": "V2"}
+
+
 def dialogue(count=120, seed=7):
     """Cue starts 1.2 to 4 s apart, like dialogue: close enough that a 1.5 s
     shift puts a neighbouring line nearer than the right one."""

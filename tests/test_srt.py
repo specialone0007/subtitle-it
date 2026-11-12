@@ -183,7 +183,17 @@ def test_fit_refuses_a_file_with_lines_missing():
     timing = _film()
     other = [c for i, c in enumerate(timing) if i % 4]  # a quarter of the lines left out
     r = srt.fit(timing, other)
-    assert not r["fits"] and "covers 75%" in r["reason"]
+    assert not r["fits"] and "covers 74.8% of the spoken cues, needs 80.0%" in r["reason"]
+
+
+def test_fit_takes_a_file_that_covers_most_lines():
+    # One line in eight missing: 87.5% covered, under the old 90% bar and
+    # over the new 80% one, so the file is polished rather than refused.
+    timing = _film()
+    other = [c for i, c in enumerate(timing) if i % 8]
+    r = srt.fit(timing, other)
+    assert r["fits"], r["reason"]
+    assert 0.8 <= r["covered"] < 0.9
 
 
 def test_fit_refuses_a_file_with_lines_in_the_silences():
