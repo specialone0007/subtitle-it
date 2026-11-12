@@ -26,6 +26,10 @@ What the plugin keeps and sends:
   code on your machine.
 - Subtitle text is sent to Claude as part of your Claude Code session.
 - OpenSubtitles receives the film's hash, title or IMDb id when it searches.
+  The subtitle file itself is fetched from the https address OpenSubtitles
+  links to, which can be another host, with no key or token. API requests
+  that carry the key or token follow a redirect only to opensubtitles.com
+  over https.
 - A web search receives the film's title and year: the skill looks them up
   once when it does not know them, and the bible writer and second reader
   search for the cast and plot.
@@ -38,4 +42,5 @@ What the plugin keeps and sends:
   the Hugging Face command line tool: the Hugging Face library then sends
   that token with it. The token in `credentials.json` is never used for it.
 - The first run of each script downloads its Python packages from PyPI,
-  and PyTorch from download.pytorch.org on Windows and Linux.
+  and PyTorch from download.pytorch.org on Windows and Linux. When no
+  installed Python fits a script, uv may also download a Python build.
