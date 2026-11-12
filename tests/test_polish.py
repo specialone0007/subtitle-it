@@ -338,3 +338,75 @@ def test_flags_list_the_scene_of_a_wrong_address_form(tmp_path: Path):
     text = (w / polish.FLAG_FILE).read_text(encoding="utf-8")
     assert "#2 " in text and "#3 " not in text
     assert "cue 1 (Sam → Nora) uses sen where the bible says siz" in text
+
+
+SPLIT_EN = """1
+00:00:01,000 --> 00:00:03,000
+[Door creaks]
+
+2
+00:00:05,000 --> 00:00:13,000
+- I told you before, don't you remember?
+- I do, but you said something else then.
+
+3
+00:00:14,000 --> 00:00:16,000
+SAM: Fine.
+"""
+
+# A file this plugin delivered: the sound-only cue left out, the
+# two-speaker cue split at the speaker change, renumbered from 1.
+SPLIT_TR = """1
+00:00:05,000 --> 00:00:09,200
+Bunu sana daha önce söylemiştim,
+hatırlamıyor musun?
+
+2
+00:00:09,320 --> 00:00:13,000
+Hatırlıyorum ama o zaman
+başka bir şey demiştin.
+
+3
+00:00:14,000 --> 00:00:16,000
+SAM: Peki.
+"""
+
+
+def test_seed_from_a_delivered_file_joins_a_split_cue_back_by_speaker(tmp_path: Path):
+    (tmp_path / "en.srt").write_text(SPLIT_EN, encoding="utf-8")
+    (tmp_path / "tr.srt").write_text(SPLIT_TR, encoding="utf-8")
+    w = tmp_path / "work"
+    prepare.build(w, tmp_path / "en.srt", None, tmp_path / "en.srt")
+    out = polish.seed(w, tmp_path / "tr.srt")
+    assert out["cues"] == 2 and out["seeded"] == 2 and out["turkish_cues_with_tags_or_labels_removed"] == 1
+    texts = _seeded(w)
+    assert 1 not in texts
+    assert texts[2] == [
+        "- Bunu sana daha önce söylemiştim, hatırlamıyor musun?",
+        "- Hatırlıyorum ama o zaman başka bir şey demiştin.",
+    ]
+    assert texts[3] == ["Peki."]
+    # The layout step splits it again on check.
+    r = assemble.run_checks(w)
+    assert r["hard_fail_count"] == 0, r["hard"]
+    assert r["split_cues"] == 1 and r["delivered_cues"] == 3
+
+
+def _numbered(texts: list[str]) -> str:
+    return "\n".join(f"{i}\n00:00:{i:02d},000 --> 00:00:{i:02d},800\n{t}\n" for i, t in enumerate(texts, 1))
+
+
+@pytest.mark.parametrize("flagged", [True, False])
+def test_seed_cleans_the_turkish_by_its_own_flag(tmp_path: Path, flagged: bool):
+    # A plain Turkish file keeps its parentheses and headings; a
+    # hearing-impaired one loses the description.
+    (tmp_path / "en.srt").write_text(_numbered([f"Line {i}." for i in range(40)]), encoding="utf-8")
+    rest = [f"[güler] Satır {i}." if flagged else f"Satır {i}." for i in range(37)]
+    tr = ["Evet (iç çeker).", "(Orada mısın?)", "BÖLÜM 1: Başlangıç"] + rest
+    (tmp_path / "tr.srt").write_text(_numbered(tr), encoding="utf-8")
+    w = tmp_path / "work"
+    prepare.build(w, tmp_path / "en.srt", None, tmp_path / "en.srt")
+    polish.seed(w, tmp_path / "tr.srt")
+    texts = _seeded(w)
+    assert texts[1] == (["Evet."] if flagged else ["Evet (iç çeker)."])
+    assert texts[2] == ["(Orada mısın?)"] and texts[3] == ["BÖLÜM 1: Başlangıç"]

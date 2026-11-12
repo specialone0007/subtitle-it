@@ -160,6 +160,17 @@ def test_compare_sends_disagreements_missing_answers_and_extras_to_the_judge(wor
     assert cmp["to_judge"][0]["writer"]["answer"] == [{"from_cue": 1, "form": "siz"}]
 
 
+def test_compare_names_the_questions_the_second_reader_skipped(work):
+    bible.questions(work)
+    write_second(work, [ans("address:Sam>Nora", [{"from_cue": 1, "form": "siz"}]), ans("voice:V1", None)])
+    out = bible.compare(work)
+    assert out["unanswered"] == ["term:sport", "voice:V1"]
+    write_second(
+        work, [ans("address:Sam>Nora", [{"from_cue": 1, "form": "siz"}]), ans("voice:V1", "Sam"), ans("term:sport", "koçum")]
+    )
+    assert bible.compare(work)["unanswered"] == []
+
+
 def test_compare_refuses_an_extra_that_reuses_a_question_id(work):
     write_second(work, [], [{"id": "voice:V1", "kind": "voice", "question": "Who is V1?", **ans("voice:V1", "Nora")}])
     with pytest.raises(SystemExit, match="already a question"):

@@ -49,7 +49,10 @@ flags file, then add two checks to the list above:
 
 `out/fix_review.txt` in the work folder, only for cues you change, in the
 same block format the translators used (number line, 1–2 Turkish lines,
-blank line). Same rules: dash count, italics, at most 2 lines.
+blank line). Same rules: dash count, italics, at most 2 lines of 42
+characters, and in a two-speaker cue one line per speaker. Never add a
+speaker label (`NAME:`, `[Name]`) or a sound description
+(`[kapı çarpar]`); the source text has none on purpose.
 
 `review.md` in the work folder, at most 30 lines: what you changed, by kind
 (sen/siz, names, joins, warnings), with cue numbers, and anything left on

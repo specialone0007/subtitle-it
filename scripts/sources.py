@@ -285,11 +285,15 @@ def validate(path: Path, duration_ms: int | None) -> dict:
     if overlaps:
         issues.append(f"{overlaps} cues out of time order")
     mid = len(cues) // 2
+    hi = srt.hearing_impaired(cues)
     return {
         "file": str(path),
         "encoding": enc,
         "cues": len(cues),
         "last_end": srt.fmt_ms(cues[-1].end) if cues else None,
+        # Read from the text, since names and track tags often leave it out.
+        "hearing_impaired": hi["hearing_impaired"],
+        "cues_with_tags_or_labels": hi["cues_with_tags_or_labels"],
         "issues": issues,
         "sample": [c.text for c in cues[mid : mid + 4]],
     }
@@ -353,6 +357,11 @@ def local(video: Path, work: Path) -> dict:
                 }
             )
     candidates += subfolder_candidates(video, out, info["duration_ms"])
+    # A file full of sound descriptions and speaker labels is a
+    # hearing-impaired one, whatever its name or track tag says.
+    for c in candidates:
+        if "check" in c:
+            c["hearing_impaired"] = bool(c.get("hearing_impaired")) or c["check"]["hearing_impaired"]
     return {"video": str(video), "duration_ms": info["duration_ms"], "candidates": candidates}
 
 

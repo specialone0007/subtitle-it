@@ -418,3 +418,34 @@ def test_a_track_language_that_is_not_a_plain_code_becomes_und(tmp_path: Path, m
     assert [c["language"] for c in r["candidates"]] == ["und", "und", "de"]
     assert names == ["track0.und.srt", "track1.und.srt", "track2.de.srt"]
     assert all(Path(c["path"]).parent == tmp_path / "work" / "sources" for c in r["candidates"])
+
+
+def _hi_srt(n: int, every: int) -> str:
+    def text(i: int) -> str:
+        return f"[Man] Line {i}" if i % every == 0 else f"Line {i}"
+
+    return "".join(
+        f"{i}\n00:{i // 60:02d}:{i % 60:02d},000 --> 00:{i // 60:02d}:{i % 60:02d},500\n{text(i)}\n\n" for i in range(1, n + 1)
+    )
+
+
+def test_validate_judges_hearing_impaired_by_content(tmp_path: Path):
+    p = tmp_path / "x.srt"
+    p.write_text(_hi_srt(60, every=10), encoding="utf-8")
+    r = sources.validate(p, duration_ms=70_000)
+    assert r["hearing_impaired"] is True and r["cues_with_tags_or_labels"] == 6
+    p.write_text(_hi_srt(60, every=100), encoding="utf-8")
+    assert sources.validate(p, duration_ms=70_000)["hearing_impaired"] is False
+
+
+def test_local_marks_a_plainly_named_file_full_of_tags_as_hearing_impaired(tmp_path: Path, monkeypatch):
+    film = tmp_path / "Film"
+    film.mkdir()
+    video = film / "Film.mkv"
+    video.write_bytes(b"x")
+    (film / "Film.en.srt").write_text(_hi_srt(60, every=5), encoding="utf-8")
+    (film / "Film.fr.srt").write_text(_srt(60), encoding="utf-8")
+    monkeypatch.setattr(sources, "_run", lambda cmd: json.dumps({"format": {"duration": "70.0"}, "streams": []}))
+    r = sources.local(video, tmp_path / "work")
+    by = {c["language"]: c for c in r["candidates"]}
+    assert by["en"]["hearing_impaired"] is True and by["fr"]["hearing_impaired"] is False

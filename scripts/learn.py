@@ -12,6 +12,8 @@ propose rules.
 several runs delivered to the same file, only the last one counts.
 `diff` prints every edited cue (before and after) and the word swaps that
 repeat, such as "Peki" -> "Tamam" in 6 cues. It never writes rules itself.
+Cue numbers are the delivered file's, as the user sees them; `timing_cue`
+is the same cue in the work folder, through W/delivered_map.json.
 """
 
 from __future__ import annotations
@@ -76,6 +78,12 @@ def diff(work: Path) -> dict:
     info = json.loads((work / "delivered.json").read_text(encoding="utf-8"))
     before, _ = srt.parse(work / "delivered.tr.srt")
     after, _ = srt.parse(info["delivered_to"])
+    # The delivered file is numbered on its own (sound-only cues left out,
+    # long two-speaker cues split); the map leads back to the timing file's
+    # cue, which the bible and the work folder use. An older delivery has
+    # no map: its cues are the timing file's, one for one.
+    map_file = work / "delivered_map.json"
+    cue_map = json.loads(map_file.read_text(encoding="utf-8"))["cues"] if map_file.exists() else {}
     by_ts = {c.ts: c for c in after}
     edits, swaps = [], Counter()
     swap_cues: dict[tuple[str, str], list[int]] = {}
@@ -83,7 +91,8 @@ def diff(work: Path) -> dict:
         d = by_ts.get(c.ts)
         if d is None or d.text == c.text:
             continue
-        edits.append({"cue": c.n, "before": c.text, "after": d.text})
+        timing_cue = cue_map.get(str(c.n), {}).get("cue", c.n)
+        edits.append({"cue": c.n, "timing_cue": timing_cue, "before": c.text, "after": d.text})
         a, b = WORD_RE.findall(c.text), WORD_RE.findall(d.text)
         for op, i1, i2, j1, j2 in difflib.SequenceMatcher(a=a, b=b, autojunk=False).get_opcodes():
             if op == "replace" and i2 - i1 <= 3 and j2 - j1 <= 3:

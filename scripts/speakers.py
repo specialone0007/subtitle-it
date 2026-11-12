@@ -36,8 +36,10 @@ also works.
 merges voices that sound alike (pyannote splits one character into
 several), and gives each cue in W/timing.srt the voice that clearly
 overlaps it most (V1, V2, ... in order of first appearance). A cue with
-two dash lines holds two speakers, so it gets no voice. Progress goes to
-stderr. It writes `voice` into
+two dash lines holds two speakers, so it gets no voice. A voice whose
+labelled cues name several characters, none of them in two thirds of the
+cues, gives no voice to any cue; the result counts these in
+"voices_dropped". Progress goes to stderr. It writes `voice` into
 W/speakers.json and keeps every `label` and `name` already there. Unless
 --no-sync-check is given, faster-whisper finds where speech starts in five
 3-minute stretches spread over the film, and the script reports how far the
@@ -201,6 +203,39 @@ def merge_voices(speakers: dict[str, dict], voices: dict[int, str]) -> dict[str,
     for n, v in voices.items():
         merged.setdefault(str(n), {})["voice"] = v
     return dict(sorted(merged.items(), key=lambda kv: int(kv[0])))
+
+
+# A voice can gather several characters: pyannote sometimes hears a
+# narrator, a crowd or two similar voices as one. The labels in the
+# subtitles show this. A voice is "mixed" when at least MIXED_MIN_LABELLED
+# of its cues carry a one-speaker label and no character holds
+# MIXED_TOP_SHARE of them. Below that share the hint names the wrong person
+# in at least one cue in three; the translator then picks sen or siz for
+# the wrong pair, which is worse than having no hint. Fewer labelled cues
+# are too few to judge, so the voice stays.
+MIXED_MIN_LABELLED = 6
+MIXED_TOP_SHARE = 2 / 3
+
+
+def mixed_voices(speakers: dict[str, dict], voices: dict[int, str]) -> dict[str, dict]:
+    """The voices that mix several characters, by the labels on their cues:
+    {voice: {"labelled_cues", "characters", "top_share"}}. A label naming two
+    speakers ("Nora / Sam") is left out."""
+    seen: dict[str, dict[str, int]] = {}
+    for n, v in voices.items():
+        label = (speakers.get(str(n)) or {}).get("label")
+        if not label or "/" in label:
+            continue
+        who = label.strip().casefold()
+        seen.setdefault(v, {})
+        seen[v][who] = seen[v].get(who, 0) + 1
+    mixed = {}
+    for v, names in seen.items():
+        total = sum(names.values())
+        top = max(names.values()) / total
+        if total >= MIXED_MIN_LABELLED and top < MIXED_TOP_SHARE:
+            mixed[v] = {"labelled_cues": total, "characters": len(names), "top_share": round(top, 2)}
+    return dict(sorted(mixed.items(), key=lambda kv: int(kv[0][1:])))
 
 
 # The sync check tries every constant offset in ±SYNC_SEARCH_MS, in
@@ -415,6 +450,9 @@ def run(video: Path, work: Path, config: Path | None, sync_check: bool) -> dict:
         found = len({who for _, _, who in turns})
         turns = merge_similar(turns, centroids)
         voices = assign_voices(cues, turns)
+        # A voice that mixes several characters gives no hint at all.
+        mixed = mixed_voices(speakers, voices)
+        voices = {n: v for n, v in voices.items() if v not in mixed}
         # Save the voices first: the sync check is optional and must never
         # cost the diarization.
         speakers_file.write_text(json.dumps(merge_voices(speakers, voices), ensure_ascii=False, indent=1), encoding="utf-8")
@@ -439,6 +477,8 @@ def run(video: Path, work: Path, config: Path | None, sync_check: bool) -> dict:
         "cues_with_voice": len(voices),
         "voices_before_merge": found,
         "voices": dict(sorted(counts.items(), key=lambda kv: int(kv[0][1:]))),
+        "voices_dropped": len(mixed),
+        "mixed_voices": mixed,
         "sync": sync,
     }
 
