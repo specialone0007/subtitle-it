@@ -16,6 +16,10 @@
   be https, and the API host from the login is used only when it is
   `opensubtitles.com` or one of its subdomains, so your key and login
   token never go to another host.
+- OpenSubtitles API requests, which carry your key and login token, now
+  follow a redirect only to `opensubtitles.com` over https and stop with
+  an error on any other. The subtitle file download sends no key or
+  token and follows only https redirects.
 - The bible writer and second reader no longer have the web-fetch tool;
   a web search is enough for cast and plot.
 - `SECURITY.md` now says the credentials file is plain text and that the

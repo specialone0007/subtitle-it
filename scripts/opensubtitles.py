@@ -68,6 +68,41 @@ def save_creds(config: Path, creds: dict) -> None:
 # --- http ------------------------------------------------------------------
 
 
+def _ours(host: str | None) -> bool:
+    host = (host or "").lower()
+    return host == "opensubtitles.com" or host.endswith(".opensubtitles.com")
+
+
+class _ApiRedirect(urllib.request.HTTPRedirectHandler):
+    """Follow a redirect only to https on opensubtitles.com. API requests
+    carry the key and the login token, and urllib would resend both to any
+    host a redirect names."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        u = urllib.parse.urlsplit(newurl)
+        if u.scheme != "https" or not _ours(u.hostname):
+            raise ApiError(
+                f"OpenSubtitles redirected {req.get_method()} {req.full_url.split('?')[0]} to "
+                f"{u.scheme}://{u.hostname}, which is not opensubtitles.com over https. "
+                "The request was stopped, so the key and login token were not sent there."
+            )
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+class _HttpsRedirect(urllib.request.HTTPRedirectHandler):
+    """Follow a redirect of the subtitle file download only over https."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if urllib.parse.urlsplit(newurl).scheme != "https":
+            raise ApiError(f"The subtitle download redirected to a link that is not https: {newurl[:80]}")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _open(req: urllib.request.Request, timeout: int, api: bool):
+    """Open a request; `api` requests follow redirects only within opensubtitles.com."""
+    return urllib.request.build_opener(_ApiRedirect if api else _HttpsRedirect).open(req, timeout=timeout)
+
+
 def _request(method: str, url: str, creds: dict, body: dict | None = None, auth: bool = False) -> dict:
     headers = {
         "Api-Key": creds["api_key"],
@@ -83,7 +118,7 @@ def _request(method: str, url: str, creds: dict, body: dict | None = None, auth:
     for attempt in range(3):
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
         try:
-            with urllib.request.urlopen(req, timeout=30) as r:
+            with _open(req, 30, api=True) as r:
                 return json.loads(r.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             text = e.read().decode("utf-8", errors="replace")[:300]
@@ -105,8 +140,7 @@ def _base(creds: dict) -> str:
     login token go to that host; any other falls back to the default API."""
     host = (creds.get("base_url") or "").lower()
     plain = re.fullmatch(r"[a-z0-9.-]+", host)
-    ours = host == "opensubtitles.com" or host.endswith(".opensubtitles.com")
-    return f"https://{host}/api/v1" if plain and ours else API
+    return f"https://{host}/api/v1" if plain and _ours(host) else API
 
 
 def _https(url: str) -> str:
@@ -239,8 +273,9 @@ def download(config: Path, file_id: int, out: Path, cache: Path) -> dict:
             r = _request("POST", f"{_base(creds)}/download", creds, {"file_id": file_id}, auth=True)
         else:
             raise
+    # The file sits on whatever https host the link names, so it gets no key or token.
     req = urllib.request.Request(_https(r["link"]), headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=60) as resp:
+    with _open(req, 60, api=False) as resp:
         raw = resp.read()
     cache.mkdir(parents=True, exist_ok=True)
     cached.write_bytes(raw)

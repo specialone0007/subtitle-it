@@ -1,6 +1,10 @@
+import http.server
+import io
 import json
 import os
 import stat
+import threading
+import urllib.request
 from pathlib import Path
 
 import pytest
@@ -90,6 +94,89 @@ def test_download_refuses_a_link_that_is_not_https(tmp_path: Path, monkeypatch):
     def no_fetch(*a, **k):
         raise AssertionError("an http link must not be fetched")
 
-    monkeypatch.setattr(opensubtitles.urllib.request, "urlopen", no_fetch)
+    monkeypatch.setattr(opensubtitles, "_open", no_fetch)
     with pytest.raises(opensubtitles.ApiError, match="not https"):
         opensubtitles.download(tmp_path, 42, tmp_path / "x.srt", tmp_path / "cache")
+
+
+def _server(code: int, location: str | None, seen: list):
+    """A local server that records each request's headers and answers with `code`."""
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def _answer(self):
+            seen.append(dict(self.headers))
+            self.send_response(code)
+            if location:
+                self.send_header("Location", location)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b"{}")
+
+        do_GET = do_POST = _answer
+
+        def log_message(self, *a):
+            pass
+
+    srv = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return srv
+
+
+def test_an_api_redirect_to_another_host_is_refused_and_gets_no_credentials():
+    foreign_seen, api_seen = [], []
+    foreign = _server(200, None, foreign_seen)
+    api = _server(302, f"http://127.0.0.1:{foreign.server_port}/steal", api_seen)
+    try:
+        with pytest.raises(opensubtitles.ApiError, match="not opensubtitles.com over https"):
+            opensubtitles._request(
+                "GET", f"http://127.0.0.1:{api.server_port}/api/v1/infos/user", {"api_key": "k", "token": "t"}, auth=True
+            )
+    finally:
+        api.shutdown()
+        foreign.shutdown()
+    assert api_seen and api_seen[0]["Api-Key"] == "k"
+    assert foreign_seen == []
+
+
+@pytest.mark.parametrize(
+    "target",
+    ["https://other.example/x", "http://api.opensubtitles.com/x", "https://opensubtitles.com.evil.example/x"],
+)
+def test_an_api_redirect_off_opensubtitles_over_https_is_refused(target):
+    req = urllib.request.Request("https://api.opensubtitles.com/api/v1/subtitles", headers={"Api-Key": "k"})
+    with pytest.raises(opensubtitles.ApiError):
+        opensubtitles._ApiRedirect().redirect_request(req, io.BytesIO(), 302, "Found", {}, target)
+
+
+def test_an_api_redirect_within_opensubtitles_is_followed_with_the_key():
+    req = urllib.request.Request("https://api.opensubtitles.com/api/v1/subtitles?Query=x", headers={"Api-Key": "k"})
+    new = opensubtitles._ApiRedirect().redirect_request(
+        req, io.BytesIO(), 301, "Moved", {}, "https://api.opensubtitles.com/api/v1/subtitles?query=x"
+    )
+    assert new.full_url == "https://api.opensubtitles.com/api/v1/subtitles?query=x"
+    assert new.get_header("Api-key") == "k"
+
+
+def test_the_file_download_sends_no_key_or_token(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(opensubtitles, "load_creds", lambda config: {"api_key": "k", "token": "t"})
+    monkeypatch.setattr(opensubtitles, "login", lambda config, creds, force=False: creds)
+    monkeypatch.setattr(opensubtitles, "_request", lambda *a, **k: {"link": "https://dl.example/x.srt"})
+    sent = []
+
+    def fetch(req, timeout, api):
+        sent.append((req, api))
+        return io.BytesIO(b"1\n00:00:01,000 --> 00:00:02,000\nHi\n")
+
+    monkeypatch.setattr(opensubtitles, "_open", fetch)
+    opensubtitles.download(tmp_path, 42, tmp_path / "x.srt", tmp_path / "cache")
+    [(req, api)] = sent
+    headers = {k.lower() for k, _ in req.header_items()}
+    assert api is False and "api-key" not in headers and "authorization" not in headers
+
+
+def test_the_file_download_follows_only_https_redirects():
+    req = urllib.request.Request("https://dl.example/x.srt")
+    with pytest.raises(opensubtitles.ApiError, match="not https"):
+        opensubtitles._HttpsRedirect().redirect_request(req, io.BytesIO(), 302, "Found", {}, "http://cdn.example/x.srt")
+    new = opensubtitles._HttpsRedirect().redirect_request(req, io.BytesIO(), 302, "Found", {}, "https://cdn.example/x.srt")
+    assert new.full_url == "https://cdn.example/x.srt"
