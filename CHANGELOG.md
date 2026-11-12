@@ -98,7 +98,7 @@
   the same character first or read the same up to a bracket, semicolon or
   comma, so "Harlan Pike" and "Uncle Harlan Pike" no longer go to the
   judge. A name followed by 's, as in "Sam's mother", names no one. On a 2-hour test film
-  the readers now agree on 24 of 32 voices instead of 8.
+  the readers now agree on 23 of 32 voices instead of 8.
 - `learn.py scan` no longer lists an older run's work folder as edited by
   you when a later run delivered to the same file. Only the last delivery
   to each file counts.
