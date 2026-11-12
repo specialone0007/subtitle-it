@@ -26,6 +26,9 @@ What the plugin keeps and sends:
   code on your machine.
 - Subtitle text is sent to Claude as part of your Claude Code session.
 - OpenSubtitles receives the film's hash, title or IMDb id when it searches.
+- A web search receives the film's title and year: the skill looks them up
+  once when it does not know them, and the bible writer and second reader
+  search for the cast and plot.
 - Audio hints run on your machine. They download models from Hugging Face,
   and no audio leaves your machine.
 - Speech-to-text, the last resort when no subtitle file exists, runs on your
