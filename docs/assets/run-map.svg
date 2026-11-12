@@ -179,5 +179,5 @@
 <text x="442" y="1023" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#cfc8b4">A local model, on your machine</text>
 <rect x="700" y="1011" width="14" height="14" rx="3" fill="#d9534f"/>
 <text x="722" y="1023" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#cfc8b4">Claude</text>
-<text x="1240" y="1023" text-anchor="end" font-family="Georgia, 'Times New Roman', Times, serif" font-size="13" font-style="italic" fill="#8a8578">The numbers are the steps below</text>
+<text x="1240" y="1023" text-anchor="end" font-family="Georgia, 'Times New Roman', Times, serif" font-size="13" font-style="italic" fill="#8a8578">The numbers are the steps in ARCHITECTURE.md</text>
 </svg>
