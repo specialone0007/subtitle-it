@@ -151,8 +151,14 @@ def build(
         cleaned += f1 or f2 or f3
         # A cue whose own text and source text are only sound descriptions
         # and labels has nothing to translate: it is left out of the work
-        # and of the delivered file.
-        sound_only = remove and (f1 or f2) and not timing_lines and not src_lines
+        # and of the delivered file. When the source is another file and
+        # held only sounds here, what is left of the timing file's text
+        # does not keep the cue if it too reads as a sound once cleaned as
+        # a hearing-impaired file's: "(Laughs)" in a timing file too plain
+        # to lose its parentheses.
+        src_sounds = src_pairs is not None and bool(src_raw) and not src_lines and f2
+        timing_said = bool(timing_lines) and not (src_sounds and not srt.strip_hi(timing_lines, True)[0])
+        sound_only = remove and (f1 or f2) and not timing_said and not src_lines
         shown[c.n] = timing_lines
         row = {
             "n": c.n,

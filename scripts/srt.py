@@ -277,10 +277,12 @@ _NAME = r"[A-ZÀ-ÝĞİŞ][\w'.\-]*(?:\s+[A-ZÀ-ÝĞİŞ][\w'.\-]*){0,2}"
 # in capitals with no colon ("[DOOR SLAMS] Hi.") is a sound.
 _BRACKET_LABEL_RE = re.compile(r"\[(?:\d+\.\s*)?(?P<name>" + _NAME + r"(?:\s+\d{1,2})?)\]\s*:?\s*")
 # Capitals before a colon that name no speaker: "OK: let's go.", "WARNING:
-# HIGH VOLTAGE". Digits rule out "DAY 3:" and "BÖLÜM 1:" on their own.
+# HIGH VOLTAGE", "SON DAKİKA: ...". A label is matched whole and by its
+# first word. Digits rule out "DAY 3:" and "BÖLÜM 1:" on their own.
 NOT_LABELS = {
     "ACT",
     "ATTENTION",
+    "BEKLE",
     "BREAKING",
     "BÖLÜM",
     "CAUTION",
@@ -289,13 +291,17 @@ NOT_LABELS = {
     "DAY",
     "DİKKAT",
     "EPISODE",
+    "EVET",
     "EXIT",
     "FYI",
     "GÜN",
+    "HAYIR",
+    "HEY",
     "KISIM",
     "LEVEL",
     "LOCATION",
     "NB",
+    "NO",
     "NOT",
     "NOTE",
     "NOTICE",
@@ -310,6 +316,7 @@ NOT_LABELS = {
     "RULE",
     "SAHNE",
     "SCENE",
+    "SON DAKİKA",
     "STEP",
     "SUBJECT",
     "TAMAM",
@@ -317,7 +324,42 @@ NOT_LABELS = {
     "TITLE",
     "UPDATE",
     "UYARI",
+    "WAIT",
     "WARNING",
+    "YES",
+}
+# Words that, followed by a number, name a place, not a speaker: "[Pier 12]",
+# "[Gate 3] Over here." The number alone does not decide it, since
+# "[Guard 2]" is a speaker.
+PLACE_WORDS = {
+    "AVENUE",
+    "BAY",
+    "BLOCK",
+    "BLOK",
+    "BUILDING",
+    "CELL",
+    "DOCK",
+    "FLOOR",
+    "GATE",
+    "HANGAR",
+    "HIGHWAY",
+    "İSKELE",
+    "KAPI",
+    "KAT",
+    "KOĞUŞ",
+    "ODA",
+    "PERON",
+    "PIER",
+    "PLATFORM",
+    "ROOM",
+    "ROUTE",
+    "SECTOR",
+    "STREET",
+    "SUITE",
+    "TERMINAL",
+    "TRACK",
+    "WARD",
+    "ZONE",
 }
 # One word of a name: letters, Turkish ones included, with ' . - inside.
 _NAME_WORD_RE = re.compile(r"[^\W\d_](?:[^\W\d_]|['.\-])*")
@@ -441,13 +483,30 @@ class Cleaned:
     found: bool  # the line had a sound description or a label
 
 
+def _upper(word: str) -> set[str]:
+    """A word in capitals, both the plain way and the Turkish way (i to İ),
+    without trailing dots: "Dikkat" gives DIKKAT and DİKKAT."""
+    word = word.rstrip(".")
+    return {word.upper(), word.replace("i", "İ").replace("ı", "I").upper()}
+
+
+def _not_a_name(name: str) -> bool:
+    """A label that names no speaker: the whole label or its first word is
+    a word such as OK, WAIT or WARNING ("WAIT:", "SON DAKİKA:"), or it is a
+    place with a number ("Pier 12")."""
+    words = name.split()
+    if not words:
+        return True
+    if (_upper(name) | _upper(words[0])) & NOT_LABELS:
+        return True
+    return len(words) >= 2 and words[-1].isdigit() and bool(_upper(words[0]) & PLACE_WORDS)
+
+
 def _is_name(name: str) -> bool:
     """Capitals before a colon read as a speaker's name: letters only, at
     most 3 words, no digits, and not a word such as OK or WARNING."""
     words = name.split()
-    return (
-        1 <= len(words) <= 3 and all(_NAME_WORD_RE.fullmatch(w) for w in words) and words[0].rstrip(".").upper() not in NOT_LABELS
-    )
+    return 1 <= len(words) <= 3 and all(_NAME_WORD_RE.fullmatch(w) for w in words) and not _not_a_name(name)
 
 
 def _paren_is_speech(rest: str, m: re.Match) -> bool:
@@ -474,6 +533,8 @@ def _bracket_name(m: re.Match) -> str | None:
     if ":" not in m.group(0) and not any(ch.islower() for ch in m.group("name")):
         return None
     if words[0].casefold() in SOUND_WORDS or any(w.casefold().endswith("ing") and len(w) > 5 for w in words):
+        return None
+    if _not_a_name(m.group("name")):
         return None
     return m.group("name")
 
@@ -532,20 +593,66 @@ def clean_line(line: str, hi: bool = True) -> Cleaned:
     text = re.sub(r"<(\w+)[^>]*>\s*</\1>", "", text)
     # No space left between an opening tag or the dash and the words.
     text = re.sub(r"^((?:\s*<[^/>][^>]*>)*\s*(?:-\s)?)\s+", r"\1", text).strip()
+    # "- (Laughs) - What?" keeps one dash, not "- - What?". A "--" stays.
+    text = re.sub(r"^((?:\s*<[^/>][^>]*>)*\s*)-\s*-(?!-)\s*", r"\1- ", text)
     if not re.search(r"\w", strip_tags(text)):
         text = ""
     return Cleaned(text, label, True)
 
 
+_EDGE_TAGS_RE = re.compile(r"(?:\s*(?:<[^>]+>|\{\\[^}]*\}))*\s*$")
+
+
+def close_spans(lines: list[str], hi: bool = True) -> list[str]:
+    """The lines with each description that runs over two or more lines
+    closed on every line it touches, so clean_line, which reads one line at
+    a time, sees it: "[Woman calling out," / "indistinct]" becomes
+    "[Woman calling out,]" / "[indistinct]". Square brackets always;
+    parentheses only in a hearing-impaired file, and not when the whole
+    parenthesis reads as speech (see _paren_is_speech)."""
+    out = list(lines)
+    marks = [("[", "]")] + ([("(", ")")] if hi else [])
+    for o, c in marks:
+        i = 0
+        while i < len(out):
+            at = out[i].rfind(o)
+            if at < 0 or c in out[i][at:]:
+                i += 1
+                continue
+            j = next((k for k in range(i + 1, len(out)) if o in out[k] or c in out[k]), None)
+            if j is None or c not in out[j] or o in out[j][: out[j].index(c)]:
+                i += 1
+                continue
+            if o == "(":
+                joined = " ".join(out[i : j + 1])
+                m = PAREN_RE.match(joined, at)
+                if m is None or _paren_is_speech(joined, m):
+                    i = j
+                    continue
+            for k in range(i, j + 1):
+                ln = out[k]
+                lead = _LEAD_RE.match(ln).end() if k > i else 0
+                tail = _EDGE_TAGS_RE.search(ln).start() if k < j else len(ln)
+                body = ln[lead:tail]
+                if k > i:
+                    body = o + body
+                if k < j:
+                    body = body + c
+                out[k] = ln[:lead] + body + ln[tail:]
+            i = j
+    return out
+
+
 def strip_hi(lines: list[str], hi: bool = True) -> tuple[list[str], list[str], bool]:
     """A cue's lines without sound descriptions and speaker labels, as
     clean_line removes them for a file that is (`hi`) or is not a
-    hearing-impaired one. Returns
+    hearing-impaired one. A description that runs over two lines goes too
+    (see close_spans). Returns
     (lines, label names in order, whether anything was found). Lines left
     empty are dropped. When a two-speaker cue keeps one speaker's line only,
     that line loses its dialogue dash: one speaker gets none."""
     out, names, found = [], [], False
-    for ln in lines:
+    for ln in close_spans(lines, hi):
         c = clean_line(ln, hi)
         found |= c.found
         if c.label:
@@ -560,7 +667,7 @@ def strip_hi(lines: list[str], hi: bool = True) -> tuple[list[str], list[str], b
 def has_hi(lines: list[str]) -> bool:
     """The lines hold a sound description or a speaker label, read the way
     a hearing-impaired file's are."""
-    return any(clean_line(ln, hi=True).found for ln in lines)
+    return any(clean_line(ln, hi=True).found for ln in close_spans(lines))
 
 
 HI_MIN_SHARE = 0.03
