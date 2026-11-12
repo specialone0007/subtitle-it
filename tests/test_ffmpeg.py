@@ -37,6 +37,9 @@ Good morning.
 
 
 def make_video(folder: Path) -> Path:
+    """The audio is plain PCM. With AAC, ffmpeg 6 on Ubuntu moved every cue
+    23 ms later (the encoder's start-up delay) while newer versions did not,
+    and this test is about the scripts, not that difference."""
     sub = folder / "track.srt"
     sub.write_text(SRT, encoding="utf-8")
     video = folder / "Harbour Lights (2026).mkv"
@@ -47,7 +50,7 @@ def make_video(folder: Path) -> Path:
             "-f", "lavfi", "-i", "sine=frequency=440:duration=5",
             "-i", str(sub),
             "-map", "0:v", "-map", "1:a", "-map", "2:s",
-            "-c:v", "mpeg4", "-c:a", "aac", "-c:s", "srt",
+            "-c:v", "mpeg4", "-c:a", "pcm_s16le", "-c:s", "srt",
             "-metadata:s:s:0", "language=eng",
             str(video),
         ],
