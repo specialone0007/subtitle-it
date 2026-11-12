@@ -3,21 +3,24 @@
 ![Title card: Turkish Subtitles, a Claude Code plugin that turns a film's subtitles into natural Turkish](docs/assets/title-card.svg)
 
 <p align="center">
-  <b>Name a film. Get Turkish subtitles that sound like people talking.</b><br>
-  <a href="#quick-start">Quick start</a> ·
-  <a href="#how-a-run-goes">How a run goes</a> ·
-  <a href="#cost-time-and-platforms">Cost and time</a> ·
-  <a href="docs/architecture.md">Every step in detail</a>
+  <b>Name a film. Get Turkish subtitles that sound like people talking.</b>
+</p>
+
+<p align="center">
+  <a href="#quick-start"><img src="docs/assets/btn-quick-start.svg" alt="Quick start" width="190"></a>
+  <a href="#how-a-run-goes"><img src="docs/assets/btn-how-a-run-goes.svg" alt="How a run goes" width="190"></a>
+  <a href="#cost-time-and-platforms"><img src="docs/assets/btn-cost-and-time.svg" alt="Cost and time" width="190"></a>
+  <a href="docs/architecture.md"><img src="docs/assets/btn-every-step.svg" alt="Every step in detail" width="190"></a>
 </p>
 
 A Claude Code plugin for Turkish speakers who want to watch a film that has
 no good Turkish subtitles. You type one command:
 
 ```
-/turkish-subtitles:subtitle Anatomy of a Fall
+/turkish-subtitles:subtitle Inception
 ```
 
-About a quarter of an hour later, `Anatomy of a Fall.tr.srt` sits next to
+About a quarter of an hour later, `Inception.tr.srt` sits next to
 the video, on the source file's own timings. (Plain `/subtitle` also works
 when no other command uses that name.)
 
@@ -56,8 +59,11 @@ when no other command uses that name.)
 | **10. Review** | One reviewer reads the whole film next to the source and fixes what a single chunk could not show. |
 | **11. Deliver** | Saves the `.tr.srt` next to the video and writes the report. |
 
-When a good human-made Turkish subtitle already exists, the run polishes
-that file instead of translating from scratch, which uses less.
+When a human-made Turkish subtitle already exists, the run polishes that
+file instead of translating from scratch, which uses less. It looks on
+your disk first, then on OpenSubtitles, which leaves out machine
+translations. It tries up to three files and uses the first one that fits
+the video's timings.
 
 ![The cast: the scripts are plain Python, the local models listen to the audio on your machine, and Claude does the language work as seven kinds of agent](docs/assets/cast.svg)
 
@@ -188,7 +194,7 @@ output, so a shell or tool that shortens command output does not get in the way.
 ## Learning from your fixes
 
 After watching, fix lines in the `.tr.srt` with any editor, then run
-`/turkish-subtitles:subtitle learn Anatomy of a Fall`. The skill proposes
+`/turkish-subtitles:subtitle learn Inception`. The skill proposes
 general rules from your edits ("Always use 'Tamam' for 'OK'?") and saves
 only the ones you accept. Each new run also checks for edited files.
 
@@ -232,7 +238,7 @@ scripts/transcribe.py           subtitles from the audio when no file exists, th
 scripts/result.py               print each script's JSON result and save it to --result
 tests/                          pytest suite
 docs/architecture.md            how a run works
-docs/assets/                    the pictures in this file
+docs/assets/                    the pictures in this file and in the architecture doc
 ```
 
 </details>
@@ -247,11 +253,9 @@ and [NOTICE](NOTICE).
 ## Credits
 
 <p align="center">
-  <i>Written and directed by</i><br>
-  <b><a href="https://www.linkedin.com/in/furkanreha/">Furkan Reha</a></b><br><br>
-  <i>Starring</i><br>
-  Claude · pyannote · Whisper · ffmpeg · uv<br><br>
-  <i>Subtitles from</i><br>
-  your own disk, or OpenSubtitles under your own account<br><br>
-  <sub>No films were spoiled in the making of these subtitles.</sub>
+  <a href="https://www.linkedin.com/in/furkanreha/"><img src="docs/assets/credits.svg" alt="Credits. Written and directed by Furkan Reha. Starring Claude, pyannote, Whisper, ffmpeg and uv. Subtitles from your own disk, or OpenSubtitles under your own account. No films were spoiled in the making of these subtitles."></a>
+</p>
+
+<p align="center">
+  <a href="https://www.linkedin.com/in/furkanreha/"><img src="docs/assets/btn-linkedin.svg" alt="Furkan Reha on LinkedIn" width="300"></a>
 </p>
