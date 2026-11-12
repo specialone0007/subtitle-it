@@ -116,7 +116,8 @@ The numbers match the steps in `SKILL.md`.
 After you fix lines in a delivered file, `/turkish-subtitles:subtitle learn
 <film>` runs `learn.py diff`, proposes up to five general rules from your
 edits, and saves the ones you accept in your preferences. Every later run
-uses them.
+uses them. Its steps live in `skills/subtitle/learn.md`, and the one-time
+setup steps in `setup.md` beside it, so a normal run does not carry them.
 
 ## Files
 

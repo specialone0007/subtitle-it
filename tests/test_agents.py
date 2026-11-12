@@ -49,3 +49,18 @@ def test_a_fix_round_never_gets_the_chunk_output_path():
     assert "fix_r<round>_<NN>.txt" in bullet
     assert "flags_r<round>_<NN>.txt" in bullet
     assert "never its two `Write` lines" in bullet
+
+
+def test_files_the_skill_sends_you_to_exist():
+    text = SKILL.read_text(encoding="utf-8")
+    named = set(re.findall(r"\$\{CLAUDE_SKILL_DIR\}/([\w.-]+\.md)", text))
+    named |= set(re.findall(r"`([a-z]+\.md)`", text)) - {"SKILL.md", "bible.md", "report.md", "review.md", "preferences.md"}
+    assert {"setup.md", "learn.md", "pack-tr.md", "preferences-template.md"} <= named
+    for name in named:
+        assert (SKILL.parent / name).exists(), name
+    setup = (SKILL.parent / "setup.md").read_text(encoding="utf-8")
+    headings = re.findall(r'see "([^"]+)" in', text)
+    assert "see `setup.md`" not in text, "name the setup.md section a pointer sends you to"
+    assert set(headings) == set(re.findall(r"^## (.+)$", setup, re.M))
+    for heading in headings:
+        assert f"## {heading}" in setup, heading
