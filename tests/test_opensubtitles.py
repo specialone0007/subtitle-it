@@ -58,6 +58,7 @@ def test_saved_credentials_are_readable_only_by_the_owner(tmp_path: Path):
     p = tmp_path / "cfg" / "credentials.json"
     assert json.loads(p.read_text(encoding="utf-8")) == {"api_key": "k"}
     assert not (tmp_path / "cfg" / "credentials.tmp").exists()
+    assert b"\r" not in p.read_bytes()
     if os.name != "nt":
         assert stat.S_IMODE(p.stat().st_mode) == 0o600
 
