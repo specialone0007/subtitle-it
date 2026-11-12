@@ -119,8 +119,8 @@ answers the same questions without seeing it.
 2. A second reader, who never sees the bible, answers the same questions
    from the subtitles. It starts as soon as the bible is written, while the
    audio step may still run.
-3. The voice questions come from `bible.py voice-questions`, and a second
-   second reader answers them beside the voice mapper.
+3. The voice questions come from `bible.py voice-questions`, and another
+   round of the second reader answers them beside the voice mapper.
 4. `bible.py compare` locks what both agree on.
 5. A judge reads only the cited cues for the rest and decides from the
    evidence or by a safe default.
