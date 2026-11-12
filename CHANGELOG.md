@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Docs: the README is rewritten for a first-time reader, with pictures in
+  a film look (an example scene, one run's numbers, the cast, a map of the
+  whole run, link buttons and end credits). The architecture doc moved
+  from `docs/architecture.md` to `ARCHITECTURE.md` at the top level, with
+  one heading per step. The README's "Setup" section is now "Quick start".
+  Nothing about a run changes.
 - CI now also runs on macOS, and installs ffmpeg on every system. A new
   test, `tests/test_ffmpeg.py`, builds a 5-second video with a text subtitle
   track and reads it back with the real ffmpeg and ffprobe, so a difference
