@@ -21,7 +21,7 @@ from __future__ import annotations
 import argparse
 import getpass
 import json
-import os
+import re
 import struct
 import sys
 import time
@@ -34,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import result  # noqa: E402
 
 API = "https://api.opensubtitles.com/api/v1"
-USER_AGENT = "TurkishSubtitles v0.1"
+USER_AGENT = "TurkishSubtitles v0.4.0"
 TOKEN_MAX_AGE = 20 * 3600  # tokens last 24 h; renew a bit early
 
 
@@ -62,11 +62,7 @@ def load_creds(config: Path) -> dict:
 def save_creds(config: Path, creds: dict) -> None:
     config.mkdir(parents=True, exist_ok=True)
     p = _cred_path(config)
-    tmp = p.with_suffix(".tmp")
-    tmp.write_text(json.dumps(creds, indent=1), encoding="utf-8")
-    if os.name != "nt":
-        os.chmod(tmp, 0o600)
-    tmp.replace(p)
+    result.write_private(p, json.dumps(creds, indent=1))
 
 
 # --- http ------------------------------------------------------------------
@@ -104,8 +100,16 @@ def _request(method: str, url: str, creds: dict, body: dict | None = None, auth:
 
 
 def _base(creds: dict) -> str:
+    """The API root on the host the login named, always over https. A host
+    that is not a plain host name falls back to the default API."""
     host = creds.get("base_url")
-    return f"https://{host}/api/v1" if host else API
+    return f"https://{host}/api/v1" if host and re.fullmatch(r"[A-Za-z0-9.-]+", host) else API
+
+
+def _https(url: str) -> str:
+    if urllib.parse.urlsplit(url).scheme != "https":
+        raise ApiError(f"OpenSubtitles sent a download link that is not https: {url[:80]}")
+    return url
 
 
 def login(config: Path, creds: dict, force: bool = False) -> dict:
@@ -232,7 +236,7 @@ def download(config: Path, file_id: int, out: Path, cache: Path) -> dict:
             r = _request("POST", f"{_base(creds)}/download", creds, {"file_id": file_id}, auth=True)
         else:
             raise
-    req = urllib.request.Request(r["link"], headers={"User-Agent": USER_AGENT})
+    req = urllib.request.Request(_https(r["link"]), headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req, timeout=60) as resp:
         raw = resp.read()
     cache.mkdir(parents=True, exist_ok=True)
@@ -248,9 +252,9 @@ def main(argv: list[str] | None = None) -> None:
     for name in ("setup", "status", "search", "download", "hash"):
         s = sub.add_parser(name)
         if name != "hash":
-            s.add_argument("--config", type=Path, required=True)
+            s.add_argument("--config", type=result.path, required=True)
         if name in ("search", "hash"):
-            s.add_argument("--video", type=Path, required=name == "hash")
+            s.add_argument("--video", type=result.path, required=name == "hash")
         if name == "search":
             s.add_argument("--query")
             s.add_argument("--imdb")
@@ -258,8 +262,8 @@ def main(argv: list[str] | None = None) -> None:
             s.add_argument("--languages", required=True)
         if name == "download":
             s.add_argument("--file-id", type=int, required=True)
-            s.add_argument("--out", type=Path, required=True)
-            s.add_argument("--cache", type=Path, required=True)
+            s.add_argument("--out", type=result.path, required=True)
+            s.add_argument("--cache", type=result.path, required=True)
     result.add_argument(p)
     a = result.parse(p, argv)
     if a.cmd == "setup":

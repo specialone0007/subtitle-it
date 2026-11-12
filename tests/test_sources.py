@@ -393,3 +393,28 @@ def test_local_ignores_folders_that_are_not_subtitle_folders(tmp_path: Path, mon
     (film / "Extras" / "English.srt").write_text(_srt(60), encoding="utf-8")
     _no_tools(monkeypatch)
     assert sources.local(video, tmp_path / "work")["candidates"] == []
+
+
+def test_a_track_language_that_is_not_a_plain_code_becomes_und(tmp_path: Path, monkeypatch):
+    film = tmp_path / "Film"
+    film.mkdir()
+    video = film / "Film.mkv"
+    video.write_bytes(b"x")
+    streams = [
+        {"codec_type": "subtitle", "codec_name": "subrip", "tags": {"language": "../../x"}},
+        {"codec_type": "subtitle", "codec_name": "subrip", "tags": {"language": "EN-us"}},
+        {"codec_type": "subtitle", "codec_name": "subrip", "tags": {"language": "ger"}},
+    ]
+
+    def fake_run(cmd):
+        if cmd[0] == "ffprobe":
+            return json.dumps({"format": {"duration": "70.0"}, "streams": streams})
+        Path(cmd[-1]).write_text(_srt(60), encoding="utf-8")
+        return ""
+
+    monkeypatch.setattr(sources, "_run", fake_run)
+    r = sources.local(video, tmp_path / "work")
+    names = [Path(c["path"]).name for c in r["candidates"]]
+    assert [c["language"] for c in r["candidates"]] == ["und", "und", "de"]
+    assert names == ["track0.und.srt", "track1.und.srt", "track2.de.srt"]
+    assert all(Path(c["path"]).parent == tmp_path / "work" / "sources" for c in r["candidates"])

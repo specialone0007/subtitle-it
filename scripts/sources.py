@@ -241,6 +241,9 @@ def probe(video: Path) -> dict:
         disp = s.get("disposition") or {}
         title = tags.get("title", "")
         lang = LANG.get(tags.get("language", "").lower(), tags.get("language", "und").lower())
+        # The tag goes into a file name: keep only a plain language code.
+        if not re.fullmatch(r"[a-z]{2,3}", lang):
+            lang = "und"
         tracks.append(
             {
                 "sub_index": sub_index,
@@ -444,16 +447,16 @@ def main(argv: list[str] | None = None) -> None:
     sub = p.add_subparsers(dest="cmd", required=True)
     f = sub.add_parser("find")
     f.add_argument("--query", required=True)
-    f.add_argument("--dirs", type=Path, nargs="+", required=True)
+    f.add_argument("--dirs", type=result.path, nargs="+", required=True)
     lo = sub.add_parser("local")
-    lo.add_argument("--video", type=Path, required=True)
-    lo.add_argument("--work", type=Path, required=True)
+    lo.add_argument("--video", type=result.path, required=True)
+    lo.add_argument("--work", type=result.path, required=True)
     v = sub.add_parser("validate")
-    v.add_argument("--file", type=Path, required=True)
+    v.add_argument("--file", type=result.path, required=True)
     v.add_argument("--duration-ms", type=int)
     r = sub.add_parser("remember")
-    r.add_argument("--file", type=Path, required=True)
-    r.add_argument("--prefs", type=Path, required=True)
+    r.add_argument("--file", type=result.path, required=True)
+    r.add_argument("--prefs", type=result.path, required=True)
     s = sub.add_parser("slug")
     s.add_argument("name")
     result.add_argument(p)
