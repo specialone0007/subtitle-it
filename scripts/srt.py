@@ -573,6 +573,10 @@ def clean_line(line: str, hi: bool = True) -> Cleaned:
         name = _bracket_name(m) if m else None
         if name and (rest[m.end() :].strip() or ":" in m.group(0)):
             label, rest, found = name, rest[m.end() :], True
+        elif m and ":" in m.group(0):
+            # "[Wait]: Come back." is no label, but the bracket goes with
+            # its colon, so no stray ":" is left in front of the speech.
+            rest, found = rest[m.end() :], True
     # A mark where each description was, so only the space it leaves is
     # tidied: "Yes [laughs]." becomes "Yes.", while French "Quoi ?" keeps
     # its space.
@@ -593,8 +597,10 @@ def clean_line(line: str, hi: bool = True) -> Cleaned:
     text = re.sub(r"<(\w+)[^>]*>\s*</\1>", "", text)
     # No space left between an opening tag or the dash and the words.
     text = re.sub(r"^((?:\s*<[^/>][^>]*>)*\s*(?:-\s)?)\s+", r"\1", text).strip()
-    # "- (Laughs) - What?" keeps one dash, not "- - What?". A "--" stays.
-    text = re.sub(r"^((?:\s*<[^/>][^>]*>)*\s*)-\s*-(?!-)\s*", r"\1- ", text)
+    # "- (Laughs) - What?" keeps one dash, not "- - What?". Only a line
+    # that began with a dialogue dash: "(sighs) --and then" keeps its "--".
+    if lead.group("dash"):
+        text = re.sub(r"^((?:\s*<[^/>][^>]*>)*\s*)-\s*-(?!-)\s*", r"\1- ", text)
     if not re.search(r"\w", strip_tags(text)):
         text = ""
     return Cleaned(text, label, True)
