@@ -25,7 +25,9 @@ What the plugin keeps and sends:
   Face. A tampered checkpoint there or in your Hugging Face cache could run
   code on your machine.
 - Subtitle text is sent to Claude as part of your Claude Code session.
-- OpenSubtitles receives the film's hash, title or IMDb id when it searches.
+- OpenSubtitles receives your OpenSubtitles username and password when the
+  plugin logs in. A search sends the video's hash, the title or IMDb id,
+  the year when it is known, and the subtitle languages wanted.
   The subtitle file itself is fetched from the https address OpenSubtitles
   links to, which can be another host, with no key or token. API requests
   that carry the key or token follow a redirect only to opensubtitles.com
@@ -33,8 +35,9 @@ What the plugin keeps and sends:
 - A web search receives the film's title and year: the skill looks them up
   once when it does not know them, and the bible writer and second reader
   search for the cast and plot.
-- Audio hints run on your machine. They download models from Hugging Face,
-  and no audio leaves your machine.
+- Audio hints run on your machine. They download the pyannote models from
+  Hugging Face with your Hugging Face token, and no audio leaves your
+  machine.
 - Speech-to-text, the last resort when no subtitle file exists, runs on your
   machine too. It downloads its Whisper model from Hugging Face once and
   sends no audio anywhere. The download needs no token and sends none,

@@ -177,17 +177,21 @@ output, so a shell or tool that shortens command output does not get in the way.
 ## What leaves your machine
 
 - **Subtitle text** goes to Claude as part of your Claude Code session.
-- **OpenSubtitles** receives the video's hash, title or IMDb id when it searches.
+- **OpenSubtitles** receives your OpenSubtitles username and password when
+  the plugin logs in. A search sends the video's hash, the title or IMDb
+  id, the year when it is known, and the subtitle languages wanted.
   The subtitle file itself comes from the https address OpenSubtitles
   links to, which can be another host, and no key or token is sent with it.
 - **Web search** receives the film's title and year. The skill looks them
   up once when it does not know them, and the bible writer and second
   reader search for the cast and plot.
-- **Audio** never leaves. Audio hints and speech-to-text run locally; the
-  speech model is downloaded once from Hugging Face. That download needs
-  no token and sends none, unless `HF_TOKEN` is set in your environment
-  or you have logged in with the Hugging Face command line tool: the
-  Hugging Face library then sends that token with it.
+- **Audio** never leaves. Audio hints and speech-to-text run locally.
+  Audio hints download the pyannote models from Hugging Face with your
+  Hugging Face token. The speech model is downloaded once from Hugging
+  Face; that download needs no token and sends none, unless `HF_TOKEN`
+  is set in your environment or you have logged in with the Hugging
+  Face command line tool: the Hugging Face library then sends that
+  token with it.
 - **Packages** are downloaded the first time each script runs: Python
   packages from PyPI, and PyTorch from download.pytorch.org on Windows
   and Linux. When no installed Python fits a script, uv may also download
