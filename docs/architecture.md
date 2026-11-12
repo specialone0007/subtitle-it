@@ -87,10 +87,17 @@ The numbers match the steps in `SKILL.md`.
   default goes into the report.
 - **6–7. Translate.** One subagent per chunk, all started at once, each with
   the Turkish language pack (`pack-tr.md`), the bible, your preferences and
-  its neighbours' chunks for context. In a polish run there are no
-  translators: `polish.py seed` puts the Turkish file's text on the timing
-  file's cues, `polish.py flags` lists the cues to fix (check fails, lines
-  left in English, crude lines the Turkish tones down, lines that may sit
+  its neighbours' chunks for context. The translators run at low reasoning
+  effort (`effort: low` in `agents/translator.md`), whatever effort the
+  session uses; the fix rounds of step 9 use the same agent, so they do too.
+  On one 2-hour film (1,838 cues) this cost about 17% less per film than medium effort and
+  finished steps 6 to 10 1.4 minutes sooner, with no measurable loss in a
+  blind test of 100 cues (medium preferred on 20, low on 15, 65 equal). A
+  Translator model of `sonnet` also runs at low effort; that is untested.
+  In a polish run there are no translators: `polish.py seed` puts the
+  Turkish file's text on the timing file's cues, `polish.py flags` lists the
+  cues to fix (check fails, lines left in English, crude lines the Turkish
+  tones down, lines that may sit
   on the wrong cue), and one polish fixer subagent changes only those. The
   step 10 reviewer starts in the same message and reads the film while the
   fixer works; where both change a flagged cue, the fixer's version wins.
