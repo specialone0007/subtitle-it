@@ -56,6 +56,12 @@ SOFT_FILE = "polish_soft.txt"
 SOFT_FIX_FILE = "fix_soft.txt"
 # Warnings the fixer leaves to the reviewer, as a full run does.
 REVIEWER_ONLY = {"reading speed"}
+# Text for a sound-only cue is never delivered: nothing for the fixer to do.
+NOT_FOR_FIXER = REVIEWER_ONLY | {"sound-only cue"}
+# A cue with no Turkish at all. Its flag and its tr: line say so in words a
+# fixer cannot read past: a skipped one is a hard fail and a fix round.
+MISSING_FLAG = "cue count: missing: this cue has no Turkish yet; write it, translated from en: or src:"
+NO_TURKISH = "<none: write this cue>"
 # A pause longer than this between two cues starts a new scene. A
 # professional file keeps one form through a scene, so where the address
 # check finds the wrong form on one cue, the same form on the cues around it
@@ -136,7 +142,8 @@ def seed(work: Path, tr_path: Path) -> dict:
     rows = {r["n"]: r for r in json.loads((work / "cues.json").read_text(encoding="utf-8"))}
     # Cues that hold only sounds get no Turkish: a Turkish line there goes
     # to a spoken neighbour or is listed as placed nowhere.
-    timing = [c for c in timing if not rows[c.n].get("sound_only")]
+    sound_only = assemble.sound_only_cues(work, rows)
+    timing = [c for c in timing if c.n not in sound_only]
     turkish, enc = srt.parse(tr_path)
     if not turkish:
         raise SystemExit(f"no cues found in {tr_path}")
@@ -238,7 +245,7 @@ def _write_flags(path: Path, header: str, reasons: dict[int, list[str]], rows: d
             f.write("src: " + prepare._one_line(r["source"]) + "\n")
             if r["en"] is not None and r["en"] != r["source"]:
                 f.write("en: " + prepare._one_line(r["en"]) + "\n")
-            f.write("tr: " + prepare._one_line(texts.get(n)) + "\n")
+            f.write("tr: " + (prepare._one_line(texts.get(n)) if n in texts else NO_TURKISH) + "\n")
             for label in reasons[n]:
                 f.write(f"flag: {label}\n")
             f.write("\n")
@@ -285,14 +292,19 @@ def flags(work: Path) -> dict:
     rows = {r["n"]: r for r in json.loads((work / "cues.json").read_text(encoding="utf-8"))}
     texts, _ = assemble.load_translation(work)
     reasons: dict[int, list[str]] = {}
-    for item in checks["hard"] + [w for w in checks["warnings"] if w["check"] not in REVIEWER_ONLY]:
+    missing: list[int] = []
+    for item in checks["hard"] + [w for w in checks["warnings"] if w["check"] not in NOT_FOR_FIXER]:
         # A fix file can name a cue the timing file does not have; check
         # already reports that as a hard fail, and there is no cue to list.
         if item["cue"] is not None and item["cue"] in rows:
             label = item["check"] + (f": {item['detail']}" if item["detail"] else "")
+            if item["check"] == "cue count" and item["detail"] == "missing":
+                label = MISSING_FLAG
+                missing.append(item["cue"])
             reasons.setdefault(item["cue"], []).append(label)
+    sound_only = assemble.sound_only_cues(work, rows)
     for n, tr in texts.items():
-        if n not in rows:
+        if n not in rows or n in sound_only:
             continue
         en = rows[n]["en"] or rows[n]["source"]
         if untranslated(tr, en):
@@ -319,11 +331,19 @@ def flags(work: Path) -> dict:
         for label in {lab.split(":")[0] for lab in labels}:
             by_check[label] = by_check.get(label, 0) + 1
     header = f"# {len(reasons)} cues to fix. Write each fixed cue to out/{FIX_FILE} as: number, then its lines."
+    if missing:
+        verb = "has" if len(missing) == 1 else "have"
+        header += (
+            f"\n# {len(missing)} of them {verb} no Turkish yet (tr: {NO_TURKISH}). Every one must be in"
+            f" your file, or the check fails: {', '.join(map(str, sorted(missing)))}"
+        )
     _write_flags(work / FLAG_FILE, header, reasons, rows, texts)
     return {
         "file": str(work / FLAG_FILE),
         "cues": checks["cues"],
         "flagged": len(reasons),
+        "missing": len(missing),
+        "missing_cues": sorted(missing),
         "by_check": dict(sorted(by_check.items(), key=lambda kv: -kv[1])),
         "reading_speed_left_to_reviewer": sum(1 for w in checks["warnings"] if w["check"] == "reading speed"),
     }

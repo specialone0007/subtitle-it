@@ -170,8 +170,8 @@ model of `sonnet` also runs at low effort; that is untested.
   the wrong cue.
 - One polish fixer subagent changes only those.
 - The step 10 reviewer starts in the same message and reads the film while
-  the fixer works. Where both change a flagged cue, the fixer's version
-  wins.
+  the fixer works. Where both change a flagged cue, the reviewer's
+  version wins, and it fixes that cue's flags too.
 
 ### 8–9. Assemble and check
 

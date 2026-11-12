@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 import assemble
+import polish
 import prepare
 import srt
 
@@ -40,6 +41,14 @@ import srt
         ("Rule one: never lie.", "Rule one: never lie.", None),
         ("10:30: meet me.", "10:30: meet me.", None),
         ("Who's there?", "Who's there?", None),
+        ("- (Laughs) - What?", "- What?", None),
+        ("- [Laughs] -What?", "- What?", None),
+        ("<i>- (sighs) - No.</i>", "<i>- No.</i>", None),
+        ("- (sighs) --and then", "- --and then", None),
+        ("[Pier 12] Over here.", "Over here.", None),
+        ("[Gate 3] Over here.", "Over here.", None),
+        ("[Wait] Come back.", "Come back.", None),
+        ("[Dikkat] Geri çekil.", "Geri çekil.", None),
     ],
 )
 def test_clean_line_drops_descriptions_and_labels_and_keeps_speech(line, text, label):
@@ -58,6 +67,14 @@ SPEECH_OR_TAG = [
     ("AT 10: meet me", "AT 10: meet me", "AT 10: meet me", None),
     ("BÖLÜM 1: Başlangıç", "BÖLÜM 1: Başlangıç", "BÖLÜM 1: Başlangıç", None),
     ("UYARI: Yüksek gerilim", "UYARI: Yüksek gerilim", "UYARI: Yüksek gerilim", None),
+    ("WAIT: what?", "WAIT: what?", "WAIT: what?", None),
+    ("NO: never.", "NO: never.", "NO: never.", None),
+    ("HEY: you there.", "HEY: you there.", "HEY: you there.", None),
+    ("YES: sir.", "YES: sir.", "YES: sir.", None),
+    ("BEKLE: dur.", "BEKLE: dur.", "BEKLE: dur.", None),
+    ("HAYIR: asla.", "HAYIR: asla.", "HAYIR: asla.", None),
+    ("SON DAKİKA: Liman kapandı.", "SON DAKİKA: Liman kapandı.", "SON DAKİKA: Liman kapandı.", None),
+    ("JOHN DAY: Hi.", "Hi.", "JOHN DAY: Hi.", "JOHN DAY"),
     ("ANNA MARIA LOUISE KAY: Hi.", "ANNA MARIA LOUISE KAY: Hi.", "ANNA MARIA LOUISE KAY: Hi.", None),
     ("SANDRA: Who's there?", "Who's there?", "SANDRA: Who's there?", "SANDRA"),
     ("- ŞULE: Merhaba.", "- Merhaba.", "- ŞULE: Merhaba.", "ŞULE"),
@@ -86,6 +103,31 @@ def test_strip_hi_drops_sound_lines_and_an_orphan_dash():
     lines, _, found = srt.strip_hi(["- Who?", "- Me."])
     assert lines == ["- Who?", "- Me."] and not found
     assert srt.strip_hi(["[Thunder rumbling]", "(rain)"])[0] == []
+
+
+@pytest.mark.parametrize(
+    ("lines", "hi", "left"),
+    [
+        (["[Woman calling out,", "indistinct]"], True, []),
+        (["[Woman calling out,", "indistinct]"], False, []),
+        (["<i>[Man shouting,</i>", "<i>indistinct] Run!</i>"], True, ["<i>Run!</i>"]),
+        (["- Hi. [door", "slams]"], True, ["- Hi."]),
+        (["(Woman calling out,", "indistinct)"], True, []),
+        # Parentheses go only from a hearing-impaired file, and never when
+        # the whole of them reads as speech.
+        (["(Woman calling out,", "indistinct)"], False, ["(Woman calling out,", "indistinct)"]),
+        (["I said (and I mean it,", "every word) no."], True, ["I said (and I mean it,", "every word) no."]),
+        (["(Are you still", "there?)"], True, ["(Are you still", "there?)"]),
+    ],
+)
+def test_strip_hi_drops_a_description_that_runs_over_two_lines(lines, hi, left):
+    assert srt.strip_hi(lines, hi)[0] == left
+
+
+def test_turkish_check_reads_not_a_name_words_as_text():
+    for line in ("HAYIR: Asla.", "BEKLE: Dur.", "SON DAKİKA: Liman kapandı.", "- (Güler) - Ne?"):
+        assert not [p for p in assemble.hi_problems([line], tagged=True) if p[0] == "speaker label"], line
+    assert assemble.hi_problems(["ŞULE: Merhaba."], tagged=True)[0][0] == "speaker label"
 
 
 def _cues(texts: list[str]) -> list[srt.Cue]:
@@ -279,6 +321,67 @@ def test_check_warns_on_text_for_a_sound_only_cue(films: Path):
     r = assemble.run_checks(w)
     assert r["hard_fail_count"] == 0 and [(x["cue"], x["check"]) for x in r["warnings"]] == [(2, "sound-only cue")]
     assert "Gök" not in (w / "draft.tr.srt").read_text(encoding="utf-8")
+
+
+TWO_LINE_SOUND = """1
+00:00:01,000 --> 00:00:03,000
+[Door slams]
+SANDRA: Viens.
+
+2
+00:00:03,500 --> 00:00:06,000
+[Woman calling out,
+indistinct]
+
+3
+00:00:07,000 --> 00:00:09,000
+Tu es là ?
+"""
+
+
+def test_build_leaves_out_a_description_over_two_lines(tmp_path: Path):
+    (tmp_path / "fr.srt").write_text(TWO_LINE_SOUND, encoding="utf-8")
+    w = tmp_path / "work"
+    out = prepare.build(w, tmp_path / "fr.srt", None, None)
+    assert out["sound_only_cues_dropped"] == 1
+    rows = json.loads((w / "cues.json").read_text(encoding="utf-8"))
+    assert rows[1]["sound_only"] and rows[1]["source"] == []
+
+
+def test_check_rejects_turkish_for_a_sound_only_cue_an_older_build_kept(tmp_path: Path):
+    # A work folder built before descriptions over two lines were read as
+    # one: cue 2 kept its text and was not marked sound only.
+    (tmp_path / "fr.srt").write_text(TWO_LINE_SOUND, encoding="utf-8")
+    w = tmp_path / "work"
+    prepare.build(w, tmp_path / "fr.srt", None, None)
+    rows = json.loads((w / "cues.json").read_text(encoding="utf-8"))
+    del rows[1]["sound_only"]
+    rows[1]["source"] = rows[1]["timing_lines"] = ["[Woman calling out,", "indistinct]"]
+    (w / "cues.json").write_text(json.dumps(rows), encoding="utf-8")
+    (w / "out").mkdir(exist_ok=True)
+    (w / "out" / "tr_00.txt").write_text("1\nGel.\n\n2\nToplanın millet!\n\n3\nOrada mısın?\n", encoding="utf-8")
+    r = assemble.run_checks(w)
+    assert r["hard_fail_count"] == 0 and r["sound_only_cues"] == 1 and r["delivered_cues"] == 2
+    assert [(x["cue"], x["check"]) for x in r["warnings"]] == [(2, "sound-only cue")]
+    assert "rejected" in r["warnings"][0]["detail"]
+    assert "Toplanın" not in (w / "draft.tr.srt").read_text(encoding="utf-8")
+    # The fixer is not sent to it either.
+    assert polish.flags(w)["flagged"] == 0
+
+
+def test_build_leaves_out_a_cue_the_source_file_says_is_only_sounds(tmp_path: Path):
+    # A plain timing file (one tag in 41 cues) keeps "(Laughs)" as text; the
+    # hearing-impaired source has only a sound there, so the cue holds
+    # nothing to translate. Cue 2 has words in the timing file and stays.
+    timing = [f"Line {i}." for i in range(40)]
+    source = [f"[laughs] Line {i}." for i in range(40)]
+    (tmp_path / "timing.srt").write_text(_srt(["(Laughs)", "Ha ha, sure."] + timing), encoding="utf-8")
+    (tmp_path / "source.srt").write_text(_srt(["[laughs]", "[laughs]"] + source), encoding="utf-8")
+    w = tmp_path / "work"
+    out = prepare.build(w, tmp_path / "timing.srt", tmp_path / "source.srt", None)
+    assert out["hearing_impaired"] == {"timing": False, "source": True}
+    rows = json.loads((w / "cues.json").read_text(encoding="utf-8"))
+    assert [n for n, r in enumerate(rows, 1) if r.get("sound_only")] == [1]
 
 
 def test_keep_mode_leaves_labels_alone(films: Path):
