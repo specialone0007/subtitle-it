@@ -178,6 +178,8 @@ output, so a shell or tool that shortens command output does not get in the way.
 
 - **Subtitle text** goes to Claude as part of your Claude Code session.
 - **OpenSubtitles** receives the video's hash, title or IMDb id when it searches.
+  The subtitle file itself comes from the https address OpenSubtitles
+  links to, which can be another host, and no key or token is sent with it.
 - **Web search** receives the film's title and year. The skill looks them
   up once when it does not know them, and the bible writer and second
   reader search for the cast and plot.
@@ -188,7 +190,8 @@ output, so a shell or tool that shortens command output does not get in the way.
   Hugging Face library then sends that token with it.
 - **Packages** are downloaded the first time each script runs: Python
   packages from PyPI, and PyTorch from download.pytorch.org on Windows
-  and Linux.
+  and Linux. When no installed Python fits a script, uv may also download
+  a Python build.
 - **Credentials** are typed into your own terminal, never into the chat, and
   kept in `credentials.json`. The OpenSubtitles key and login go only to
   OpenSubtitles, and the Hugging Face token only to Hugging Face.
