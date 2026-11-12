@@ -20,6 +20,8 @@
 - `SECURITY.md` now says the credentials file is plain text and that the
   audio hints load the pyannote checkpoints with full pickle loading. The
   README names the third-party models and tools and their terms.
+- The README and `SECURITY.md` now say that the film's title and year go
+  to a web search.
 - Docs: the README is rewritten for a first-time reader, with pictures in
   a film look (an example scene, one run's numbers, the cast, a map of the
   whole run, link buttons and end credits). The architecture doc moved

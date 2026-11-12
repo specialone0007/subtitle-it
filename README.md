@@ -178,6 +178,9 @@ output, so a shell or tool that shortens command output does not get in the way.
 
 - **Subtitle text** goes to Claude as part of your Claude Code session.
 - **OpenSubtitles** receives the video's hash, title or IMDb id when it searches.
+- **Web search** receives the film's title and year. The skill looks them
+  up once when it does not know them, and the bible writer and second
+  reader search for the cast and plot.
 - **Audio** never leaves. Audio hints and speech-to-text run locally; the
   speech model is downloaded once from Hugging Face, with no token.
 - **Credentials** are typed into your own terminal, never into the chat, and
