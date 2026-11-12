@@ -182,7 +182,13 @@ output, so a shell or tool that shortens command output does not get in the way.
   up once when it does not know them, and the bible writer and second
   reader search for the cast and plot.
 - **Audio** never leaves. Audio hints and speech-to-text run locally; the
-  speech model is downloaded once from Hugging Face, with no token.
+  speech model is downloaded once from Hugging Face. That download needs
+  no token and sends none, unless `HF_TOKEN` is set in your environment
+  or you have logged in with the Hugging Face command line tool: the
+  Hugging Face library then sends that token with it.
+- **Packages** are downloaded the first time each script runs: Python
+  packages from PyPI, and PyTorch from download.pytorch.org on Windows
+  and Linux.
 - **Credentials** are typed into your own terminal, never into the chat, and
   kept in `credentials.json`. The OpenSubtitles key and login go only to
   OpenSubtitles, and the Hugging Face token only to Hugging Face.
