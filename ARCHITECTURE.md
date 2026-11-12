@@ -1,6 +1,6 @@
 # How a run works
 
-![How a run goes: find the film, get subtitles, audio hints, film bible, translate, check, review, deliver](assets/run-strip.svg)
+![How a run goes: find the film, get subtitles, audio hints, film bible, translate, check, review, deliver](docs/assets/run-strip.svg)
 
 One command starts a run, and about a quarter of an hour later a Turkish
 subtitle file sits next to the video. This page walks through what happens
@@ -9,7 +9,7 @@ the one skill Claude follows in your conversation.
 
 ## Who does what
 
-![The cast: the scripts are plain Python, the local models listen to the audio on your machine, and Claude does the language work as seven kinds of agent](assets/cast.svg)
+![The cast: the scripts are plain Python, the local models listen to the audio on your machine, and Claude does the language work as seven kinds of agent](docs/assets/cast.svg)
 
 The work is split by one rule: anything with one right answer is a script,
 and anything that needs a feel for language is an agent.
@@ -34,7 +34,7 @@ session.
 
 ## The whole run on one page
 
-![The whole run on one page, in four acts: find, understand, translate, finish. Blue is a script, green a local model on your machine, red is Claude](assets/run-map.svg)
+![The whole run on one page, in four acts: find, understand, translate, finish. Blue is a script, green a local model on your machine, red is Claude](docs/assets/run-map.svg)
 
 Read it top to bottom. A dashed gold frame means the boxes inside it run at the same time. The numbers match the steps below.
 

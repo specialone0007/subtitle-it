@@ -10,7 +10,7 @@
   <a href="#quick-start"><img src="docs/assets/btn-quick-start.svg" alt="Quick start" width="190"></a>
   <a href="#how-a-run-goes"><img src="docs/assets/btn-how-a-run-goes.svg" alt="How a run goes" width="190"></a>
   <a href="#cost-time-and-platforms"><img src="docs/assets/btn-cost-and-time.svg" alt="Cost and time" width="190"></a>
-  <a href="docs/architecture.md"><img src="docs/assets/btn-every-step.svg" alt="Every step in detail" width="190"></a>
+  <a href="ARCHITECTURE.md"><img src="docs/assets/btn-every-step.svg" alt="Every step in detail" width="190"></a>
 </p>
 
 A Claude Code plugin for Turkish speakers who want to watch a film that has
@@ -48,16 +48,10 @@ when no other command uses that name.)
 
 ![How a run goes: find the film, get subtitles, audio hints, film bible, translate, check, review, deliver](docs/assets/run-strip.svg)
 
-| Step | What happens |
-| --- | --- |
-| **1. Find the film** | Searches the folders you gave it. |
-| **2. Get subtitles** | A track inside the video, a file next to it, or OpenSubtitles. As a last resort it writes them from the film's own speech. |
-| **3. Audio hints** | Optional. Hears which voice speaks each line and checks the subtitles are in sync. Runs on your machine. |
-| **4–5. Film bible** | One agent writes it. A second reader answers the same questions blind, and a judge settles any difference. |
-| **6–7. Translate** | The film is cut into chunks, and one translator per chunk works at the same time. |
-| **8–9. Check** | A script checks every cue. Anything broken goes back to its translator. |
-| **10. Review** | One reviewer reads the whole film next to the source and fixes what a single chunk could not show. |
-| **11. Deliver** | Saves the `.tr.srt` next to the video and writes the report. |
+The strip above is the short version. This is the whole run, in four acts.
+A dashed gold frame means the boxes inside it run at the same time.
+
+![The whole run on one page, in four acts: find, understand, translate, finish. Blue is a script, green a local model on your machine, red is Claude](docs/assets/run-map.svg)
 
 When a human-made Turkish subtitle already exists, the run polishes that
 file instead of translating from scratch, which uses less. It looks on
@@ -67,7 +61,8 @@ the video's timings.
 
 ![The cast: the scripts are plain Python, the local models listen to the audio on your machine, and Claude does the language work as seven kinds of agent](docs/assets/cast.svg)
 
-[How a run works](docs/architecture.md) walks through each step.
+[How a run works](ARCHITECTURE.md) explains every step in plain words: what it reads, what it
+writes, and why it is there.
 
 ## Quick start
 
@@ -237,7 +232,7 @@ scripts/speakers.py             voices per cue from the audio, sync check
 scripts/transcribe.py           subtitles from the audio when no file exists, the last resort
 scripts/result.py               print each script's JSON result and save it to --result
 tests/                          pytest suite
-docs/architecture.md            how a run works
+ARCHITECTURE.md                 how a run works, step by step
 docs/assets/                    the pictures in this file and in the architecture doc
 ```
 
