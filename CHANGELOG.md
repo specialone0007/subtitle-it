@@ -42,13 +42,13 @@
   between systems shows up in CI rather than in a run.
 - The translators now run at low reasoning effort (`effort: low` in
   `agents/translator.md`), whatever effort the session uses. The fix rounds
-  use the same agent, so they do too. On a 2-hour test film this cut the translators
-  from $3.88 to $2.16 at list prices, about 17% of a film's cost, and steps
-  6 to 10 finished 1.4 minutes sooner. In a blind test of 100 cues, three
-  judges preferred the medium-effort file on 20, the low-effort file on 15
-  and found 65 equal, a gap within their disagreement (sign test p = 0.5).
-  A Translator model of `sonnet` now also runs at low effort; that pairing
-  is untested.
+  use the same agent, so they do too. On a 2-hour test film this cut the
+  translators from $3.88 to $2.16 at list prices, about 17% of a film's
+  cost, and steps 6 to 10 finished 1.4 minutes sooner. In a blind test of
+  100 cues, three judges preferred the medium-effort file on 20, the
+  low-effort file on 15 and found 65 equal, a gap within their disagreement
+  (sign test p = 0.5). A Translator model of `sonnet` now also runs at low
+  effort; that pairing is untested.
 - Tidy-up: learn mode and the one-time setup steps (media folders,
   OpenSubtitles credentials, the Hugging Face token) moved out of
   `SKILL.md` into `learn.md` and `setup.md`. The skill points to the right
@@ -59,24 +59,24 @@
   writer's questions as soon as the bible is written, while the audio step
   may still be running. The voice questions come from the audio step's
   voices (`bible.py voice-questions`), and a second reader round answers
-  them beside the voice mapper. On a 2-hour test film this cut the steps from the
-  audio step to the judged bible from 13.1 to 9.2 minutes, about 2.5
-  minutes of it from the change itself; agreed, judged and tie counts
+  them beside the voice mapper. On a 2-hour test film this cut the steps
+  from the audio step to the judged bible from 13.1 to 9.2 minutes, about
+  2.5 minutes of it from the change itself; agreed, judged and tie counts
   stayed the same within run-to-run spread.
 - Fix rounds 1 and 2 now say which model they use: the preferences'
   "Translator model", the same as the translators. The skill named a model
   only for round 3 (Opus), so the first two rounds could run on either.
 - The audio step's sync check now catches subtitles that are a second or
   more off the speech. It used to match each cue to the nearest speech
-  start, and once the shift neared the gap between lines that start
-  belonged to the neighbouring line: on a 2-hour test film, shifts of 1.5 to 5
-  seconds either way all read as in sync. It now tries every constant
-  offset within 20 seconds and keeps the one under which most speech starts
-  land on a cue, as `srt.py fit` does for two files. On a 2-hour test film every
+  start, and once the shift neared the gap between lines that start belonged
+  to the neighbouring line: on a 2-hour test film, shifts of 1.5 to 5
+  seconds either way all read as in sync. It now tries every constant offset
+  within 20 seconds and keeps the one under which most speech starts land on
+  a cue, as `srt.py fit` does for two files. On a 2-hour test film every
   shift from 0.6 to 5 seconds is found within 5 ms of its size (measured
-  from the unshifted file, which sits 100 ms early), and the unshifted
-  file stays in sync. When no offset clearly beats the rest it
-  says so instead of guessing.
+  from the unshifted file, which sits 100 ms early), and the unshifted file
+  stays in sync. When no offset clearly beats the rest it says so instead of
+  guessing.
 - A polish run is faster. The polish fixer and the whole-film reviewer now
   work at the same time on one film instead of one after the other, and
   the audio step's sync check transcribes five 3-minute stretches instead
@@ -98,31 +98,32 @@
 - A polish run no longer leaves a line softer than the source's swearing.
   The toned-down check now knows strong and mild words, so "fuck" turned
   into "lanet olsun" is flagged. After the review, `polish.py soft` lists
-  the lines still soft, the polish fixer restores them, and the report
-  lists any left. On a 2-hour test film the human file had 52 such lines; 11 were
+  the lines still soft, the polish fixer restores them, and the report lists
+  any left. On a 2-hour test film the human file had 52 such lines; 11 were
   left after the fixer and the reviewer, before this last pass.
 - The bible check now counts two voice answers as the same when they name
   the same character first or read the same up to a bracket, semicolon or
-  comma, so "Harlan Pike" and "Uncle Harlan Pike" no longer go to the
-  judge. A name followed by 's, as in "Sam's mother", names no one. On a 2-hour test film
-  the readers now agree on 23 of 32 voices instead of 8.
+  comma, so "Harlan Pike" and "Uncle Harlan Pike" no longer go to the judge.
+  A name followed by 's, as in "Sam's mother", names no one. On a 2-hour
+  test film the readers now agree on 23 of 32 voices instead of 8.
 - `learn.py scan` no longer lists an older run's work folder as edited by
   you when a later run delivered to the same file. Only the last delivery
   to each file counts.
 - The README's token note now gives the measured numbers.
 - A run now starts from a human-made Turkish subtitle when one fits the
   film's timing: from the video's own files, else from OpenSubtitles. It
-  skips the translators. A polish fixer agent changes only the flagged
-  cues, and the reviewer also restores toned-down lines and checks lines on
-  the wrong cue. On a 2-hour test film that used about half the subagent tokens of
-  a full run. Without a fitting Turkish file the run translates as before.
-- New `scripts/polish.py` for that path. `seed` puts the Turkish text on the timing file's cues and
-  copies the timing file's italics and dialogue dashes where that is a
-  mechanical change. `flags` lists only the cues a fixer must change: hard
-  check fails, glossary and sen/siz warnings, long lines, lines left in
-  English, crude or sexual lines the Turkish tones down, and cues where a
-  Turkish line may sit on the wrong cue. On a 2-hour test film it flags 134 of 1,838
-  cues.
+  skips the translators. A polish fixer agent changes only the flagged cues,
+  and the reviewer also restores toned-down lines and checks lines on the
+  wrong cue. On a 2-hour test film that used about half the subagent tokens
+  of a full run. Without a fitting Turkish file the run translates as
+  before.
+- New `scripts/polish.py` for that path. `seed` puts the Turkish text on the
+  timing file's cues and copies the timing file's italics and dialogue
+  dashes where that is a mechanical change. `flags` lists only the cues a
+  fixer must change: hard check fails, glossary and sen/siz warnings, long
+  lines, lines left in English, crude or sexual lines the Turkish tones
+  down, and cues where a Turkish line may sit on the wrong cue. On a 2-hour
+  test film it flags 134 of 1,838 cues.
 - Another subtitle file is now paired onto the timing file when
   `srt.py fit` says it lines up after one constant shift, found by searching
   ±60 s. It ignores sound descriptions and songs, and allows lines that are
@@ -140,24 +141,26 @@
   `bible.py voices` adds those answers to the bible before it is checked.
   The two steps used to run one after the other.
 - When no usable subtitle file exists on disk or on OpenSubtitles, the run
-  makes one from the film's own speech with Whisper (`scripts/transcribe.py`),
-  the last resort. Translators are told the text may be misheard, and the
-  report says the subtitles came from the audio.
+  makes one from the film's own speech with Whisper
+  (`scripts/transcribe.py`), the last resort. Translators are told the text
+  may be misheard, and the report says the subtitles came from the audio.
 - A film given by path from a folder that is not in your media folders adds
   that folder, so later runs find films there by name
-  (`sources.py remember`). A film in its own folder adds the folder above it.
+  (`sources.py remember`). A film in its own folder adds the folder above
+  it.
 - When no film matches, the run names any media folder that was not there,
   such as an unplugged drive, instead of only saying nothing was found.
 - Step 2 also reads subtitle files in a `Subs` or `Subtitles` folder beside
   the video, up to two levels down, where a film's subtitles often sit
-  (`Subs/English.srt`, or numbered subtitle files in a subfolder). Before, only files
-  next to the video and named after it were found, so the run fell back to
-  OpenSubtitles.
+  (`Subs/English.srt`, or numbered subtitle files in a subfolder). Before,
+  only files next to the video and named after it were found, so the run
+  fell back to OpenSubtitles.
 
 ## 0.3.0
 
 - A second reader answers the bible's questions blind, and a judge settles
-  any difference from the cited cues (`scripts/bible.py`, step 5 of the skill).
+  any difference from the cited cues (`scripts/bible.py`, step 5 of the
+  skill).
 - A normal run no longer asks anything after setup. It asks only which film
   you mean when the name matches several different films.
 - Out-of-sync subtitles are shifted to match the audio, and the voices are
