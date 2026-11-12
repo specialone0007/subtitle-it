@@ -11,9 +11,9 @@ deliver the result next to the video.
     uv run assemble.py where       --work W --cues 12,340
 
 `check` reads W/out/tr_*.txt, then W/out/fix_*.txt in the order they were
-written (later files win; in a polish run fix_polish.txt also wins over
-fix_review.txt), writes W/draft.tr.srt when every cue has text, and
-writes W/checks.json. When a cue is missing or a file is malformed, no draft is
+written (later files win; in a polish run fix_review.txt also wins over
+fix_polish.txt, as if written later), writes W/draft.tr.srt when every cue
+has text, and writes W/checks.json. When a cue is missing or a file is malformed, no draft is
 written and any older draft is removed. Hard fails block delivery; warnings do
 not, and nothing without a current draft is ever delivered.
 
@@ -58,17 +58,19 @@ def fix_order(out: Path) -> list[Path]:
     """W/out/fix_*.txt in the order they apply. Fix files apply in the order
     they were written, so a fix round after the review wins over
     fix_review.txt whatever the files are called. One exception: in a polish
-    run the fixer and the reviewer work at the same time, and the flagged
-    cues are the fixer's, so fix_polish.txt applies right after
-    fix_review.txt even when it was written first."""
+    run the fixer and the reviewer work at the same time, and where both
+    write a cue the reviewer's version wins, since the reviewer reads the
+    whole film and fixes a flagged cue's flags too when it rewrites one. So
+    fix_review.txt applies right after fix_polish.txt even when it was
+    written first, as if it were the later file."""
     files = list(out.glob("fix_*.txt"))
-    review = out / "fix_review.txt"
-    review_at = review.stat().st_mtime_ns if review.exists() else -1
+    polish = out / "fix_polish.txt"
+    polish_at = polish.stat().st_mtime_ns if polish.exists() else -1
 
     def key(p: Path) -> tuple[int, int, str]:
         at = p.stat().st_mtime_ns
-        if p.name == "fix_polish.txt":
-            return (max(at, review_at), 1, p.name)
+        if p.name == "fix_review.txt":
+            return (max(at, polish_at), 1, p.name)
         return (at, 0, p.name)
 
     return sorted(files, key=key)
@@ -147,11 +149,36 @@ def where(work: Path, cues: list[int]) -> list[dict]:
     return out
 
 
+def _build_info(work: Path) -> dict:
+    build_file = work / "build.json"
+    return json.loads(build_file.read_text(encoding="utf-8")) if build_file.exists() else {}
+
+
 def hi_mode(work: Path) -> str:
     """How `prepare.py build` treated hearing-impaired text: remove or keep."""
-    build_file = work / "build.json"
-    info = json.loads(build_file.read_text(encoding="utf-8")) if build_file.exists() else {}
-    return info.get("hearing_impaired_tags", "keep")
+    return _build_info(work).get("hearing_impaired_tags", "keep")
+
+
+def sound_only_cues(work: Path, rows: dict[int, dict]) -> set[int]:
+    """The cues whose text holds only sound descriptions and labels. The
+    build marks them; with `remove` the text is cleaned again here, so a
+    cue that an older build kept (a description running over two lines)
+    is caught too. Turkish text for these cues is never delivered."""
+    marked = {n for n, r in rows.items() if r.get("sound_only")}
+    info = _build_info(work)
+    if info.get("hearing_impaired_tags", "keep") != "remove":
+        return marked
+    flags = info.get("hearing_impaired", {})
+    hi_timing = flags.get("timing", True)
+    hi_source = flags.get("source", hi_timing)
+    for n, r in rows.items():
+        if n in marked:
+            continue
+        timing_left, _, found_timing = srt.strip_hi(r.get("timing_lines") or [], hi_timing)
+        source_left, _, found_source = srt.strip_hi(r.get("source") or [], hi_source)
+        if (found_timing or found_source) and not timing_left and not source_left:
+            marked.add(n)
+    return marked
 
 
 def hi_problems(lines: list[str], tagged: bool) -> list[tuple[str, str]]:
@@ -191,14 +218,14 @@ def run_checks(work: Path) -> dict:
 
     for p in problems:
         h(None, "file format", p)
-    sound_only = {n for n, r in rows.items() if r.get("sound_only")}
+    sound_only = sound_only_cues(work, rows)
     kept = [c for c in timing if c.n not in sound_only]
     valid = {c.n for c in kept}
     for n in sorted(set(texts) - valid - sound_only):
         h(n, "cue count", "cue number not in the timing file")
-    # Text for a cue that holds only sounds is left out, never delivered.
+    # Text for a cue that holds only sounds is rejected: never delivered.
     for n in sorted(set(texts) & sound_only):
-        w(n, "sound-only cue", "the source has only sound descriptions here; this text is not delivered")
+        w(n, "sound-only cue", "the source has only sound descriptions here; this text is rejected and not delivered")
     missing = [c.n for c in kept if c.n not in texts]
     for n in missing:
         h(n, "cue count", "missing")
@@ -302,12 +329,13 @@ def sidebyside(work: Path) -> Path:
     seeded = (work / "polish_placement.json").exists()
     chunks = json.loads(chunks_file.read_text(encoding="utf-8")) if chunks_file.exists() and not seeded else []
     joins = {c["first"] for c in chunks[1:]}
+    sound_only = sound_only_cues(work, {r["n"]: r for r in rows})
     path = work / "sidebyside.tsv"
     with open(path, "w", encoding="utf-8") as f:
         f.write("n\tspeaker\tsource\tturkish\n")
         for r in rows:
             n = r["n"]
-            if r.get("sound_only"):
+            if n in sound_only:
                 continue
             if n in joins:
                 f.write(f"# --- chunk join before cue {n} ---\n")
@@ -374,6 +402,8 @@ def _summary(result: dict) -> dict:
         "hard_fails": result["hard_fail_count"],
         "warnings": result["warning_count"],
         "by_check": by_check,
+        # Every cue with no Turkish, by number: first_hard_fails stops at 30.
+        "missing_cues": [x["cue"] for x in result["hard"] if x["check"] == "cue count" and x["detail"] == "missing"],
         "first_hard_fails": result["hard"][:30],
     }
 

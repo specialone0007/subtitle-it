@@ -258,15 +258,18 @@ command, passing the agents of steps 3–5.
 In a polish run, start no translators. Run
 `polish.py seed --work WORK --tr <the fitted Turkish file>`, then
 `polish.py flags --work WORK`, then `assemble.py sidebyside --work WORK`,
-in one Bash call. Tell the user in one line how many cues were seeded and
-how many are flagged. Then, in ONE message, start the fixer and the
-reviewer, so they work at the same time on different cues:
+in one Bash call. Tell the user in one line how many cues were seeded,
+how many are flagged and how many of those have no Turkish (`missing`).
+Then, in ONE message, start the fixer and the reviewer, so they work at
+the same time on different cues:
 
 - When `flagged` is above 0, one `turkish-subtitles:polish-fixer`
   subagent with the paths: pack, bible, preferences, WORK. It writes
   `WORK/out/fix_polish.txt`.
 - The step 10 reviewer, with the polish run's lines. It leaves the
-  flagged cues to the fixer.
+  flagged cues to the fixer. Where both write a cue, the reviewer's
+  version wins: `check` applies `fix_review.txt` after `fix_polish.txt`
+  whichever was written first.
 
 Wait for both, then go on to step 8.
 
@@ -300,7 +303,7 @@ fails.
 
 - Hard fails: group the failing cues by chunk. For each affected chunk start one `turkish-subtitles:translator` subagent with the first five lines of that chunk's prompt from step 6 (language pack, bible, preferences, chunk, neighbour chunks), never its two `Write` lines, plus: "Fix only these cues: <numbers and the failed check>. Write only those cues to WORK/out/fix_r<round>_<NN>.txt. Write flags to WORK/out/flags_r<round>_<NN>.txt." Use the same model as in step 6: the preferences' "Translator model" (`session` means do not set a model). The chunk's first output and flags stay as they are. Then run `check` again. At most 2 rounds.
 - Still failing after 2 rounds: one more round the same way, with the model set to `opus`.
-- Still failing after that: go on. Step 11 delivers with `--force` and lists the failing cues in the report. If `check` wrote no draft (a cue is missing or a file is malformed), there is nothing to deliver: stop and tell the user which cues are missing.
+- Still failing after that: go on. Step 11 delivers with `--force` and lists the failing cues in the report. If `check` wrote no draft (a cue is missing or a file is malformed), there is nothing to deliver: stop and tell the user which cues are missing (its result's `missing_cues` names every one).
 - Warnings never block. They go to the reviewer.
 
 The check also lays out each cue as it will be shown: at most 2 lines of

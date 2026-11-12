@@ -97,6 +97,8 @@ def test_missing_cue_blocks_draft(work: Path):
     r = assemble.run_checks(work)
     assert r["draft"] is None
     assert sum(1 for x in r["hard"] if x["detail"] == "missing") == 3
+    # The summary names every missing cue, not only the first 30 hard fails.
+    assert assemble._summary(r)["missing_cues"] == [2, 3, 4]
 
 
 def test_fix_files_override(work: Path):
@@ -207,19 +209,33 @@ def test_post_review_fix_wins_over_review(work: Path):
     assert assemble.run_checks(work)["hard_fail_count"] == 0
 
 
-def test_polish_fix_wins_over_a_later_review_and_loses_to_later_rounds(work: Path):
+@pytest.mark.parametrize("review_last", [True, False])
+def test_review_wins_over_the_polish_fix_and_loses_to_later_rounds(work: Path, review_last: bool):
     out = work / "out"
     for name in ("tr_00.txt", "fix_polish.txt", "fix_review.txt", "fix_soft.txt"):
         (out / name).write_text("1\nx\n", encoding="utf-8")
     t = (out / "tr_00.txt").stat().st_mtime
-    # The fixer and the reviewer ran side by side; the reviewer finished last.
-    _touch(out / "fix_polish.txt", t + 10)
-    _touch(out / "fix_review.txt", t + 20)
+    # The fixer and the reviewer ran side by side; either can finish last.
+    _touch(out / "fix_polish.txt", t + (10 if review_last else 20))
+    _touch(out / "fix_review.txt", t + (20 if review_last else 10))
     _touch(out / "fix_soft.txt", t + 30)
-    assert [p.name for p in assemble.fix_order(out)] == ["fix_review.txt", "fix_polish.txt", "fix_soft.txt"]
+    assert [p.name for p in assemble.fix_order(out)] == ["fix_polish.txt", "fix_review.txt", "fix_soft.txt"]
     # Without a review, the order is the writing order.
     (out / "fix_review.txt").unlink()
     assert [p.name for p in assemble.fix_order(out)] == ["fix_polish.txt", "fix_soft.txt"]
+
+
+@pytest.mark.parametrize("review_last", [True, False])
+def test_the_reviewers_text_is_checked_and_delivered_when_both_write_a_cue(work: Path, review_last: bool):
+    out = work / "out"
+    (out / "tr_00.txt").write_text(GOOD, encoding="utf-8")
+    (out / "fix_polish.txt").write_text("4\nPeki.\n", encoding="utf-8")
+    (out / "fix_review.txt").write_text("4\nOlur.\n", encoding="utf-8")
+    t = (out / "tr_00.txt").stat().st_mtime
+    _touch(out / "fix_polish.txt", t + (10 if review_last else 20))
+    _touch(out / "fix_review.txt", t + (20 if review_last else 10))
+    assert assemble.run_checks(work)["hard_fail_count"] == 0
+    assert srt.parse(work / "draft.tr.srt")[0][-1].lines == ["Olur."]
 
 
 def test_rebuild_drops_earlier_runs_files(work: Path, tmp_path: Path):
