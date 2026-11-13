@@ -26,6 +26,8 @@ import turkish
         ("Senin gibi biri", "buraya hiç gelmedi.", False),
         ("Hepiniz daha iyi bir", "şey için çaresizsiniz.", True),
         ("<i>♪ Öpüşelim", "Gerçek insanlar gibi ♪</i>", False),
+        ("Bu gerçekten çok güzel bir gündü.", "Değil mi?", False),
+        ("Sadece bir.", "Peki, ikincisi nerede?", False),
     ],
 )
 def test_bad_break(first, second, bad):
@@ -73,11 +75,18 @@ def test_layout_keeps_song_lines_as_the_song_breaks_them():
     assert layout.plan(0, 3000, lines, 80)[0][0].lines == lines
 
 
+def test_layout_keeps_a_sentence_end_break():
+    lines = ["Bu gerçekten çok güzel bir gündü.", "Değil mi?"]
+    assert layout.plan(0, 3000, lines, 80) == ([layout.Part(0, 3000, lines)], None)
+
+
 def test_layout_keeps_a_bad_break_it_cannot_improve():
-    # Both words are long: no other break fits, so the lines stay as written.
-    lines = ["Muvaffakiyetsizleştiricileştiriveremeyebileceklerimizden", "misiniz?"]
-    parts, _ = layout.plan(0, 4000, lines, 80)
-    assert parts[0].lines == lines
+    # Each line fits, the two do not fit on one, and every other break is
+    # as bad: after the long word the next line starts with "gibi", after
+    # "gibi" one word stands alone. The lines stay as written.
+    lines = ["Çekoslovakyalılaştıramadıklarımızdan", "gibi davranıyorsunuz."]
+    assert all(len(ln) <= 42 for ln in lines) and len(" ".join(lines)) > 42
+    assert layout.plan(0, 4000, lines, 80) == ([layout.Part(0, 4000, lines)], None)
 
 
 @pytest.mark.parametrize(
