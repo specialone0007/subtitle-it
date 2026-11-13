@@ -1,6 +1,6 @@
 ---
 name: translate
-description: Translate a film's subtitles from any language into natural Turkish (.tr.srt next to the video). Use when the user asks for Turkish subtitles for a film, or gives a film name, video or .srt to translate into Turkish. Turkish is the only target language so far. Learning from the user's edits is the separate learn skill.
+description: Translate a film's subtitles from any language into natural Turkish (an .srt with the video's own name, next to it). Use when the user asks for Turkish subtitles for a film, or gives a film name, video or .srt to translate into Turkish. Turkish is the only target language so far. Learning from the user's edits is the separate learn skill.
 argument-hint: "<film name | video path | .srt path>"
 ---
 
@@ -138,7 +138,8 @@ why in one line, from its `reason`.
 Then look for a human-made Turkish subtitle to polish instead of
 translating every line. Skip this when the timing file came from the
 audio. Take a Turkish text track or file that `sources.py local` found,
-except the destination file of step 11, else run `opensubtitles.py search`
+except the destination file of step 11 and any file whose `confidence` is
+"this plugin's earlier delivery, not a source", else run `opensubtitles.py search`
 as above with `--languages tr` (it leaves out machine and AI translations)
 and download the first result as `WORK/sources/os_tr.srt`. Run
 `srt.py fit TIMING TURKISH` and shift it the same way when `offset_ms` is
@@ -347,13 +348,17 @@ written, so that round's files win over `fix_review.txt`.
 
 ## 11. Deliver
 
-Destination: next to the video as `<video file name without extension>.tr.srt`
-(for an `.srt` input: the same folder, with the language part of the name
-replaced by `tr`). Run
+Destination: next to the video as `<video file name without extension>.srt`,
+exactly the video's name, since many TVs only load a subtitle named like
+the video (for an `.srt` input: the same folder, with the language part of
+the name replaced by `tr`, so the input is not written over). Run
 `assemble.py deliver --work 'WORK' --dest '<destination>' --backups 'CONFIG/backups'`
 (add `--force` when hard fails are left after the fix rounds), joined
 after the `deliver` mark with the agents of step 10.
-An old Turkish file at the destination is moved to the backups folder.
+The file is saved as UTF-8 with a BOM. A file already at the destination
+is moved to the backups folder; the result's `old_file` says what it was.
+When it is `not Turkish` (an English `Film.srt`, say), tell the user in one
+line where its backup (`backup_of_old_file`) is, and put that in the report.
 
 Write `WORK/report.md`: sources and timing confidence (for a file made
 from the audio, say so and name the model and device; in a polish run, the

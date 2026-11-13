@@ -158,8 +158,7 @@ def media_folders(prefs: Path) -> list[str]:
     return folders
 
 
-def _key(p: Path) -> str:
-    return os.path.normcase(str(p.expanduser().resolve()))
+_key = srt.path_key
 
 
 def _inside(path: Path, folder: Path) -> bool:
@@ -313,6 +312,20 @@ def to_srt(src: Path, dest: Path) -> Path:
     return dest
 
 
+EARLIER_DELIVERY = "this plugin's earlier delivery, not a source"
+
+
+def delivered_here(work: Path) -> set[str]:
+    """Every file this work folder delivered, as a `_key`: today's name
+    (`Film.srt`) and an older one (`Film.tr.srt`) kept in
+    `earlier_deliveries`. A run takes none of them as a source or as a
+    Turkish file to polish, as long as it still holds Turkish."""
+    info_file = work / "delivered.json"
+    if not info_file.exists():
+        return set()
+    return {_key(p) for p in srt.delivered_paths(json.loads(info_file.read_text(encoding="utf-8")))}
+
+
 def local(video: Path, work: Path) -> dict:
     info = probe(video)
     out = work / "sources"
@@ -333,10 +346,23 @@ def local(video: Path, work: Path) -> dict:
                 "check": validate(dest, info["duration_ms"]),
             }
         )
+    delivered = delivered_here(work)
     for p in sorted(video.parent.iterdir()):
         if p.suffix.lower() in SUB_EXT and p.is_file() and norm(p.name).startswith(norm(video.stem)):
             lang = sidecar_language(p, video)
             name = p.name.lower()
+            # The path alone is not enough: the user may have put an
+            # English file there since, which is a source like any other.
+            if _key(p) in delivered and srt.looks_turkish(p):
+                candidates.append(
+                    {
+                        "source": "file next to video",
+                        "language": "tr",
+                        "path": str(p),
+                        "confidence": EARLIER_DELIVERY,
+                    }
+                )
+                continue
             if ".tr." in name and lang == "tr":
                 candidates.append(
                     {
@@ -348,6 +374,18 @@ def local(video: Path, work: Path) -> dict:
                 )
                 continue
             dest = to_srt(p, out / f"sidecar.{slug(p.stem)}.srt")
+            # `Film.srt` carries no language in its name: it may be a
+            # Turkish file, this plugin's own delivery among them.
+            if lang == "und" and srt.looks_turkish(dest):
+                candidates.append(
+                    {
+                        "source": "file next to video",
+                        "language": "tr",
+                        "path": str(p),
+                        "confidence": "existing Turkish file, not a source",
+                    }
+                )
+                continue
             candidates.append(
                 {
                     "source": "file next to video",

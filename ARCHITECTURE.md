@@ -216,8 +216,12 @@ any line still soft goes to "Check after watching".
 
 ### 11. Deliver
 
-`assemble.py deliver` writes `<film>.tr.srt` next to the video and moves any
-older Turkish file to a backups folder. The cue map is kept with the
+`assemble.py deliver` writes `<film>.srt` next to the video, with exactly
+the video's name so TVs pick it up, as UTF-8 with a BOM. Any file already
+there is moved to a backups folder, and the result says what it was:
+`earlier delivery`, `Turkish` or `not Turkish` (an English `<film>.srt`,
+say). For an `.srt` input the name keeps the input's, with `tr` as its
+language, so the input is never written over. The cue map is kept with the
 delivered copy, and with a backup of an earlier delivery, so the report,
 learn mode and old files can still name each cue. `assemble.py where`
 turns a work folder cue number into its delivered number and time. `report.md` ends with "Check after
@@ -251,4 +255,5 @@ a step needs them.
 - One work folder per film, the download cache and the scripts' results:
   the plugin's data folder, which Claude Code deletes when you uninstall the
   plugin.
-- Next to the video: only `<film>.tr.srt`.
+- Next to the video: only `<film>.srt` (`<film>.tr.srt` before 0.6.2;
+  learn mode still finds those through each run's `delivered.json`).

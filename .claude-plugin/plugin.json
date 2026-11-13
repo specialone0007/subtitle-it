@@ -1,7 +1,7 @@
 {
   "name": "subtitle-it",
   "displayName": "Subtitle It",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Translate a film's subtitles from any language into natural Turkish, on the source file's own timings. Turkish is the first supported language; more are planned.",
   "author": { "name": "Furkan Reha", "url": "https://www.linkedin.com/in/furkanreha/" },
   "repository": "https://github.com/specialone0007/subtitle-it",
