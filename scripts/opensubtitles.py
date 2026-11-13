@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import getpass
 import json
+import os
 import re
 import struct
 import sys
@@ -54,14 +55,29 @@ def _cred_path(config: Path) -> Path:
     return config / "credentials.json"
 
 
-def load_creds(config: Path) -> dict:
+def _setup_hint(config: Path) -> str:
+    return f'  uv run "{Path(__file__).resolve()}" setup --config "{config}"'
+
+
+def load_creds(config: Path, need_key: bool = True) -> dict:
     p = _cred_path(config)
     if not p.exists():
+        raise ApiError("No OpenSubtitles credentials. Ask the user to run this in their own terminal:\n" + _setup_hint(config))
+    # The message names the file and never shows what is in it.
+    try:
+        creds = json.loads(p.read_text(encoding="utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        creds = None
+    if not isinstance(creds, dict):
         raise ApiError(
-            "No OpenSubtitles credentials. Ask the user to run this in their own terminal:\n"
-            f'  uv run "{Path(__file__).resolve()}" setup --config "{config}"'
+            f"{p} is not a valid credentials file. Ask the user to delete it and run this in their own terminal:\n"
+            + _setup_hint(config)
         )
-    return json.loads(p.read_text(encoding="utf-8"))
+    if need_key and not creds.get("api_key"):
+        raise ApiError(
+            f"{p} has no OpenSubtitles API key. Ask the user to run this in their own terminal:\n" + _setup_hint(config)
+        )
+    return creds
 
 
 def save_creds(config: Path, creds: dict) -> None:
@@ -120,22 +136,30 @@ def _request(method: str, url: str, creds: dict, body: dict | None = None, auth:
         headers["Content-Type"] = "application/json"
     if auth and creds.get("token"):
         headers["Authorization"] = f"Bearer {creds['token']}"
+    where = f"{method} {url.split('?')[0]}"
     for attempt in range(3):
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
         try:
             with _open(req, 30, api=True) as r:
-                return json.loads(r.read().decode("utf-8"))
+                raw = r.read()
         except urllib.error.HTTPError as e:
             text = e.read().decode("utf-8", errors="replace")[:300]
             if e.code == 429 and attempt < 2:
                 time.sleep(1.5 * (attempt + 1))
                 continue
-            raise ApiError(f"OpenSubtitles {e.code} on {method} {url.split('?')[0]}: {text}") from None
-        except urllib.error.URLError as e:
+            raise ApiError(f"OpenSubtitles {e.code} on {where}: {text}") from None
+        except OSError as e:  # no connection, a refused one or a timeout
             if attempt < 2:
                 time.sleep(2)
                 continue
-            raise ApiError(f"OpenSubtitles unreachable: {e.reason}") from None
+            raise ApiError(f"OpenSubtitles unreachable: {getattr(e, 'reason', None) or e}") from None
+        try:
+            reply = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            reply = None
+        if not isinstance(reply, dict):
+            raise ApiError(f"OpenSubtitles sent a reply that is not a JSON object on {where}: {raw[:80]!r}")
+        return reply
     raise ApiError("OpenSubtitles: too many retries")
 
 
@@ -190,7 +214,7 @@ def moviehash(path: Path) -> str:
 def setup(config: Path) -> None:
     print("OpenSubtitles setup. Nothing you type is shown or printed back.")
     print("Create a free key at https://www.opensubtitles.com/consumers and a free account to get 20 downloads a day.")
-    creds = load_creds(config) if _cred_path(config).exists() else {}
+    creds = load_creds(config, need_key=False) if _cred_path(config).exists() else {}
     key = getpass.getpass("API key (Enter to keep the current one): ").strip()
     if key:
         creds["api_key"] = key
@@ -278,14 +302,27 @@ def download(config: Path, file_id: int, out: Path, cache: Path) -> dict:
             r = _request("POST", f"{_base(creds)}/download", creds, {"file_id": file_id}, auth=True)
         else:
             raise
+    if not isinstance(r.get("link"), str):
+        raise ApiError(f"OpenSubtitles gave no download link for file {file_id}")
     # The file sits on whatever https host the link names, so it gets no key or token.
     req = urllib.request.Request(_https(r["link"]), headers={"User-Agent": USER_AGENT})
-    with _open(req, 60, api=False) as resp:
-        raw = resp.read(MAX_SUBTITLE_BYTES + 1)
+    try:
+        with _open(req, 60, api=False) as resp:
+            raw = resp.read(MAX_SUBTITLE_BYTES + 1)
+    except urllib.error.HTTPError as e:
+        raise ApiError(f"the subtitle file download failed with HTTP {e.code}, so nothing was saved") from None
+    except OSError as e:  # no connection, a refused one or a timeout
+        raise ApiError(
+            f"the subtitle file could not be downloaded ({getattr(e, 'reason', None) or e}), so nothing was saved"
+        ) from None
     if len(raw) > MAX_SUBTITLE_BYTES:
         raise ApiError(f"the subtitle file is larger than {MAX_SUBTITLE_BYTES // 1_000_000} MB, so it was not saved")
+    # The cache is trusted from then on, so a run cut off while writing it
+    # must leave either the whole file or none.
     cache.mkdir(parents=True, exist_ok=True)
-    cached.write_bytes(raw)
+    tmp = cached.with_name(cached.name + ".tmp")
+    tmp.write_bytes(raw)
+    os.replace(tmp, cached)
     out.write_bytes(raw)
     return {"file": str(out), "from_cache": False, "remaining": r.get("remaining"), "reset_time": r.get("reset_time")}
 
