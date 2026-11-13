@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.7.0 (2026-11-14)
+
+Feedback from The Dog Stars: some scenes were too formal, background songs
+were translated, and some lines were word for word and slow to read. The
+fixes follow the Netflix Turkish Timed Text Style Guide where it has a rule.
+
+- sen/siz follows the scene, not only the pair. The bible records each
+  pair's usual form and the scenes where it shifts. When unsure, siz is
+  kept for formal relations, and adults of about the same age at ease say
+  sen. The reviewer no longer turns a translator's natural sen into siz to
+  match the bible; it lists each cue where it departs from the bible.
+- Songs: a new `Songs` preference, `story` by default. Only songs that carry
+  the story (sung on screen, or lyrics the scene plays against) are
+  translated; the bible writer lists them in `songs.json`, and
+  `prepare.py songs` leaves the rest out of the translation and the
+  delivered file. `skip` translates none, `all` every one. Lyrics follow
+  Netflix formatting: italics, `♪` at both ends, a capital at each line
+  start, no comma or full stop at a line end.
+- Readable at a glance: the language pack now opens with this rule, and
+  has before/after examples. Lines are reshaped into fewer, plainer words
+  without losing what is said, a phrase repeated in a row is written once,
+  and the reviewer fixes reading-speed warnings with shorter wording
+  instead of leaving them.
+- Bare sounds: `prepare.py build` leaves out a cue that is only "Oh.",
+  "Hmm?" or "Uh, um...". A yes or no said as a sound ("Uh-huh.") right
+  after a question stays and is written as a word. The report counts the
+  bare sounds and songs left out, and `assemble.py where` names the reason.
+
 ## 0.6.2 (2026-11-13)
 
 - The Turkish subtitle is now delivered with exactly the video's name:
