@@ -185,7 +185,7 @@ def seed(work: Path, tr_path: Path) -> dict:
                     # change: each part is one speaker's turn again.
                     lines = [_dashed(layout.one_line(o.lines)) for o in parts]
                 elif len(lines) > 2:
-                    lines = srt.wrap(" ".join(ln.strip() for ln in lines), assemble.MAX_LINE)
+                    lines = srt.wrap(" ".join(ln.strip() for ln in lines), assemble.MAX_LINE, lang="tr")
                     rewrapped += 1
             lines, changed = match_form(c.lines, lines)
             reformed += changed
