@@ -2,7 +2,7 @@
 # the top of each file and run with `uv run scripts/<name>.py`.
 [project]
 name = "subtitle-it-dev"
-version = "0.6.0"
+version = "0.6.1"
 license = "Apache-2.0"
 requires-python = ">=3.11"
 dependencies = []
