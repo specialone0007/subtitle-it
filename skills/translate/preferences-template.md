@@ -34,6 +34,15 @@ only from a file that is hearing-impaired.
 
 remove
 
+## Songs
+
+Which song lyrics are translated. `story` translates only the songs that
+carry the story (sung by a character on screen, or lyrics that speak to
+the scene), as the Netflix Turkish style guide does. `skip` translates
+none and `all` translates every one. One of: story, skip, all.
+
+story
+
 ## Swearing
 
 match the source
