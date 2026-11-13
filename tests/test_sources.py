@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 import opensubtitles
 import sources
 
@@ -459,3 +461,43 @@ def test_validate_counts_repairs_without_failing_the_file(tmp_path: Path):
     assert r["cues"] == 60 and r["repairs"] == 1 and r["issues"] == []
     p.write_text(_hi_srt(60, every=100), encoding="utf-8")
     assert sources.validate(p, duration_ms=70_000)["repairs"] == 0
+
+
+TR_TEXT = "1\n00:00:01,000 --> 00:00:02,000\nBuraya gel.\n\n2\n00:00:03,000 --> 00:00:04,000\nIşık soğuk.\n"
+
+
+def _film_folder(tmp_path: Path) -> tuple[Path, Path]:
+    film = tmp_path / "Film"
+    film.mkdir()
+    video = film / "Film.mkv"
+    video.write_bytes(b"x")
+    return film, video
+
+
+def test_local_takes_a_turkish_film_srt_as_an_existing_turkish_file(tmp_path: Path, monkeypatch):
+    film, video = _film_folder(tmp_path)
+    (film / "Film.srt").write_bytes(b"\xef\xbb\xbf" + TR_TEXT.encode("utf-8"))
+    _no_tools(monkeypatch)
+    [c] = sources.local(video, tmp_path / "work")["candidates"]
+    assert c["language"] == "tr" and c["confidence"] == "existing Turkish file, not a source"
+    assert c["path"] == str(film / "Film.srt")
+
+
+def test_local_keeps_an_english_film_srt_as_a_source(tmp_path: Path, monkeypatch):
+    film, video = _film_folder(tmp_path)
+    (film / "Film.srt").write_text(_srt(60), encoding="utf-8")
+    _no_tools(monkeypatch)
+    [c] = sources.local(video, tmp_path / "work")["candidates"]
+    assert c["confidence"] == "likely" and c["check"]["cues"] == 60
+
+
+@pytest.mark.parametrize("name", ["Film.srt", "Film.tr.srt"])
+def test_local_marks_this_plugins_earlier_delivery(tmp_path: Path, monkeypatch, name: str):
+    film, video = _film_folder(tmp_path)
+    (film / name).write_text(TR_TEXT, encoding="utf-8")
+    work = tmp_path / "work"
+    work.mkdir()
+    (work / "delivered.json").write_text(json.dumps({"delivered_to": str(film / name)}), encoding="utf-8")
+    _no_tools(monkeypatch)
+    [c] = sources.local(video, work)["candidates"]
+    assert c["language"] == "tr" and c["confidence"] == sources.EARLIER_DELIVERY

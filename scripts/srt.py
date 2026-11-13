@@ -203,6 +203,26 @@ def parse(path: str | Path, repairs: list[str] | None = None) -> tuple[list[Cue]
     return parse_text(text, repairs), enc
 
 
+# Dotless ı, dotted İ and soft ğ: common in any Turkish text, absent from
+# English and from the other Latin-script languages these files come in.
+TURKISH_LETTERS = set("ıİğĞ")
+
+
+def looks_turkish(path: str | Path) -> bool:
+    """True when at least a fifth of the cues hold a Turkish-only letter.
+    For a file whose name carries no language, such as the delivered
+    `Film.srt` next to `Film.mkv`."""
+    try:
+        cues, _ = parse(path)
+    except (OSError, ValueError):
+        return False
+    spoken = [c for c in cues if c.text.strip()]
+    if not spoken:
+        return False
+    hits = sum(1 for c in spoken if TURKISH_LETTERS & set(c.text))
+    return hits * 5 >= len(spoken)
+
+
 # --- writing -------------------------------------------------------------
 
 

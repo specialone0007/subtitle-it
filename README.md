@@ -21,8 +21,9 @@ more are planned; today every run writes Turkish. You type one command:
 /subtitle-it:translate Inception
 ```
 
-About a quarter of an hour later, `Inception.tr.srt` sits next to
-the video, on the source file's own timings. (Plain `/translate` also works
+About a quarter of an hour later, `Inception.srt` sits next to
+`Inception.mkv`, on the source file's own timings. It has exactly the
+video's name, so a TV playing the film from a USB stick picks it up. (Plain `/translate` also works
 when no other command uses that name.)
 
 ![Same line, two translations. The English line "Well... you're coming, right?" becomes "Kuyu... geliyorsun, sağ?" word for word, and "Şey... geliyorsun, değil mi?" with the plugin](docs/assets/scene.svg)
@@ -181,8 +182,8 @@ long as the film, or more for speech-to-text.
 
 | Place | What is there |
 | --- | --- |
-| Next to the video | `<film>.tr.srt`. Nothing else is written into your film folders. |
-| `~/.config/subtitle-it/`<br>(on Windows `C:\Users\<you>\.config\subtitle-it\`) | `preferences.md` (media folders, translator model, audio hints, hearing-impaired tags, swearing, titles, learned rules), `credentials.json` (OpenSubtitles and Hugging Face; only the scripts read it), and `backups/` (old Turkish files replaced by a new one). Kept when the plugin is uninstalled. A settings folder from before the plugin was renamed is moved here, once, the first time it is needed. |
+| Next to the video | `<film>.srt`, with exactly the video's name and saved as UTF-8 with a BOM, so TVs find it and show ş, ğ and ı. A file already there under that name, such as an English `<film>.srt`, is moved to `backups/` first. Nothing else is written into your film folders. |
+| `~/.config/subtitle-it/`<br>(on Windows `C:\Users\<you>\.config\subtitle-it\`) | `preferences.md` (media folders, translator model, audio hints, hearing-impaired tags, swearing, titles, learned rules), `credentials.json` (OpenSubtitles and Hugging Face; only the scripts read it), and `backups/` (files a new subtitle replaced). Kept when the plugin is uninstalled. A settings folder from before the plugin was renamed is moved here, once, the first time it is needed. |
 | The plugin's data folder<br>(`~/.claude/plugins/data/subtitle-it-.../`) | One work folder per film with the bible, the delivered copy and a report, plus the download cache and `results/`, where each script saves its last JSON result. **Uninstalling the plugin deletes it.** |
 
 The skill reads the files in `results/` rather than the scripts' printed
@@ -218,7 +219,7 @@ output, so a shell or tool that shortens command output does not get in the way.
 
 ## Learning from your fixes
 
-After watching, fix lines in the `.tr.srt` with any editor, then run
+After watching, fix lines in the delivered `.srt` with any editor, then run
 `/subtitle-it:learn Inception`. It proposes
 general rules from your edits ("Always use 'Tamam' for 'OK'?") and saves
 only the ones you accept. Each new run also checks for edited files.
