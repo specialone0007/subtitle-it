@@ -234,7 +234,7 @@ def test_check_delivers_without_the_sound_only_cue_and_maps_the_numbers(films: P
     draft, _ = srt.parse(w / "draft.tr.srt")
     assert [c.n for c in draft] == [1, 2, 3] and draft[1].ts.startswith("00:00:07,000")
     cue_map = json.loads((w / "cue_map.json").read_text(encoding="utf-8"))
-    assert cue_map == {"cues": {"1": {"cue": 1}, "2": {"cue": 3}, "3": {"cue": 4}}, "sound_only": [2]}
+    assert cue_map == {"cues": {"1": {"cue": 1}, "2": {"cue": 3}, "3": {"cue": 4}}, "sound_only": [2], "why": {}}
     assert assemble.where(w, [2, 3]) == [
         {"cue": 2, "delivered": [], "note": "sound only: not in the delivered file"},
         {"cue": 3, "delivered": [2], "at": ["00:00:07,000"]},

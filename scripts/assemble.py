@@ -101,7 +101,11 @@ def _cps(text: str, ms: int) -> float:
 
 
 def lay_out(
-    kept: list[srt.Cue], texts: dict[int, list[str]], parts: dict[int, list[layout.Part]], sound_only: list[int]
+    kept: list[srt.Cue],
+    texts: dict[int, list[str]],
+    parts: dict[int, list[layout.Part]],
+    sound_only: list[int],
+    why: dict[int, str] | None = None,
 ) -> tuple[list[srt.Cue], dict]:
     """The cues as delivered, numbered from 1, and the map from each
     delivered number to the timing file's cue. A cue the layout split
@@ -116,7 +120,9 @@ def lay_out(
             ts = c.ts if len(pieces) == 1 else f"{srt.fmt_ms(p.start)} --> {srt.fmt_ms(p.end)}"
             shown.append(srt.Cue(n=n, start=p.start, end=p.end, ts=ts, lines=p.lines))
             where[str(n)] = {"cue": c.n} if len(pieces) == 1 else {"cue": c.n, "part": k, "of": len(pieces)}
-    return shown, {"cues": where, "sound_only": sound_only}
+    # `sound_only` lists every cue left out, whatever the reason; `why`
+    # names the reason for the ones that are not sound descriptions.
+    return shown, {"cues": where, "sound_only": sound_only, "why": {str(n): w for n, w in (why or {}).items()}}
 
 
 def read_map(work: Path, delivered: bool = True) -> dict | None:
@@ -130,7 +136,7 @@ def read_map(work: Path, delivered: bool = True) -> dict | None:
 def where(work: Path, cues: list[int]) -> list[dict]:
     """Where cues of the timing file are in the delivered file (or in the
     draft before delivery): delivered numbers and times, or that the cue
-    was left out as sound only."""
+    was left out (sound only, a bare sound or a song)."""
     cue_map = read_map(work) or read_map(work, delivered=False)
     path = work / ("delivered.tr.srt" if (work / DELIVERED_MAP_FILE).exists() else "draft.tr.srt")
     shown = {c.n: c for c in srt.parse(path)[0]} if path.exists() else {}
@@ -142,7 +148,8 @@ def where(work: Path, cues: list[int]) -> list[dict]:
     out = []
     for n in cues:
         if n in cue_map["sound_only"]:
-            out.append({"cue": n, "delivered": [], "note": "sound only: not in the delivered file"})
+            reason = LEFT_OUT_NOTES.get(cue_map.get("why", {}).get(str(n), ""), "sound only")
+            out.append({"cue": n, "delivered": [], "note": f"{reason}: not in the delivered file"})
             continue
         ds = sorted(back.get(n, []))
         out.append({"cue": n, "delivered": ds, "at": [shown[d].ts[:12] for d in ds if d in shown]})
@@ -159,12 +166,23 @@ def hi_mode(work: Path) -> str:
     return _build_info(work).get("hearing_impaired_tags", "keep")
 
 
+LEFT_OUT_NOTES = {"sound": "a bare sound, left out", "song": "a song left out"}
+
+
+def left_out_why(rows: dict[int, dict]) -> dict[int, str]:
+    """The cues left out for a reason other than sound descriptions: a bare
+    sound ("Oh.") or a song not translated, by `prepare.py`."""
+    return {n: r["left_out"] for n, r in rows.items() if r.get("left_out") and not r.get("sound_only")}
+
+
 def sound_only_cues(work: Path, rows: dict[int, dict]) -> set[int]:
-    """The cues whose text holds only sound descriptions and labels. The
-    build marks them; with `remove` the text is cleaned again here, so a
-    cue that an older build kept (a description running over two lines)
-    is caught too. Turkish text for these cues is never delivered."""
-    marked = {n for n, r in rows.items() if r.get("sound_only")}
+    """The cues that get no translation and are not delivered: those whose
+    text holds only sound descriptions and labels, and those `prepare.py`
+    left out as a bare sound or a song. The build marks them; with `remove`
+    the text is cleaned again here, so a cue that an older build kept (a
+    description running over two lines) is caught too. Turkish text for
+    these cues is never delivered."""
+    marked = {n for n, r in rows.items() if r.get("sound_only") or r.get("left_out")}
     info = _build_info(work)
     if info.get("hearing_impaired_tags", "keep") != "remove":
         return marked
@@ -223,9 +241,14 @@ def run_checks(work: Path) -> dict:
     valid = {c.n for c in kept}
     for n in sorted(set(texts) - valid - sound_only):
         h(n, "cue count", "cue number not in the timing file")
-    # Text for a cue that holds only sounds is rejected: never delivered.
+    # Text for a cue that holds only sounds, or that was left out, is
+    # rejected: never delivered.
+    left_why = left_out_why(rows)
     for n in sorted(set(texts) & sound_only):
-        w(n, "sound-only cue", "the source has only sound descriptions here; this text is rejected and not delivered")
+        if n in left_why:
+            w(n, "left-out cue", f"{LEFT_OUT_NOTES[left_why[n]]}; this text is rejected and not delivered")
+        else:
+            w(n, "sound-only cue", "the source has only sound descriptions here; this text is rejected and not delivered")
     missing = [c.n for c in kept if c.n not in texts]
     for n in missing:
         h(n, "cue count", "missing")
@@ -284,7 +307,7 @@ def run_checks(work: Path) -> dict:
 
     shown: list[srt.Cue] = []
     if not missing and not any(x["check"] == "file format" for x in hard):
-        shown, cue_map = lay_out(kept, texts, parts, sorted(sound_only))
+        shown, cue_map = lay_out(kept, texts, parts, sorted(sound_only), left_why)
         srt.write(work / "draft.tr.srt", shown)
         (work / MAP_FILE).write_text(json.dumps(cue_map, indent=1), encoding="utf-8")
         back, _ = srt.parse(work / "draft.tr.srt")
@@ -302,7 +325,9 @@ def run_checks(work: Path) -> dict:
     result = {
         "draft": draft,
         "cues": len(timing),
-        "sound_only_cues": len(sound_only),
+        "sound_only_cues": len(sound_only) - len(left_why),
+        "bare_sounds_left_out": sum(1 for v in left_why.values() if v == "sound"),
+        "songs_left_out": sum(1 for v in left_why.values() if v == "song"),
         "delivered_cues": len(shown),
         "split_cues": sum(1 for p in parts.values() if len(p) > 1),
         "translated": len(set(texts) & valid),
@@ -433,6 +458,8 @@ def _summary(result: dict) -> dict:
         "draft": result["draft"],
         "cues": result["cues"],
         "sound_only_cues": result["sound_only_cues"],
+        "bare_sounds_left_out": result["bare_sounds_left_out"],
+        "songs_left_out": result["songs_left_out"],
         "delivered_cues": result["delivered_cues"],
         "split_cues": result["split_cues"],
         "translated": result["translated"],

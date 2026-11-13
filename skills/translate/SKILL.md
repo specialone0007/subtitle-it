@@ -164,7 +164,12 @@ parentheses and labels in capitals only from a hearing-impaired one. It
 leaves out cues that are only
 sounds; they are not in the delivered file. Keep its `hearing_impaired`,
 `cues_with_tags_or_labels_removed` and `sound_only_cues_dropped` for the
-report, and its `warnings`: a malformed file (a cue with no blank line
+report, and its `warnings`. Whatever `--hi` says, `build` also leaves out,
+as the Netflix Turkish style guide does, a cue that is only a bare sound
+the audience hears ("Oh.", "Hmm?"); a yes or no said as a sound right
+after a question stays. It marks the cues that are all song lyrics; step
+6–7 decides which songs are translated. Keep `bare_sound_cues_dropped` and
+`song_cues` for the report too. On `warnings`: a malformed file (a cue with no blank line
 before it, or text cut off from its cue by a stray blank line) is read as
 meant, and the report says which file was malformed. Tell the user in 2–3 lines which files you used and the timing
 confidence.
@@ -196,7 +201,8 @@ Mark `hints_bible` with this step's first command.
    `subtitle-it:bible-writer` subagent. Its prompt: the paths (WORK, the preferences file), the film facts (title,
    year, original language, IMDb id), and, when audio hints are running,
    the line `Voices: added later.` It writes `WORK/bible.md`,
-   `WORK/glossary.json` and `WORK/decisions.json`.
+   `WORK/glossary.json`, `WORK/decisions.json` and, when `build` found
+   song cues, `WORK/songs.json` (the songs that carry the story).
 3. When the bible writer is done, run `bible.py questions --work WORK` (it
    writes `WORK/questions.json`) and start the step 5 second reader at
    once, whether or not the audio step is still running. When the audio
@@ -259,7 +265,16 @@ agreed on, how many the judge settled, and how many were ties.
 ## 6–7. Translate in parallel
 
 Mark `translate`, or `polish` in a polish run, with this step's first
-command, passing the agents of steps 3–5.
+command, passing the agents of steps 3–5. That first command is
+`prepare.py songs --work WORK --mode <the preferences' "Songs">` (`story`
+when the section is missing), then `prepare.py chunks --work WORK`, in
+the same Bash call. `story` translates only the songs in `songs.json`,
+`skip` none and `all` every one; a song left out is not delivered, as the
+Netflix Turkish style guide does with songs that do not carry the plot.
+Keep its `kept` and `left_out` for the report, and its `note` when set.
+If it refuses `songs.json`, start the bible writer once more with the
+error, asking it to fix only that file, then run it again. Once only: if
+it still fails, run it with `--mode skip` and say so in the report.
 
 In a polish run, start no translators. Run
 `polish.py seed --work WORK --tr <the fitted Turkish file>`, then
@@ -366,15 +381,16 @@ Turkish file it started from, how many cues the fixer and the reviewer
 changed, and how many lines are still softer than the source), any timing shift
 and sync verdict, whether each source file is hearing-impaired and how
 many cues lost tags or labels and how many sound-only cues were left
-out, any file `build` warned was malformed, the voices dropped as mixed, the bible check (decisions, agreed,
+out, how many bare sounds were left out, the songs (song cues found,
+translated, left out, and the `Songs` mode), any file `build` warned was malformed, the voices dropped as mixed, the bible check (decisions, agreed,
 judged, ties, questions the second reader never answered), cue count
 (work folder and delivered), cues split per speaker, hard fails and
 warnings left, the reviewer's summary. The work folder numbers cues by
 the timing file; the delivered file is numbered on its own. Before
 writing any cue number into the report, convert it with
 `assemble.py where --work WORK --cues <numbers, comma separated>`: it gives
-each one's delivered numbers and start time, or says it was left out as
-sound only. Write the delivered number and time. Then run
+each one's delivered numbers and start time, or says it was left out
+(sound only, a bare sound or a song). Write the delivered number and time. Then run
 `usage.py step --work 'WORK' --name done && usage.py summary --work 'WORK'`
 and put its `markdown` in the report as it is: the `## Time and usage`
 section, with the time per step group, the agents and their tokens, and
