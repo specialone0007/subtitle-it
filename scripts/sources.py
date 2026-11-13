@@ -313,6 +313,20 @@ def to_srt(src: Path, dest: Path) -> Path:
     return dest
 
 
+EARLIER_DELIVERY = "this plugin's earlier delivery, not a source"
+
+
+def delivered_here(work: Path) -> set[str]:
+    """The file this work folder last delivered, as a `_key`: a run must
+    take it neither as a source nor as a Turkish file to polish, whether
+    it has today's name (`Film.srt`) or an older one (`Film.tr.srt`)."""
+    info_file = work / "delivered.json"
+    if not info_file.exists():
+        return set()
+    to = json.loads(info_file.read_text(encoding="utf-8")).get("delivered_to")
+    return {_key(Path(to))} if to else set()
+
+
 def local(video: Path, work: Path) -> dict:
     info = probe(video)
     out = work / "sources"
@@ -333,10 +347,21 @@ def local(video: Path, work: Path) -> dict:
                 "check": validate(dest, info["duration_ms"]),
             }
         )
+    delivered = delivered_here(work)
     for p in sorted(video.parent.iterdir()):
         if p.suffix.lower() in SUB_EXT and p.is_file() and norm(p.name).startswith(norm(video.stem)):
             lang = sidecar_language(p, video)
             name = p.name.lower()
+            if _key(p) in delivered:
+                candidates.append(
+                    {
+                        "source": "file next to video",
+                        "language": "tr",
+                        "path": str(p),
+                        "confidence": EARLIER_DELIVERY,
+                    }
+                )
+                continue
             if ".tr." in name and lang == "tr":
                 candidates.append(
                     {
@@ -348,6 +373,18 @@ def local(video: Path, work: Path) -> dict:
                 )
                 continue
             dest = to_srt(p, out / f"sidecar.{slug(p.stem)}.srt")
+            # `Film.srt` carries no language in its name: it may be a
+            # Turkish file, this plugin's own delivery among them.
+            if lang == "und" and srt.looks_turkish(dest):
+                candidates.append(
+                    {
+                        "source": "file next to video",
+                        "language": "tr",
+                        "path": str(p),
+                        "confidence": "existing Turkish file, not a source",
+                    }
+                )
+                continue
             candidates.append(
                 {
                     "source": "file next to video",

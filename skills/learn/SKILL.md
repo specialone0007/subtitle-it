@@ -1,6 +1,6 @@
 ---
 name: learn
-description: Turn the user's own fixes in a delivered Turkish subtitle (.tr.srt) into rules that later translate runs follow. Use when the user runs "/subtitle-it:learn <film>", or says they fixed lines in a subtitle this plugin delivered and want it to learn from them.
+description: Turn the user's own fixes in a delivered Turkish subtitle (the .srt next to the video, or .tr.srt from older runs) into rules that later translate runs follow. Use when the user runs "/subtitle-it:learn <film>", or says they fixed lines in a subtitle this plugin delivered and want it to learn from them.
 argument-hint: "<film name>"
 ---
 

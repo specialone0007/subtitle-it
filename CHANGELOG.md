@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.6.2 (2026-11-13)
+
+- The Turkish subtitle is now delivered with exactly the video's name:
+  `Film.mkv` gets `Film.srt`, not `Film.tr.srt`. Many TVs (Samsung, LG)
+  only load a subtitle file named like the video, and showed the film's
+  built-in English subtitles instead. For an `.srt` input the name still
+  swaps the language part for `tr`, so the input is not written over.
+- The delivered file is saved as UTF-8 with a BOM, so TVs show ş, ğ and ı
+  instead of guessing another encoding.
+- A file already at the destination, such as an English `Film.srt`, is
+  moved to the backups folder as an old Turkish file was. The `deliver`
+  result says what it was (`old_file`: `earlier delivery`, `Turkish` or
+  `not Turkish`), and the run tells you where a non-Turkish one went.
+- `sources.py local` no longer takes the plugin's own earlier delivery
+  (`Film.srt`, or a `Film.tr.srt` from an older run) as a source or as a
+  Turkish file to polish, and treats a `Film.srt` with Turkish text as an
+  existing Turkish file. Learn mode still finds films delivered as
+  `.tr.srt` before this release.
+
 ## 0.6.1 (2026-11-13)
 
 - A subtitle file with a missing blank line between two cues is now read
