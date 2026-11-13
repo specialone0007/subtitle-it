@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import bisect
+import os
 import re
 import sys
 from dataclasses import dataclass, field
@@ -201,6 +202,27 @@ def parse(path: str | Path, repairs: list[str] | None = None) -> tuple[list[Cue]
     right while parsing are added to `repairs` when it is given."""
     text, enc = decode(Path(path).read_bytes())
     return parse_text(text, repairs), enc
+
+
+# --- delivered files ---------------------------------------------------
+
+
+def path_key(path: str | Path) -> str:
+    """One spelling per file, for comparing paths: `~` expanded, links
+    resolved and, on Windows, case folded."""
+    return os.path.normcase(str(Path(path).expanduser().resolve()))
+
+
+def delivered_paths(info: dict) -> list[str]:
+    """Every path a work folder has delivered to, from its delivered.json,
+    oldest first: the `earlier_deliveries` kept from runs before, then
+    `delivered_to`. A film delivered as `Film.tr.srt` before 0.6.2 and as
+    `Film.srt` since keeps both, since both stay next to the video.
+    `assemble.py deliver` and `sources.py local` both read it here."""
+    paths = list(info.get("earlier_deliveries") or [])
+    if info.get("delivered_to"):
+        paths.append(info["delivered_to"])
+    return paths
 
 
 # Dotless ı, dotted İ and soft ğ: common in any Turkish text, absent from

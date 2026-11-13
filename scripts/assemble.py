@@ -31,7 +31,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import re
 import shutil
 import sys
@@ -350,21 +349,6 @@ def sidebyside(work: Path) -> Path:
 UTF8_BOM = b"\xef\xbb\xbf"
 
 
-def _key(path: str | Path) -> str:
-    return os.path.normcase(str(Path(path).resolve()))
-
-
-def delivered_paths(info: dict) -> list[str]:
-    """Every path this work folder has delivered to, oldest first: the
-    `earlier_deliveries` kept from runs before, then `delivered_to`. A
-    film delivered as `Film.tr.srt` before 0.6.2 and as `Film.srt` since
-    keeps both, since both stay next to the video."""
-    paths = list(info.get("earlier_deliveries") or [])
-    if info.get("delivered_to"):
-        paths.append(info["delivered_to"])
-    return paths
-
-
 def _old_file_kind(work: Path, dest: Path) -> str:
     """What the file already at the destination is: this work folder's
     earlier delivery, another Turkish file, or a file in another language
@@ -376,7 +360,7 @@ def _old_file_kind(work: Path, dest: Path) -> str:
     info_file = work / "delivered.json"
     if turkish and info_file.exists():
         info = json.loads(info_file.read_text(encoding="utf-8"))
-        if _key(dest) in {_key(p) for p in delivered_paths(info)}:
+        if srt.path_key(dest) in {srt.path_key(p) for p in srt.delivered_paths(info)}:
             return "earlier delivery"
     return "Turkish" if turkish else "not Turkish"
 
@@ -396,7 +380,7 @@ def deliver(work: Path, dest: Path, backups: Path, force: bool) -> dict:
     old_file = None
     old_info_file = work / "delivered.json"
     old_info = json.loads(old_info_file.read_text(encoding="utf-8")) if old_info_file.exists() else {}
-    earlier = [p for p in delivered_paths(old_info) if _key(p) != _key(dest)]
+    earlier = [p for p in srt.delivered_paths(old_info) if srt.path_key(p) != srt.path_key(dest)]
     if dest.exists():
         old_file = _old_file_kind(work, dest)
         backups.mkdir(parents=True, exist_ok=True)
