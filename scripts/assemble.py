@@ -7,7 +7,7 @@ deliver the result next to the video.
 
     uv run assemble.py check       --work W
     uv run assemble.py sidebyside  --work W
-    uv run assemble.py deliver     --work W --dest FILM.tr.srt --backups DIR [--force]
+    uv run assemble.py deliver     --work W --dest FILM.srt --backups DIR [--force]
     uv run assemble.py where       --work W --cues 12,340
 
 `check` reads W/out/tr_*.txt, then W/out/fix_*.txt in the order they were
@@ -346,6 +346,25 @@ def sidebyside(work: Path) -> Path:
     return path
 
 
+UTF8_BOM = b"\xef\xbb\xbf"
+
+
+def _old_file_kind(work: Path, dest: Path) -> str:
+    """What the file already at the destination is: this work folder's
+    earlier delivery, another Turkish file, or a file in another language
+    (an English `Film.srt` beside `Film.mkv`, say). Each is moved to the
+    backups folder; the last one the run report names. The path alone
+    does not make a file the earlier delivery: the user may have put an
+    English file there since, so it must also hold Turkish."""
+    turkish = srt.looks_turkish(dest)
+    info_file = work / "delivered.json"
+    if turkish and info_file.exists():
+        info = json.loads(info_file.read_text(encoding="utf-8"))
+        if srt.path_key(dest) in {srt.path_key(p) for p in srt.delivered_paths(info)}:
+            return "earlier delivery"
+    return "Turkish" if turkish else "not Turkish"
+
+
 def deliver(work: Path, dest: Path, backups: Path, force: bool) -> dict:
     checks = json.loads((work / "checks.json").read_text(encoding="utf-8"))
     draft = work / "draft.tr.srt"
@@ -358,7 +377,12 @@ def deliver(work: Path, dest: Path, backups: Path, force: bool) -> dict:
     if any(f.stat().st_mtime > checked for f in (work / "out").glob("*.txt")):
         raise SystemExit("translation files changed after the last check: run check again")
     backed_up = None
+    old_file = None
+    old_info_file = work / "delivered.json"
+    old_info = json.loads(old_info_file.read_text(encoding="utf-8")) if old_info_file.exists() else {}
+    earlier = [p for p in srt.delivered_paths(old_info) if srt.path_key(p) != srt.path_key(dest)]
     if dest.exists():
+        old_file = _old_file_kind(work, dest)
         backups.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         backed_up = backups / f"{dest.stem}.{stamp}{dest.suffix}"
@@ -371,20 +395,27 @@ def deliver(work: Path, dest: Path, backups: Path, force: bool) -> dict:
         # When the old file is this folder's earlier delivery, its cue map
         # goes with it, so the backup's numbers can still be traced to the
         # timing file's cues.
-        old_info = work / "delivered.json"
         old_map = work / DELIVERED_MAP_FILE
-        if old_info.exists() and old_map.exists():
-            sha = json.loads(old_info.read_text(encoding="utf-8")).get("sha256")
-            if sha == hashlib.sha256(dest.read_bytes()).hexdigest():
+        if old_info and old_map.exists():
+            if old_info.get("sha256") == hashlib.sha256(dest.read_bytes()).hexdigest():
                 shutil.copyfile(old_map, backed_up.with_name(backed_up.name + ".map.json"))
         shutil.move(dest, backed_up)
-    shutil.copyfile(draft, dest)
-    shutil.copyfile(draft, work / "delivered.tr.srt")
+    # With a BOM, TVs that read the file next to the video show ş, ğ and ı
+    # instead of guessing a Western code page.
+    data = draft.read_bytes()
+    if not data.startswith(UTF8_BOM):
+        data = UTF8_BOM + data
+    dest.write_bytes(data)
+    (work / "delivered.tr.srt").write_bytes(data)
     shutil.copyfile(work / MAP_FILE, work / DELIVERED_MAP_FILE)
     info = {
         "delivered_to": str(dest),
+        # Paths delivered before under another name, still next to the
+        # video: `sources.py local` must not take them as sources either.
+        "earlier_deliveries": earlier,
         "backup_of_old_file": str(backed_up) if backed_up else None,
-        "sha256": hashlib.sha256(draft.read_bytes()).hexdigest(),
+        "old_file": old_file,
+        "sha256": hashlib.sha256(data).hexdigest(),
         "delivered_at": datetime.now().isoformat(timespec="seconds"),
         "hard_fails_at_delivery": checks["hard_fail_count"],
         "warnings_at_delivery": checks["warning_count"],

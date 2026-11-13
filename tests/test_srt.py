@@ -296,3 +296,24 @@ def test_fit_command_writes_the_result(tmp_path: Path):
     srt.main(["--result", str(path), "fit", str(a), str(a)])
     out = json.loads(path.read_text(encoding="utf-8"))
     assert out["fits"] is True and out["offset_ms"] == 0
+
+
+def test_looks_turkish(tmp_path: Path):
+    tr = tmp_path / "tr.srt"
+    tr.write_text("1\n00:00:01,000 --> 00:00:02,000\nIşık soğuk.\n\n2\n00:00:03,000 --> 00:00:04,000\nGel.\n", encoding="utf-8")
+    en = tmp_path / "en.srt"
+    en.write_text("1\n00:00:01,000 --> 00:00:02,000\nIt's cold.\n", encoding="utf-8")
+    empty = tmp_path / "empty.srt"
+    empty.write_text("", encoding="utf-8")
+    assert srt.looks_turkish(tr)
+    assert not srt.looks_turkish(en) and not srt.looks_turkish(empty)
+    assert not srt.looks_turkish(tmp_path / "missing.srt")
+
+
+def test_delivered_paths_lists_earlier_names_then_the_last(tmp_path: Path):
+    old, new = str(tmp_path / "Film.tr.srt"), str(tmp_path / "Film.srt")
+    assert srt.delivered_paths({"delivered_to": new, "earlier_deliveries": [old]}) == [old, new]
+    # A delivered.json from before 0.6.2 has no earlier_deliveries.
+    assert srt.delivered_paths({"delivered_to": old}) == [old]
+    assert srt.delivered_paths({}) == []
+    assert srt.path_key(tmp_path / "a" / ".." / "Film.srt") == srt.path_key(new)

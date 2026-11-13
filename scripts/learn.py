@@ -8,7 +8,9 @@ can propose rules.
     uv run learn.py scan --data DATA_DIR
     uv run learn.py diff --work W
 
-`scan` lists films whose delivered .tr.srt has changed since delivery. When
+`scan` lists films whose delivered file has changed since delivery. It
+follows the path each run saved in W/delivered.json, so it finds today's
+`Film.srt` and the `Film.tr.srt` that runs before 0.6.2 delivered. When
 several runs delivered to the same file, only the last one counts.
 `diff` prints every edited cue (before and after) and the word swaps that
 repeat, such as "Peki" -> "Tamam" in 6 cues. It never writes rules itself.

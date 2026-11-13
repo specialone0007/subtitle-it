@@ -171,7 +171,7 @@
 <rect x="760" y="910" width="5" height="70" rx="2" fill="#4a90d9"/>
 <text x="782" y="939" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="13" fill="#c9a227">11</text>
 <text x="810" y="940" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#f4efe1">Deliver</text>
-<text x="782" y="963" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#8a8578">Saves the .tr.srt by the video, writes the report</text>
+<text x="782" y="963" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#8a8578">Saves the .srt by the video, writes the report</text>
 <line x1="706" y1="945.0" x2="754" y2="945.0" stroke="#c9a227" stroke-width="1.5" marker-end="url(#arrow)"/>
 <rect x="220" y="1011" width="14" height="14" rx="3" fill="#4a90d9"/>
 <text x="242" y="1023" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#cfc8b4">A script, no model</text>

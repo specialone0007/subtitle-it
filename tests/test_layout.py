@@ -165,7 +165,7 @@ def test_where_command_writes_the_result(work: Path):
 
 def test_deliver_keeps_the_map_and_learn_reads_it(work: Path, tmp_path: Path):
     assemble.run_checks(work)
-    dest = tmp_path / "Film.tr.srt"
+    dest = tmp_path / "Film.srt"
     assemble.deliver(work, dest, tmp_path / "backups", force=False)
     assert (work / "delivered_map.json").read_text(encoding="utf-8") == (work / "cue_map.json").read_text(encoding="utf-8")
     dest.write_text(dest.read_text(encoding="utf-8").replace("Tamam.", "Peki."), encoding="utf-8")
@@ -182,7 +182,7 @@ def test_deliver_keeps_the_map_and_learn_reads_it(work: Path, tmp_path: Path):
 
 def test_deliver_leaves_out_the_map_when_the_user_edited_the_file(work: Path, tmp_path: Path):
     assemble.run_checks(work)
-    dest = tmp_path / "Film.tr.srt"
+    dest = tmp_path / "Film.srt"
     assemble.deliver(work, dest, tmp_path / "backups", force=False)
     # The user edits the delivered file: the old map no longer describes it.
     dest.write_text(dest.read_text(encoding="utf-8").replace("Tamam.", "Peki."), encoding="utf-8")
@@ -202,7 +202,7 @@ def test_two_deliveries_in_one_second_keep_both_backups(work: Path, tmp_path: Pa
 
     monkeypatch.setattr(assemble, "datetime", Frozen)
     assemble.run_checks(work)
-    dest = tmp_path / "Film.tr.srt"
+    dest = tmp_path / "Film.srt"
     backups = tmp_path / "backups"
     dest.write_text("first", encoding="utf-8")
     one = Path(assemble.deliver(work, dest, backups, force=False)["backup_of_old_file"])
@@ -211,8 +211,8 @@ def test_two_deliveries_in_one_second_keep_both_backups(work: Path, tmp_path: Pa
     dest.write_text("third", encoding="utf-8")
     three = Path(assemble.deliver(work, dest, backups, force=False)["backup_of_old_file"])
     assert [one.name, two.name, three.name] == [
-        "Film.tr.20261113-120000.srt",
-        "Film.tr.20261113-120000-2.srt",
-        "Film.tr.20261113-120000-3.srt",
+        "Film.20261113-120000.srt",
+        "Film.20261113-120000-2.srt",
+        "Film.20261113-120000-3.srt",
     ]
     assert [p.read_text(encoding="utf-8") for p in (one, two, three)] == ["first", "second", "third"]

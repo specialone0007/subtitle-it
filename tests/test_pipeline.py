@@ -131,7 +131,7 @@ def test_sidebyside_result_names_the_file(work: Path):
 def test_deliver_backs_up_and_learn_finds_swaps(work: Path, tmp_path: Path):
     (work / "out" / "tr_01.txt").write_text(GOOD.replace("Evet.", "Peki.").replace("Tamam.", "Peki."), encoding="utf-8")
     assemble.run_checks(work)
-    dest = tmp_path / "Film.tr.srt"
+    dest = tmp_path / "Film.srt"
     dest.write_text("old", encoding="utf-8")
     backups = tmp_path / "backups"
     info = assemble.deliver(work, dest, backups, force=False)
@@ -182,6 +182,85 @@ def test_learn_scan_still_lists_each_film_of_its_own(tmp_path: Path):
     a.write_text("A edited", encoding="utf-8")
     b.write_text("B edited", encoding="utf-8")
     assert [x["file"] for x in learn.scan(tmp_path / "data")] == [str(a), str(b)]
+
+
+def test_deliver_writes_utf8_with_a_bom(work: Path, tmp_path: Path):
+    (work / "out" / "tr_01.txt").write_text(GOOD, encoding="utf-8")
+    assemble.run_checks(work)
+    dest = tmp_path / "Film.srt"
+    info = assemble.deliver(work, dest, tmp_path / "backups", force=False)
+    data = dest.read_bytes()
+    assert data.startswith(b"\xef\xbb\xbf") and not data.startswith(b"\xef\xbb\xbf" * 2)
+    assert "Hava soğuk." in data[3:].decode("utf-8")
+    assert info["old_file"] is None and info["backup_of_old_file"] is None
+    # learn compares the file next to the video with these bytes.
+    assert info["sha256"] == hashlib.sha256(data).hexdigest()
+    assert (work / "delivered.tr.srt").read_bytes() == data
+    assert srt.parse(dest)[0][0].text == "Gel."
+
+
+ENGLISH = "1\n00:00:01,000 --> 00:00:02,000\nCome here.\n\n2\n00:00:03,000 --> 00:00:04,000\nIt's cold.\n"
+TURKISH = "1\n00:00:01,000 --> 00:00:02,000\nBuraya gel.\n\n2\n00:00:03,000 --> 00:00:04,000\nIşık soğuk.\n"
+
+
+def test_deliver_backs_up_an_english_file_with_the_videos_name(work: Path, tmp_path: Path):
+    (work / "out" / "tr_01.txt").write_text(GOOD, encoding="utf-8")
+    assemble.run_checks(work)
+    dest = tmp_path / "Film.srt"
+    dest.write_text(ENGLISH, encoding="utf-8")
+    info = assemble.deliver(work, dest, tmp_path / "backups", force=False)
+    assert info["old_file"] == "not Turkish"
+    backup = Path(info["backup_of_old_file"])
+    assert backup.parent == tmp_path / "backups" and backup.read_text(encoding="utf-8") == ENGLISH
+    assert json.loads((work / "delivered.json").read_text(encoding="utf-8"))["old_file"] == "not Turkish"
+
+
+def test_deliver_names_a_turkish_file_and_its_own_earlier_delivery(work: Path, tmp_path: Path):
+    (work / "out" / "tr_01.txt").write_text(GOOD, encoding="utf-8")
+    assemble.run_checks(work)
+    dest = tmp_path / "Film.srt"
+    dest.write_text(TURKISH, encoding="utf-8")
+    assert assemble.deliver(work, dest, tmp_path / "backups", force=False)["old_file"] == "Turkish"
+    assemble.run_checks(work)
+    assert assemble.deliver(work, dest, tmp_path / "backups", force=False)["old_file"] == "earlier delivery"
+
+
+def test_deliver_takes_an_english_file_at_its_own_path_as_not_turkish(work: Path, tmp_path: Path):
+    (work / "out" / "tr_01.txt").write_text(GOOD, encoding="utf-8")
+    assemble.run_checks(work)
+    dest = tmp_path / "Film.srt"
+    assemble.deliver(work, dest, tmp_path / "backups", force=False)
+    # The user puts an English file in its place to watch in English.
+    dest.write_text(ENGLISH, encoding="utf-8")
+    assemble.run_checks(work)
+    info = assemble.deliver(work, dest, tmp_path / "backups", force=False)
+    assert info["old_file"] == "not Turkish"
+    assert Path(info["backup_of_old_file"]).read_text(encoding="utf-8") == ENGLISH
+
+
+def test_deliver_keeps_the_pre_062_name_as_an_earlier_delivery(work: Path, tmp_path: Path):
+    (work / "out" / "tr_01.txt").write_text(GOOD, encoding="utf-8")
+    assemble.run_checks(work)
+    old, new = tmp_path / "Film.tr.srt", tmp_path / "Film.srt"
+    assemble.deliver(work, old, tmp_path / "backups", force=False)
+    assemble.run_checks(work)
+    info = assemble.deliver(work, new, tmp_path / "backups", force=False)
+    assert info["earlier_deliveries"] == [str(old)]
+    # A third run to the same name keeps the old one and does not list
+    # the current one twice.
+    assemble.run_checks(work)
+    info = assemble.deliver(work, new, tmp_path / "backups", force=False)
+    assert info["earlier_deliveries"] == [str(old)] and info["old_file"] == "earlier delivery"
+
+
+def test_learn_scan_finds_new_and_pre_062_deliveries(tmp_path: Path):
+    films = tmp_path / "data" / "films"
+    old, new = tmp_path / "Old.tr.srt", tmp_path / "New.srt"
+    _delivered(films, "old", old, "old run", "2026-11-10T10:00:00")
+    _delivered(films, "new", new, "﻿new run", "2026-11-13T10:00:00")
+    old.write_text("old run, edited", encoding="utf-8")
+    new.write_text("﻿new run, edited", encoding="utf-8")
+    assert [x["file"] for x in learn.scan(tmp_path / "data")] == [str(new), str(old)]
 
 
 def test_deliver_refuses_hard_fails(work: Path, tmp_path: Path):
