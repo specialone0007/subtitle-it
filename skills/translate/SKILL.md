@@ -114,7 +114,10 @@ Pick the timing file: the candidate with the best timing confidence that
 passes validation: built-in text track (certain) > OpenSubtitles hash match
 (certain) > file next to the video or in its subtitle folder (likely) > OpenSubtitles by name or IMDb
 (uncertain) > transcribed from the audio (from the audio). Skip forced-only and
-image tracks, and anything in Turkish.
+image tracks, and anything in Turkish. A candidate whose `repairs` is
+above 0 still passes validation: the file was malformed (a missing or a
+stray blank line) and is read as meant; `build` warns about it for the
+report.
 
 Pick the text to translate from: the timing file itself when it is in the
 original language; otherwise the best original-language candidate. Pick
@@ -160,7 +163,9 @@ parentheses and labels in capitals only from a hearing-impaired one. It
 leaves out cues that are only
 sounds; they are not in the delivered file. Keep its `hearing_impaired`,
 `cues_with_tags_or_labels_removed` and `sound_only_cues_dropped` for the
-report. Tell the user in 2–3 lines which files you used and the timing
+report, and its `warnings`: a malformed file (a cue with no blank line
+before it, or text cut off from its cue by a stray blank line) is read as
+meant, and the report says which file was malformed. Tell the user in 2–3 lines which files you used and the timing
 confidence.
 
 ## 3–5. Speaker hints, film bible and bible check, side by side
@@ -356,7 +361,7 @@ Turkish file it started from, how many cues the fixer and the reviewer
 changed, and how many lines are still softer than the source), any timing shift
 and sync verdict, whether each source file is hearing-impaired and how
 many cues lost tags or labels and how many sound-only cues were left
-out, the voices dropped as mixed, the bible check (decisions, agreed,
+out, any file `build` warned was malformed, the voices dropped as mixed, the bible check (decisions, agreed,
 judged, ties, questions the second reader never answered), cue count
 (work folder and delivered), cues split per speaker, hard fails and
 warnings left, the reviewer's summary. The work folder numbers cues by

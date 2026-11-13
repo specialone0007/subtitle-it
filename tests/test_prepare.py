@@ -38,6 +38,19 @@ Come in.
 """
 
 
+def test_build_warns_when_a_file_was_malformed(tmp_path: Path):
+    (tmp_path / "t.srt").write_text(SRT, encoding="utf-8")
+    # The source has no blank line between its two cues.
+    (tmp_path / "s.srt").write_text(SRT.replace("Me.\n\n2", "Me.\n2"), encoding="utf-8")
+    summary = prepare.build(tmp_path / "work", tmp_path / "t.srt", tmp_path / "s.srt", None)
+    assert summary["repairs"] == {"timing": 0, "source": 1}
+    assert len(summary["warnings"]) == 1 and summary["warnings"][0].startswith("the source file is malformed")
+    rows = json.loads((tmp_path / "work" / "cues.json").read_text(encoding="utf-8"))
+    assert [r["source"] for r in rows] == [["- Who is it?", "- Me."], ["Come in."]]
+    clean = prepare.build(tmp_path / "work2", tmp_path / "t.srt", None, None)
+    assert clean["repairs"] == {"timing": 0} and clean["warnings"] == []
+
+
 def test_chunks_and_review_file_show_label_and_voice(tmp_path: Path):
     (tmp_path / "en.srt").write_text(SRT, encoding="utf-8")
     w = tmp_path / "work"
