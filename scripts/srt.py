@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import result
+import turkish
 
 TS_RE = re.compile(
     r"^\s*(\d{1,3}):(\d{1,2}):(\d{1,2})[,.](\d{1,3})\s*-->\s*"
@@ -82,11 +83,17 @@ def turns(lines: list[str]) -> list[list[str]]:
     return out
 
 
-def wrap(text: str, width: int = 42) -> list[str]:
+def wrap(text: str, width: int = 42, lang: str | None = None) -> list[str]:
     """One line when it fits in `width` characters, else two. The break goes
     after a sentence end, then after a comma, as long as both lines fit;
     otherwise at the space nearest the middle. Tags do not count towards
-    the width, and no break falls inside one."""
+    the width, and no break falls inside one.
+
+    With `lang="tr"`, Turkish line-break rules come first (see
+    `turkish.bad_break`): the second line never starts with a word that
+    belongs to the line above ("gibi", "mi") and no word stands alone on a
+    line, when a break that fits avoids it; a break before a conjunction
+    ("ama", "çünkü") is preferred to one mid-phrase."""
     size = len(strip_tags(text))
     inside = {i for m in TAG_RE.finditer(text) for i in range(m.start(), m.end())}
     spaces = [i for i, ch in enumerate(text) if ch == " " and i not in inside]
@@ -98,6 +105,17 @@ def wrap(text: str, width: int = 42) -> list[str]:
         return len(strip_tags(text[:i]))
 
     fits = [i for i in spaces if left(i) <= width and size - left(i) - 1 <= width]
+    if lang == "tr" and fits:
+
+        def rank(i: int) -> tuple:
+            before = strip_tags(text[:i])
+            tier = 0 if before.endswith(tuple(".!?…")) else 1 if before.endswith(tuple(",;:")) else 3
+            if tier == 3 and turkish.starts_with_conjunction(text[i + 1 :]):
+                tier = 2
+            return (turkish.bad_break(text[:i], text[i + 1 :]) is not None, tier, abs(left(i) - mid))
+
+        cut = min(fits, key=rank)
+        return [text[:cut], text[cut + 1 :]]
     for marks in (".!?…", ",;:"):
         after = [i for i in fits if strip_tags(text[:i]).endswith(tuple(marks))]
         if after:

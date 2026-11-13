@@ -43,12 +43,12 @@ import layout  # noqa: E402
 import prepare  # noqa: E402
 import result  # noqa: E402
 import srt  # noqa: E402
+import turkish  # noqa: E402
 
 MAX_LINE = layout.MAX_LINE
 MAX_CPS = layout.MAX_CPS
 MAP_FILE = "cue_map.json"
 DELIVERED_MAP_FILE = "delivered_map.json"
-CPS_MARGIN = 1.15
 INFINITIVE_RE = re.compile(r"^[A-ZÇĞİÖŞÜ][a-zçğıöşü]+(mak|mek)[.!]$")
 CAPS_RE = re.compile(r"\b(TAMAM|HAYIR)\b")
 ITALIC_RE = re.compile(r"</?i>", re.I)
@@ -279,13 +279,17 @@ def run_checks(work: Path) -> dict:
         tr_plain = srt.strip_tags(" ".join(tr)).strip()
         ref_plain = srt.strip_tags(" ".join(ref)).strip()
         tr_cps, ref_cps = _cps(tr_plain, c.duration), _cps(ref_plain, c.duration)
-        if tr_cps > MAX_CPS and tr_cps > ref_cps * CPS_MARGIN:
+        # Netflix Turkish style guide I.17: 17 characters a second at most,
+        # whatever the source does. The viewer reads Turkish.
+        if tr_cps > MAX_CPS:
             w(c.n, "reading speed", f"{tr_cps:.1f} chars/s, source {ref_cps:.1f}")
         if len(tr) == 1 and INFINITIVE_RE.match(srt.strip_tags(tr[0]).strip()):
             w(c.n, "infinitive command", tr[0])
         for ln in tr:
             if CAPS_RE.search(ln):
                 w(c.n, "caps", ln)
+        for word, meant in turkish.accent_slips(" ".join(tr)):
+            w(c.n, "accent", f'"{word}": probably {meant}')
 
     glossary_file = work / "glossary.json"
     if glossary_file.exists():

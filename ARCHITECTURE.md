@@ -206,13 +206,19 @@ model of `sonnet` also runs at low effort; that is untested.
   description in parentheses where the source cue had tags removed. They go
   back to the chunk's translator, and after two rounds one more round runs
   on a stronger model.
-- **Warnings** are fast reading speed, glossary variants, sen or siz
-  against the bible, and a few Turkish style checks. They go to the
-  reviewer.
+- **Warnings** are reading speed above 17 characters a second (every
+  such cue, even when the source is as fast), glossary variants, sen or
+  siz against the bible, a plain "hala" or "aşık" that probably lacks its
+  circumflex, and a few Turkish style checks. They go to the reviewer.
 
 The last part of the check lays out every cue as it is shown
 (`layout.py`): at most 2 lines of 42 characters, and in a two-speaker cue
-one line per speaker. A cue whose text fits two lines is rewrapped. A
+one line per speaker. A cue whose text fits two lines is rewrapped.
+Turkish line breaks follow the Netflix Turkish guide (`turkish.py`): a
+break after a sentence end or a comma comes first, then one before a
+conjunction, and no second line starts with a word that leans on the
+one before ("gibi", "diye", "mi", "de"). A two-line cue that already fits
+but breaks badly is rewrapped when a better break fits. A
 two-speaker cue that does not fit is split at the speaker change into one
 cue per speaker. Its time is shared in proportion to each part's length,
 and a part that would get under a second gets a second, taken from the
@@ -228,8 +234,8 @@ One subagent reads the whole film side by side with the source and fixes
 what the chunk translators could not see. The bible is its default for
 sen/siz, but the scene decides: it never turns a natural sen into siz only
 to match the bible, and lists each cue where it departs from the bible.
-It fixes reading-speed warnings with shorter wording instead of leaving
-them because the source is as fast.
+It fixes reading-speed warnings with shorter wording, and family words
+("amca" or "dayı") and circumflexes that differ from the bible or the pack.
 
 In a polish run, `polish.py soft` then lists the lines that are still
 softer than the English swearing. The polish fixer restores them once, and

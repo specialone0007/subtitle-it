@@ -11,7 +11,7 @@ that is right but slow to read is a bad subtitle.
 
 - Say the same thing in fewer, plainer words. Reshape the sentence for clarity (Netflix Turkish style guide, I.22): split a nested clause, use an active verb instead of a passive or a noun made from a verb, put the point first.
 - Keep everything that is said: facts, names, jokes, threats and swearing strength. Cut only what carries nothing: hesitations, false starts, "you know", "I mean", a word said twice. Never summarise a line into something blander.
-- Aim for 17 characters a second or less (I.17). A cue the check marks as too fast gets shorter wording, not the same wording squeezed.
+- Aim for 17 characters a second or less (I.17). The check warns about every cue above that, even when the source line is as fast: the viewer reads Turkish, not the source. A cue marked too fast gets shorter wording, not the same wording squeezed.
 - A word or phrase the same speaker repeats in a row is written once (I.18): "Come on. Come on." → "Hadi." Keep the repeat when it carries the scene (a chant, a count, someone pointing at things one by one).
 - Sounds alone ("Oh.", "Hmm?", "Uh...") are already left out of your chunk. Inside a line, drop them too: "Oh, I didn't know." → "Bilmiyordum." Keep a sound that means something the audience may not catch: "Ouch!" → "Ah!", "Yuck." → "Iyy."
 - A yes or no said as a sound ("Uh-huh.", "Mm-hmm.", "Nuh-uh.") that answers something is written as the word: "Evet.", "Hı hı.", "Hayır." (II.9).
@@ -37,6 +37,13 @@ Before → after:
 - No speaker labels (`NAME:`, `[Name]`) and no sound descriptions (`[kapı çarpar]`, `(iç çeker)`), even when the source has them. The automatic check fails square brackets in any cue, and a label or a description in parentheses in a cue whose source had tags. Parentheses the source uses as speech (`(Orada mısın?)`) and headings such as `BÖLÜM 1:` stay. Song lines keep their `♪` (see Songs below).
 - Keep `<i>` and `</i>` exactly where the source has italics (voices off screen, songs, phone, thoughts). No italics where the source has none.
 - No stray byte-order marks, no `{\an8}` style tags unless the source has them.
+- Break a two-line cue where the sentence breaks, so each line reads as one piece (I.12):
+  - after a full stop, a question mark or a comma first; otherwise before a conjunction ("ve", "ama", "çünkü", "yoksa"), never after it;
+  - never between a noun and its adjective, its possessor or "bir" ("kırmızı / araba", "Ali'nin / evi", "bir / şey");
+  - never start the second line with a word that leans on the word before it: a postposition ("gibi", "diye", "kadar", "için", "ile", "göre", "değil") or a particle ("de", "da", "ki", "mi", "mısın", "mıydı");
+  - never leave one word alone on a line, unless it is a whole sentence ("Hayır.").
+
+  "Senin / gibi biri gelmedi." → "Senin gibi biri / gelmedi." · "Söyledim ama / dinlemedin." → "Söyledim / ama dinlemedin." The delivery step rewraps a cue whose break reads badly when a better break fits.
 - Never merge or split cues yourself, never leave one empty. Every cue number in your chunk gets text. Only the delivery step splits a two-speaker cue, as above.
 
 ## Grammar traps
@@ -79,9 +86,17 @@ get:
 - When the song goes on under the next dialogue, end the last lyric line you write with `...`.
 - Dialogue always wins over a song in the same cue.
 
+## Family words
+
+Turkish names the side of the family that English leaves open (I.22). "Uncle" is "amca" (father's brother) or "dayı" (mother's brother); "aunt" is "hala" (father's sister) or "teyze" (mother's sister); "brother" is "abi" (older) or "kardeş" (younger, or when the age is not known); "sister" is "abla" or "kardeş"; "grandma" is "anneanne" (mother's mother) or "babaanne" (father's mother).
+
+- Use the word the film bible gives for each relation. When the bible says nothing and the film does not show the side, take the more common word ("amca", "teyze", "kardeş") and keep it for the whole film.
+- "Abi" and "abla" are also what a younger speaker calls an older one, family or not; "amca" and "teyze" are what a child calls any older adult. Use them where the scene sounds like that, not as a translation of a name.
+
 ## Turkish writing
 
 - Use correct Turkish characters: ç ğ ı İ ö ş ü. Capital of "i" is "İ", of "ı" is "I".
+- Write the circumflex wherever it changes the meaning or the sound (I.22): "hâlâ" (still) vs "hala" (aunt), "âşık" (in love) vs "aşık", "kâr" (profit) vs "kar" (snow), "hâl" (state) vs "hal" (market hall), "resmî", "millî", "dinî" (the adjective forms). The check warns about a plain "hala" or "aşık" it finds; a "hala" that really means aunt stays.
 - Apostrophe before suffixes on proper names: "Sandra'nın", "Paris'te".
 - Numbers: write small numbers as words in speech ("iki gün"), times and years in digits.
 - Ellipsis as three dots "...", no space before "?" or "!".
