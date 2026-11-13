@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.7.1 (2026-11-14)
+
+Four rules from the Netflix Turkish Timed Text Style Guide that change how
+the subtitle reads.
+
+- Reading speed: the check warns about every cue above 17 characters a
+  second (I.17). It no longer lets a cue pass because the source line is as
+  fast; the viewer reads Turkish.
+- Line breaks (I.12): a new `turkish.py` holds the Turkish-only rules. The
+  rewrap prefers a break after a sentence end or a comma, then one before a
+  conjunction, and never starts the second line with a postposition or a
+  particle ("gibi", "diye", "mi", "de") or leaves one word alone on a line.
+  A two-line cue that already fits but breaks badly is rewrapped when a
+  better break fits. The pack and the translator brief state the rule.
+- Accents (I.22): the pack lists the circumflexes that change the meaning
+  ("hâlâ" and "hala", "âşık", "kâr", "resmî"), and the check warns about a
+  plain "hala" or "aşık" so the reviewer can tell "still" from "aunt".
+- Family words (I.22): the bible writer decides "amca" or "dayı", "hala"
+  or "teyze", "abi" or "kardeş" for each relation the film shows, as a
+  checked `term` decision, and the pack says what to use when the film
+  does not show the side.
+
 ## 0.7.0 (2026-11-14)
 
 Feedback from The Dog Stars: some scenes were too formal, background songs
