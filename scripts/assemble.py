@@ -350,17 +350,35 @@ def sidebyside(work: Path) -> Path:
 UTF8_BOM = b"\xef\xbb\xbf"
 
 
+def _key(path: str | Path) -> str:
+    return os.path.normcase(str(Path(path).resolve()))
+
+
+def delivered_paths(info: dict) -> list[str]:
+    """Every path this work folder has delivered to, oldest first: the
+    `earlier_deliveries` kept from runs before, then `delivered_to`. A
+    film delivered as `Film.tr.srt` before 0.6.2 and as `Film.srt` since
+    keeps both, since both stay next to the video."""
+    paths = list(info.get("earlier_deliveries") or [])
+    if info.get("delivered_to"):
+        paths.append(info["delivered_to"])
+    return paths
+
+
 def _old_file_kind(work: Path, dest: Path) -> str:
     """What the file already at the destination is: this work folder's
     earlier delivery, another Turkish file, or a file in another language
     (an English `Film.srt` beside `Film.mkv`, say). Each is moved to the
-    backups folder; the last one the run report names."""
+    backups folder; the last one the run report names. The path alone
+    does not make a file the earlier delivery: the user may have put an
+    English file there since, so it must also hold Turkish."""
+    turkish = srt.looks_turkish(dest)
     info_file = work / "delivered.json"
-    if info_file.exists():
-        to = json.loads(info_file.read_text(encoding="utf-8")).get("delivered_to")
-        if to and os.path.normcase(str(Path(to).resolve())) == os.path.normcase(str(dest.resolve())):
+    if turkish and info_file.exists():
+        info = json.loads(info_file.read_text(encoding="utf-8"))
+        if _key(dest) in {_key(p) for p in delivered_paths(info)}:
             return "earlier delivery"
-    return "Turkish" if srt.looks_turkish(dest) else "not Turkish"
+    return "Turkish" if turkish else "not Turkish"
 
 
 def deliver(work: Path, dest: Path, backups: Path, force: bool) -> dict:
@@ -376,6 +394,9 @@ def deliver(work: Path, dest: Path, backups: Path, force: bool) -> dict:
         raise SystemExit("translation files changed after the last check: run check again")
     backed_up = None
     old_file = None
+    old_info_file = work / "delivered.json"
+    old_info = json.loads(old_info_file.read_text(encoding="utf-8")) if old_info_file.exists() else {}
+    earlier = [p for p in delivered_paths(old_info) if _key(p) != _key(dest)]
     if dest.exists():
         old_file = _old_file_kind(work, dest)
         backups.mkdir(parents=True, exist_ok=True)
@@ -390,11 +411,9 @@ def deliver(work: Path, dest: Path, backups: Path, force: bool) -> dict:
         # When the old file is this folder's earlier delivery, its cue map
         # goes with it, so the backup's numbers can still be traced to the
         # timing file's cues.
-        old_info = work / "delivered.json"
         old_map = work / DELIVERED_MAP_FILE
-        if old_info.exists() and old_map.exists():
-            sha = json.loads(old_info.read_text(encoding="utf-8")).get("sha256")
-            if sha == hashlib.sha256(dest.read_bytes()).hexdigest():
+        if old_info and old_map.exists():
+            if old_info.get("sha256") == hashlib.sha256(dest.read_bytes()).hexdigest():
                 shutil.copyfile(old_map, backed_up.with_name(backed_up.name + ".map.json"))
         shutil.move(dest, backed_up)
     # With a BOM, TVs that read the file next to the video show ş, ğ and ı
@@ -407,6 +426,9 @@ def deliver(work: Path, dest: Path, backups: Path, force: bool) -> dict:
     shutil.copyfile(work / MAP_FILE, work / DELIVERED_MAP_FILE)
     info = {
         "delivered_to": str(dest),
+        # Paths delivered before under another name, still next to the
+        # video: `sources.py local` must not take them as sources either.
+        "earlier_deliveries": earlier,
         "backup_of_old_file": str(backed_up) if backed_up else None,
         "old_file": old_file,
         "sha256": hashlib.sha256(data).hexdigest(),

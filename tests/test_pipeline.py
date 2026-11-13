@@ -225,6 +225,34 @@ def test_deliver_names_a_turkish_file_and_its_own_earlier_delivery(work: Path, t
     assert assemble.deliver(work, dest, tmp_path / "backups", force=False)["old_file"] == "earlier delivery"
 
 
+def test_deliver_takes_an_english_file_at_its_own_path_as_not_turkish(work: Path, tmp_path: Path):
+    (work / "out" / "tr_01.txt").write_text(GOOD, encoding="utf-8")
+    assemble.run_checks(work)
+    dest = tmp_path / "Film.srt"
+    assemble.deliver(work, dest, tmp_path / "backups", force=False)
+    # The user puts an English file in its place to watch in English.
+    dest.write_text(ENGLISH, encoding="utf-8")
+    assemble.run_checks(work)
+    info = assemble.deliver(work, dest, tmp_path / "backups", force=False)
+    assert info["old_file"] == "not Turkish"
+    assert Path(info["backup_of_old_file"]).read_text(encoding="utf-8") == ENGLISH
+
+
+def test_deliver_keeps_the_pre_062_name_as_an_earlier_delivery(work: Path, tmp_path: Path):
+    (work / "out" / "tr_01.txt").write_text(GOOD, encoding="utf-8")
+    assemble.run_checks(work)
+    old, new = tmp_path / "Film.tr.srt", tmp_path / "Film.srt"
+    assemble.deliver(work, old, tmp_path / "backups", force=False)
+    assemble.run_checks(work)
+    info = assemble.deliver(work, new, tmp_path / "backups", force=False)
+    assert info["earlier_deliveries"] == [str(old)]
+    # A third run to the same name keeps the old one and does not list
+    # the current one twice.
+    assemble.run_checks(work)
+    info = assemble.deliver(work, new, tmp_path / "backups", force=False)
+    assert info["earlier_deliveries"] == [str(old)] and info["old_file"] == "earlier delivery"
+
+
 def test_learn_scan_finds_new_and_pre_062_deliveries(tmp_path: Path):
     films = tmp_path / "data" / "films"
     old, new = tmp_path / "Old.tr.srt", tmp_path / "New.srt"
