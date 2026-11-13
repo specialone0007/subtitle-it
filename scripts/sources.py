@@ -317,14 +317,16 @@ EARLIER_DELIVERY = "this plugin's earlier delivery, not a source"
 
 
 def delivered_here(work: Path) -> set[str]:
-    """The file this work folder last delivered, as a `_key`: a run must
-    take it neither as a source nor as a Turkish file to polish, whether
-    it has today's name (`Film.srt`) or an older one (`Film.tr.srt`)."""
+    """Every file this work folder delivered, as a `_key`: today's name
+    (`Film.srt`) and an older one (`Film.tr.srt`) kept in
+    `earlier_deliveries`. A run takes none of them as a source or as a
+    Turkish file to polish, as long as it still holds Turkish."""
     info_file = work / "delivered.json"
     if not info_file.exists():
         return set()
-    to = json.loads(info_file.read_text(encoding="utf-8")).get("delivered_to")
-    return {_key(Path(to))} if to else set()
+    info = json.loads(info_file.read_text(encoding="utf-8"))
+    paths = list(info.get("earlier_deliveries") or []) + ([info["delivered_to"]] if info.get("delivered_to") else [])
+    return {_key(Path(p)) for p in paths}
 
 
 def local(video: Path, work: Path) -> dict:
@@ -352,7 +354,9 @@ def local(video: Path, work: Path) -> dict:
         if p.suffix.lower() in SUB_EXT and p.is_file() and norm(p.name).startswith(norm(video.stem)):
             lang = sidecar_language(p, video)
             name = p.name.lower()
-            if _key(p) in delivered:
+            # The path alone is not enough: the user may have put an
+            # English file there since, which is a source like any other.
+            if _key(p) in delivered and srt.looks_turkish(p):
                 candidates.append(
                     {
                         "source": "file next to video",

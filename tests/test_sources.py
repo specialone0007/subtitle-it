@@ -501,3 +501,28 @@ def test_local_marks_this_plugins_earlier_delivery(tmp_path: Path, monkeypatch, 
     _no_tools(monkeypatch)
     [c] = sources.local(video, work)["candidates"]
     assert c["language"] == "tr" and c["confidence"] == sources.EARLIER_DELIVERY
+
+
+def test_local_marks_both_the_old_and_the_new_delivered_name(tmp_path: Path, monkeypatch):
+    film, video = _film_folder(tmp_path)
+    for name in ("Film.tr.srt", "Film.srt"):
+        (film / name).write_text(TR_TEXT, encoding="utf-8")
+    work = tmp_path / "work"
+    work.mkdir()
+    info = {"delivered_to": str(film / "Film.srt"), "earlier_deliveries": [str(film / "Film.tr.srt")]}
+    (work / "delivered.json").write_text(json.dumps(info), encoding="utf-8")
+    _no_tools(monkeypatch)
+    out = sources.local(video, work)["candidates"]
+    assert sorted(Path(c["path"]).name for c in out) == ["Film.srt", "Film.tr.srt"]
+    assert all(c["confidence"] == sources.EARLIER_DELIVERY for c in out)
+
+
+def test_local_keeps_an_english_file_at_the_delivered_path_as_a_source(tmp_path: Path, monkeypatch):
+    film, video = _film_folder(tmp_path)
+    (film / "Film.srt").write_text(_srt(60), encoding="utf-8")
+    work = tmp_path / "work"
+    work.mkdir()
+    (work / "delivered.json").write_text(json.dumps({"delivered_to": str(film / "Film.srt")}), encoding="utf-8")
+    _no_tools(monkeypatch)
+    [c] = sources.local(video, work)["candidates"]
+    assert c["confidence"] == "likely" and c["check"]["cues"] == 60
