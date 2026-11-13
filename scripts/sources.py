@@ -158,8 +158,7 @@ def media_folders(prefs: Path) -> list[str]:
     return folders
 
 
-def _key(p: Path) -> str:
-    return os.path.normcase(str(p.expanduser().resolve()))
+_key = srt.path_key
 
 
 def _inside(path: Path, folder: Path) -> bool:
@@ -324,9 +323,7 @@ def delivered_here(work: Path) -> set[str]:
     info_file = work / "delivered.json"
     if not info_file.exists():
         return set()
-    info = json.loads(info_file.read_text(encoding="utf-8"))
-    paths = list(info.get("earlier_deliveries") or []) + ([info["delivered_to"]] if info.get("delivered_to") else [])
-    return {_key(Path(p)) for p in paths}
+    return {_key(p) for p in srt.delivered_paths(json.loads(info_file.read_text(encoding="utf-8")))}
 
 
 def local(video: Path, work: Path) -> dict:
