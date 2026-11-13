@@ -449,3 +449,13 @@ def test_local_marks_a_plainly_named_file_full_of_tags_as_hearing_impaired(tmp_p
     r = sources.local(video, tmp_path / "work")
     by = {c["language"]: c for c in r["candidates"]}
     assert by["en"]["hearing_impaired"] is True and by["fr"]["hearing_impaired"] is False
+
+
+def test_validate_counts_repairs_without_failing_the_file(tmp_path: Path):
+    p = tmp_path / "x.srt"
+    p.write_text(_hi_srt(60, every=100).replace("Line 5\n\n6", "Line 5\n6"), encoding="utf-8")
+    r = sources.validate(p, duration_ms=70_000)
+    # The file is read as meant, so the repair is counted but is no issue.
+    assert r["cues"] == 60 and r["repairs"] == 1 and r["issues"] == []
+    p.write_text(_hi_srt(60, every=100), encoding="utf-8")
+    assert sources.validate(p, duration_ms=70_000)["repairs"] == 0

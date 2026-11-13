@@ -39,6 +39,75 @@ def test_parse_without_numbers_bom_crlf_and_dot_millis():
     assert cues[1].start == 3500
 
 
+def test_parse_well_formed_file_needs_no_repairs():
+    repairs: list[str] = []
+    cues = srt.parse_text(SAMPLE, repairs)
+    assert repairs == []
+    assert [(c.n, c.ts, c.lines) for c in cues] == [
+        (1, "00:00:01,000 --> 00:00:02,500", ["Hello."]),
+        (2, "00:00:03,000 --> 00:00:05,000", ["<i>How are you?</i>", "- Fine."]),
+        (3, "00:00:10,000 --> 00:00:12,000", ["Bye."]),
+    ]
+
+
+# One file with each fault: cue 2 has no blank line before it (with its
+# number line), cue 3 has none either (without a number line), and the text
+# of cue 3 is split by a stray blank line.
+MALFORMED = """1
+00:00:01,000 --> 00:00:02,500
+Hello.
+2
+00:00:03,000 --> 00:00:05,000
+How are you?
+00:00:06,000 --> 00:00:08,000
+I am fine,
+
+thank you.
+
+4
+00:00:10,000 --> 00:00:12,000
+Bye.
+"""
+
+
+def test_parse_repairs_missing_blank_lines_and_stray_blank_lines():
+    repairs: list[str] = []
+    cues = srt.parse_text(MALFORMED, repairs)
+    assert [(c.start, c.lines) for c in cues] == [
+        (1000, ["Hello."]),
+        (3000, ["How are you?"]),
+        (6000, ["I am fine,", "thank you."]),
+        (10000, ["Bye."]),
+    ]
+    assert [c.n for c in cues] == [1, 2, 3, 4]
+    assert len(repairs) == 3, repairs
+
+
+def test_parse_never_puts_a_timestamp_line_in_cue_text():
+    for text in (SAMPLE, MALFORMED, SAMPLE.replace("\n\n", "\n"), MALFORMED.replace("\n\n", "\n")):
+        for c in srt.parse_text(text):
+            assert not any(srt.TS_RE.match(ln) for ln in c.lines), c
+
+
+def test_parse_stray_number_line_and_text_before_the_first_cue():
+    text = "Made by someone\n\n1\n00:00:01,000 --> 00:00:02,000\nA\n\n2\n\n00:00:03,000 --> 00:00:04,000\nB\n"
+    repairs: list[str] = []
+    cues = srt.parse_text(text, repairs)
+    assert [c.lines for c in cues] == [["A"], ["B"]]
+    # Text before the first cue goes, as before; the cut-off number is a repair.
+    assert len(repairs) == 1
+
+
+def test_parse_reports_repairs_from_a_file(tmp_path: Path):
+    p = tmp_path / "x.srt"
+    p.write_text(MALFORMED, encoding="utf-8")
+    repairs: list[str] = []
+    cues, _ = srt.parse(p, repairs)
+    assert len(cues) == 4 and len(repairs) == 3
+    srt.main(["--result", str(tmp_path / "r.json"), "info", str(p)])
+    assert json.loads((tmp_path / "r.json").read_text(encoding="utf-8"))["repairs"] == 3
+
+
 def test_decode_turkish_cp1254_and_bom():
     raw = "Şey... Ağır bir gün.\nİyi geceler, Çağrı.\n".encode("cp1254") * 20
     text, enc = srt.decode(raw)

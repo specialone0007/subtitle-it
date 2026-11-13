@@ -273,7 +273,8 @@ def sidecar_language(sub: Path, video: Path) -> str:
 
 
 def validate(path: Path, duration_ms: int | None) -> dict:
-    cues, enc = srt.parse(path)
+    repairs: list[str] = []
+    cues, enc = srt.parse(path, repairs)
     issues = []
     if len(cues) < 50:
         issues.append(f"only {len(cues)} cues")
@@ -295,6 +296,9 @@ def validate(path: Path, duration_ms: int | None) -> dict:
         "hearing_impaired": hi["hearing_impaired"],
         "cues_with_tags_or_labels": hi["cues_with_tags_or_labels"],
         "issues": issues,
+        # Faults the parser put right (a missing or a stray blank line): the
+        # file is read as meant, so they are not issues and it still passes.
+        "repairs": len(repairs),
         "sample": [c.text for c in cues[mid : mid + 4]],
     }
 
