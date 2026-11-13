@@ -362,6 +362,12 @@ def deliver(work: Path, dest: Path, backups: Path, force: bool) -> dict:
         backups.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         backed_up = backups / f"{dest.stem}.{stamp}{dest.suffix}"
+        # The name changes once a second: a second delivery within the same
+        # second gets a counter, so no backup is ever written over.
+        count = 1
+        while backed_up.exists() or backed_up.with_name(backed_up.name + ".map.json").exists():
+            count += 1
+            backed_up = backups / f"{dest.stem}.{stamp}-{count}{dest.suffix}"
         # When the old file is this folder's earlier delivery, its cue map
         # goes with it, so the backup's numbers can still be traced to the
         # timing file's cues.
