@@ -144,34 +144,63 @@ def decode(raw: bytes) -> tuple[str, str]:
     return raw.decode("cp1252", errors="replace"), "cp1252"
 
 
-def parse_text(text: str) -> list[Cue]:
+def parse_text(text: str, repairs: list[str] | None = None) -> list[Cue]:
+    """Parse SRT text into cues, tolerating two common faults.
+
+    A timestamp line always starts a new cue, with or without its number
+    line above it, even when no blank line comes before it. A block after a
+    blank line with no timestamp line in it is more text of the cue above,
+    not a block to drop. When `repairs` is given, each fault put right adds
+    one line to it, so a caller can say the file was malformed."""
     text = text.replace(BOM, "").replace("\r\n", "\n").replace("\r", "\n")
     cues: list[Cue] = []
+
+    def note(what: str) -> None:
+        if repairs is not None:
+            repairs.append(what)
+
+    def more_text(lines: list[str]) -> None:
+        # Text with no timestamp of its own belongs to the cue above. Before
+        # the first cue there is nothing to attach it to, so it goes.
+        lines = [x for x in lines if x.strip()]
+        if lines and cues:
+            cues[-1].lines.extend(lines)
+            note(f"cue {cues[-1].n}: text after a blank line kept with it")
+
     for block in re.split(r"\n[ \t]*\n", text.strip()):
         lines = [ln.rstrip() for ln in block.split("\n")]
-        # The timestamp line is the anchor; the number line above it is optional.
-        for k, ln in enumerate(lines[:3]):
-            m = TS_RE.match(ln)
-            if m:
-                g = m.groups()
-                body = [x for x in lines[k + 1 :] if x.strip()]
-                cues.append(
-                    Cue(
-                        n=len(cues) + 1,
-                        start=_ms(*g[:4]),
-                        end=_ms(*g[4:]),
-                        ts=ln.strip(),
-                        lines=body,
-                    )
-                )
-                break
+        stamps = [k for k, ln in enumerate(lines) if TS_RE.match(ln)]
+        if not stamps:
+            if len(lines) == 1 and lines[0].strip().isdigit() and cues:
+                # A number line cut off from its timestamp by a blank line.
+                note(f"after cue {cues[-1].n}: a cue number apart from its timestamp")
+            else:
+                more_text(lines)
+            continue
+        prev = -1
+        for k in stamps:
+            head = lines[prev + 1 : k]
+            if head and head[-1].strip().isdigit():
+                head = head[:-1]  # the number line above the timestamp
+            if prev < 0:
+                more_text(head)
+            else:
+                # A second timestamp in one block: the lines between are the
+                # text of the cue above, which had no blank line after it.
+                cues[-1].lines = [x for x in head if x.strip()]
+                note(f"cue {len(cues) + 1}: no blank line before it")
+            g = TS_RE.match(lines[k]).groups()
+            cues.append(Cue(n=len(cues) + 1, start=_ms(*g[:4]), end=_ms(*g[4:]), ts=lines[k].strip()))
+            prev = k
+        cues[-1].lines = [x for x in lines[prev + 1 :] if x.strip()]
     return cues
 
 
-def parse(path: str | Path) -> tuple[list[Cue], str]:
-    """Parse a subtitle file. Returns (cues, detected encoding)."""
+def parse(path: str | Path, repairs: list[str] | None = None) -> tuple[list[Cue], str]:
+    """Parse a subtitle file. Returns (cues, detected encoding). Faults put
+    right while parsing are added to `repairs` when it is given."""
     text, enc = decode(Path(path).read_bytes())
-    return parse_text(text), enc
+    return parse_text(text, repairs), enc
 
 
 # --- writing -------------------------------------------------------------
@@ -854,7 +883,8 @@ def shift(cues: list[Cue], ms: int) -> list[Cue]:
 
 
 def _cmd_info(a) -> None:
-    cues, enc = parse(a.file)
+    repairs: list[str] = []
+    cues, enc = parse(a.file, repairs)
     sample = [c.text for c in cues[len(cues) // 3 : len(cues) // 3 + 5]]
     result.emit(
         {
@@ -865,6 +895,7 @@ def _cmd_info(a) -> None:
             "last_end": fmt_ms(cues[-1].end) if cues else None,
             "last_end_ms": cues[-1].end if cues else None,
             "sample": sample,
+            "repairs": len(repairs),
         },
         a.result,
     )

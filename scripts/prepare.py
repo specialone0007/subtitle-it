@@ -109,19 +109,24 @@ def build(
     stale = ("draft.tr.srt", "checks.json", "speakers.json") + (() if keep_bible_check else BIBLE_CHECK_FILES)
     for name in stale:
         (work / name).unlink(missing_ok=True)
-    timing, enc = srt.parse(timing_path)
+    # Faults the parser put right in each file read: a cue with no blank line
+    # before it, or text cut off from its cue by a stray blank line.
+    repairs: dict[str, list[str]] = {"timing": []}
+    timing, enc = srt.parse(timing_path, repairs["timing"])
     if not timing:
         raise SystemExit(f"no cues found in {timing_path}")
     hearing_impaired = {"timing": srt.hearing_impaired(timing)["hearing_impaired"]}
 
     src_pairs = None
     if source_path and source_path.resolve() != timing_path.resolve():
-        source, _ = srt.parse(source_path)
+        repairs["source"] = []
+        source, _ = srt.parse(source_path, repairs["source"])
         src_pairs = srt.pair(timing, source)
         hearing_impaired["source"] = srt.hearing_impaired(source)["hearing_impaired"]
     en_pairs = None
     if en_path and en_path.resolve() != timing_path.resolve():
-        en, _ = srt.parse(en_path)
+        repairs["en"] = []
+        en, _ = srt.parse(en_path, repairs["en"])
         en_pairs = srt.pair(timing, en)
         hearing_impaired["en"] = srt.hearing_impaired(en)["hearing_impaired"]
 
@@ -206,6 +211,12 @@ def build(
         "hearing_impaired_tags": hi,
         "cues_with_tags_or_labels_removed": cleaned,
         "sound_only_cues_dropped": dropped,
+        "repairs": {name: len(found) for name, found in repairs.items()},
+        "warnings": [
+            f"the {name} file is malformed; repairs made while reading it: {len(found)} (first: {found[0]})"
+            for name, found in repairs.items()
+            if found
+        ],
     }
     (work / "build.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
     return summary
