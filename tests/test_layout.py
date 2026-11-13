@@ -2,6 +2,7 @@
 speaker, and a two-speaker cue split in two when it cannot be shown so."""
 
 import json
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -177,3 +178,41 @@ def test_deliver_keeps_the_map_and_learn_reads_it(work: Path, tmp_path: Path):
     info = assemble.deliver(work, dest, tmp_path / "backups", force=False)
     backup = Path(info["backup_of_old_file"])
     assert json.loads(Path(str(backup) + ".map.json").read_text(encoding="utf-8"))["cues"]["3"] == {"cue": 3, "part": 2, "of": 2}
+
+
+def test_deliver_leaves_out_the_map_when_the_user_edited_the_file(work: Path, tmp_path: Path):
+    assemble.run_checks(work)
+    dest = tmp_path / "Film.tr.srt"
+    assemble.deliver(work, dest, tmp_path / "backups", force=False)
+    # The user edits the delivered file: the old map no longer describes it.
+    dest.write_text(dest.read_text(encoding="utf-8").replace("Tamam.", "Peki."), encoding="utf-8")
+    assemble.run_checks(work)
+    info = assemble.deliver(work, dest, tmp_path / "backups", force=False)
+    backup = Path(info["backup_of_old_file"])
+    assert "Peki." in backup.read_text(encoding="utf-8")
+    assert not Path(str(backup) + ".map.json").exists()
+    assert [p.name for p in (tmp_path / "backups").iterdir()] == [backup.name]
+
+
+def test_two_deliveries_in_one_second_keep_both_backups(work: Path, tmp_path: Path, monkeypatch):
+    class Frozen(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 11, 13, 12, 0, 0)
+
+    monkeypatch.setattr(assemble, "datetime", Frozen)
+    assemble.run_checks(work)
+    dest = tmp_path / "Film.tr.srt"
+    backups = tmp_path / "backups"
+    dest.write_text("first", encoding="utf-8")
+    one = Path(assemble.deliver(work, dest, backups, force=False)["backup_of_old_file"])
+    dest.write_text("second", encoding="utf-8")
+    two = Path(assemble.deliver(work, dest, backups, force=False)["backup_of_old_file"])
+    dest.write_text("third", encoding="utf-8")
+    three = Path(assemble.deliver(work, dest, backups, force=False)["backup_of_old_file"])
+    assert [one.name, two.name, three.name] == [
+        "Film.tr.20261113-120000.srt",
+        "Film.tr.20261113-120000-2.srt",
+        "Film.tr.20261113-120000-3.srt",
+    ]
+    assert [p.read_text(encoding="utf-8") for p in (one, two, three)] == ["first", "second", "third"]
