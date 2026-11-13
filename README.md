@@ -45,6 +45,12 @@ when no other command uses that name.)
   too; in other files parentheses and capitals are often dialogue, so they
   stay. A cue that is only a sound is left out. Set `Hearing-impaired tags`
   to `keep` in your preferences to keep them all.
+- **Read at a glance.** Lines are reshaped into fewer, plainer words
+  without losing what is said, following the Netflix Turkish style guide:
+  a bare "Oh." or "Hmm?" is not subtitled, a phrase said twice in a row is
+  written once, and only songs that carry the story are translated (set
+  `Songs` to `skip` or `all` to change that). sen and siz follow the tone
+  of each scene, so people at ease do not talk like strangers.
 - **No questions, no spoilers.** Once setup is done it runs to the end. The
   one question it may ask is which film you mean when a name matches several
   (Alien and Aliens). It does not discuss the plot in chat.
@@ -183,7 +189,7 @@ long as the film, or more for speech-to-text.
 | Place | What is there |
 | --- | --- |
 | Next to the video | `<film>.srt`, with exactly the video's name and saved as UTF-8 with a BOM, so TVs find it and show ş, ğ and ı. A file already there under that name, such as an English `<film>.srt`, is moved to `backups/` first. Nothing else is written into your film folders. |
-| `~/.config/subtitle-it/`<br>(on Windows `C:\Users\<you>\.config\subtitle-it\`) | `preferences.md` (media folders, translator model, audio hints, hearing-impaired tags, swearing, titles, learned rules), `credentials.json` (OpenSubtitles and Hugging Face; only the scripts read it), and `backups/` (files a new subtitle replaced). Kept when the plugin is uninstalled. A settings folder from before the plugin was renamed is moved here, once, the first time it is needed. |
+| `~/.config/subtitle-it/`<br>(on Windows `C:\Users\<you>\.config\subtitle-it\`) | `preferences.md` (media folders, translator model, audio hints, hearing-impaired tags, songs, swearing, titles, learned rules), `credentials.json` (OpenSubtitles and Hugging Face; only the scripts read it), and `backups/` (files a new subtitle replaced). Kept when the plugin is uninstalled. A settings folder from before the plugin was renamed is moved here, once, the first time it is needed. |
 | The plugin's data folder<br>(`~/.claude/plugins/data/subtitle-it-.../`) | One work folder per film with the bible, the delivered copy and a report, plus the download cache and `results/`, where each script saves its last JSON result. **Uninstalling the plugin deletes it.** |
 
 The skill reads the files in `results/` rather than the scripts' printed

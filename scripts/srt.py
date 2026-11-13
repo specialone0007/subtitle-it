@@ -782,6 +782,50 @@ def is_sound(cue: Cue) -> bool:
     return not strip_hi(cue.lines)[0]
 
 
+def is_lyric(lines: list[str]) -> bool:
+    """Every line with words in it is a song lyric: marked with ♪ or ♫,
+    or in older files with a # opening or closing it. A cue that mixes a
+    lyric with speech is not one."""
+    said = [strip_tags(ln).strip() for ln in lines]
+    said = [ln for ln in said if re.search(r"\w", ln)]
+    return bool(said) and all("♪" in ln or "♫" in ln or LYRIC_HASH_RE.search(ln) for ln in said)
+
+
+# Sounds the audience understands from the audio, which the Netflix
+# Turkish style guide (I.22) leaves unsubtitled when they stand alone.
+# Each pattern takes stretched spellings: "Ohh", "Hmmm", "Uhh".
+BARE_SOUNDS = re.compile(
+    r"(?:a+h+|o+h+|o+o+h+|h+u+h+|h+m+|m+h*m+|u+h+|u+m+|e+r+|e+h+|a+w+|u+g+h+|w+h+o+a+|w+o+w+|m+)",
+    re.I,
+)
+# A yes or no said as a sound: subtitled as a word when it answers a
+# question (Netflix Turkish style guide, II.9: "hı hı", "ı ıh").
+ANSWER_SOUNDS = re.compile(r"(?:u+h+-h+u+h+|m+-?h+m+|n+u+h+-u+h+|u+h+-u+h+)", re.I)
+
+
+def _sound_tokens(lines: list[str]) -> list[str] | None:
+    """The words of a cue when it holds words at all, split on spaces and
+    punctuation but keeping hyphens inside a word ("uh-huh")."""
+    text = " ".join(strip_tags(ln) for ln in lines)
+    text = re.sub(r"^\s*-\s*|\s-\s", " ", text)
+    words = re.findall(r"\w+(?:-\w+)*", text)
+    return words or None
+
+
+def is_answer_sound(lines: list[str]) -> bool:
+    """The whole cue is a yes or no said as a sound: "Uh-huh.", "Mm-hmm"."""
+    words = _sound_tokens(lines)
+    return bool(words) and all(ANSWER_SOUNDS.fullmatch(w) for w in words)
+
+
+def is_bare_sound(lines: list[str]) -> bool:
+    """The whole cue is sounds like "Oh.", "Hmm?" or "Uh, um...", with no
+    word that means anything on its own. A yes or no said as a sound
+    counts too; the caller keeps it when it answers a question."""
+    words = _sound_tokens(lines)
+    return bool(words) and all(BARE_SOUNDS.fullmatch(w) or ANSWER_SOUNDS.fullmatch(w) for w in words)
+
+
 def _coverage(a: list[Cue], b: list[Cue]) -> list[float]:
     """For each cue of `a`, the share of its time covered by cues of `b`.
     Both lists sorted by start time."""

@@ -33,10 +33,10 @@ own.
 1. Search the web for the film's cast and plot, as a check on names and relations.
 2. Read the whole script once.
 3. Answer every question from the cues, with the cue numbers that support your answer:
-   - `address`: does the speaker say sen or siz to the listener, and does it change? Plain Turkish usage: siz between adults who are not family or friends, to elders, superiors and strangers; sen between family, friends, children, and when one side talks down to the other.
+   - `address`: does the speaker say sen or siz to the listener, and does it change? Plain Turkish usage, read from the tone of each scene and not only the relationship on paper: siz to officials, staff, superiors, someone much older shown respect, and in a formal or wary first contact; sen between family, friends, children, adults of about the same age who talk at ease (working side by side, teasing, a quiet or tender moment), and when one side talks down to the other. A pair can shift for one scene and back: give a step where it starts and one where it ends.
    - `voice`: which character speaks the cues with that voice.
    - `name` and `term`: the Turkish you would use.
-4. A question the cues cannot settle: answer anyway, mark it `guess`, and choose what does least harm if wrong: siz between adults who are not family or friends, names and titles as in the original.
+4. A question the cues cannot settle: answer anyway, mark it `guess`, and choose what does least harm if wrong: siz for officials, staff, a formal or wary first contact and someone much older shown respect; sen between adults of about the same age once they talk at ease; names and titles as in the original.
 5. When you notice a decision the questions miss (a pair who talk to each other, a recurring term), add it under `extra`, at most 5. Never add a `voice` extra: the voices are asked in a round of their own, after the audio step. In the voice round, where every question is a `voice` question, add no `extra`: the first round covers the rest.
 
 ## Write `second.json` in the work folder

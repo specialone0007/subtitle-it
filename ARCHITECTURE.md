@@ -93,9 +93,14 @@ Then it settles the timings:
   ? or !, or holds a sentence with words on both sides, and capitals that
   do not look like a name (`OK:`, `DAY 3:`). Each label is kept as the
   cue's speaker hint. A cue that is only sounds is marked and left
-  out of the translation and of the delivered file. Song lines with words
-  stay. `sources.py` calls a file hearing-impaired when at least 3% of its
+  out of the translation and of the delivered file. `sources.py` calls a file hearing-impaired when at least 3% of its
   cues hold such tags or labels, whatever its name says.
+- Whatever that setting says, `build` follows the Netflix Turkish style
+  guide on bare sounds: a cue that is only "Oh.", "Hmm?" or "Uh, um..." is
+  left out the same way (`left_out: "sound"`), since the audience hears
+  it. A yes or no said as a sound ("Uh-huh.") right after a question stays,
+  and the translator writes it as a word. A cue whose words are all song
+  lyrics is marked `song`; step 6–7 decides which songs are translated.
 
 The step also looks for a human-made Turkish subtitle. It tries at most two
 files, a hash match first, and stops at the first one that passes
@@ -128,6 +133,13 @@ translator must share:
 - `glossary.json`.
 - `decisions.json`: each decision as a question, its answer, the cues that
   support it and how sure it is.
+- `songs.json`, when the film has song cues: the songs that carry the
+  story (sung on screen, or lyrics the scene plays against), by cue range.
+
+sen/siz is read from the tone of each scene, not only the relationship on
+paper: people at ease say sen, and a pair can shift for one scene (a cold
+siz in a fight) and back. The fallback for an unclear pair is siz only for
+formal relations; adults of about the same age at ease get sen.
 
 It works from the text while the audio step runs. Once the voices are in, a
 voice mapper subagent decides which character each voice is, and
@@ -153,6 +165,11 @@ answers the same questions without seeing it.
    goes into the report.
 
 ### 6–7. Translate
+
+First `prepare.py songs` applies the preferences' `Songs` (`story`,
+`skip` or `all`): with `story`, every song cue not in `songs.json` is
+marked `left_out: "song"`, gets no chunk line and is not delivered. Then
+`chunks` writes the chunks again without them.
 
 One subagent per chunk, all started at once. Each gets the Turkish language
 pack (`pack-tr.md`), the bible, your preferences and its neighbours' chunks
@@ -208,7 +225,11 @@ rest of the work folder keeps the timing file's numbers.
 ### 10. Review
 
 One subagent reads the whole film side by side with the source and fixes
-what the chunk translators could not see.
+what the chunk translators could not see. The bible is its default for
+sen/siz, but the scene decides: it never turns a natural sen into siz only
+to match the bible, and lists each cue where it departs from the bible.
+It fixes reading-speed warnings with shorter wording instead of leaving
+them because the source is as fast.
 
 In a polish run, `polish.py soft` then lists the lines that are still
 softer than the English swearing. The polish fixer restores them once, and

@@ -5,6 +5,7 @@
 """Build a film's work folder and cut it into chunks for the translators.
 
     uv run prepare.py build  --work W --timing T [--source S] [--en E] [--keep-bible-check] [--hi remove|keep]
+    uv run prepare.py songs  --work W [--mode story|skip|all]
     uv run prepare.py chunks --work W [--target 250]
 
 `build` writes W/timing.srt (UTF-8 copy of the timing file, timestamps kept
@@ -19,6 +20,14 @@ both out of every text before any agent sees it: the labels become speaker
 hints in speakers.json, and a cue left with no words is marked
 `sound_only` in cues.json, gets no chunk line and is not delivered.
 `--hi keep` leaves the text as it is.
+
+Two more kinds of cue are left out the same way, following the Netflix
+Turkish style guide. A cue that is only a bare sound the audience hears
+("Oh.", "Hmm?", "Uh, um...") is marked `left_out: "sound"` by `build`; a
+yes or no said as a sound ("Uh-huh") right after a question stays. A cue
+whose words are all song lyrics is marked `song`; `songs` then marks the
+songs that are not translated `left_out: "song"`, from the bible writer's
+songs.json and the preferences' "Songs".
 
 `--keep-bible-check` is for a rebuild that only shifts the times of the same
 cues: the bible check's files stay, since its answers cite cue numbers.
@@ -143,7 +152,8 @@ def build(
         return out, found
 
     speakers: dict[str, dict] = {}
-    rows, unpaired, cleaned, dropped = [], 0, 0, 0
+    rows, unpaired, cleaned, dropped, songs, sounds = [], 0, 0, 0, 0, 0
+    asked = False  # the last cue with words ended with a question
     shown: dict[int, list[str]] = {}
     for c in timing:
         src_raw = c.lines if src_pairs is None else [ln for o in src_pairs[c.n] for ln in o.lines]
@@ -165,6 +175,7 @@ def build(
         timing_said = bool(timing_lines) and not (src_sounds and not srt.strip_hi(timing_lines, True)[0])
         sound_only = remove and (f1 or f2) and not timing_said and not src_lines
         shown[c.n] = timing_lines
+        said = src_lines or timing_lines
         row = {
             "n": c.n,
             "ts": c.ts,
@@ -181,7 +192,27 @@ def build(
         if sound_only:
             row["sound_only"] = True
             dropped += 1
-        else:
+        elif srt.is_lyric(said):
+            # The source text decides, and the timing text only when the
+            # source has none here: speech in the source stays speech even
+            # where the timing file shows a lyric. Which songs are
+            # translated is decided after the bible, by `songs`.
+            row["song"] = True
+            songs += 1
+        elif (
+            srt.is_bare_sound(said)
+            and (not en_lines or srt.is_bare_sound(en_lines))
+            and not (srt.is_answer_sound(said) and asked)
+        ):
+            # "Oh." or "Hmm?" alone: the audience hears it, so it is not
+            # subtitled. The English cross-check must agree, so a word in
+            # another language spelled like a sound (German "Er.", "Him.")
+            # stays. "Uh-huh" right after a question is an answer and stays.
+            row["left_out"] = "sound"
+            sounds += 1
+        if not sound_only and "left_out" not in row:
+            asked = bool(said) and srt.strip_tags(said[-1]).strip().endswith("?")
+        if not sound_only:
             if src_pairs is not None and not src_lines:
                 unpaired += 1
             label = cue_label(src_raw, hi_source) or cue_label(en_raw or [], hi_en)
@@ -211,6 +242,8 @@ def build(
         "hearing_impaired_tags": hi,
         "cues_with_tags_or_labels_removed": cleaned,
         "sound_only_cues_dropped": dropped,
+        "song_cues": songs,
+        "bare_sound_cues_dropped": sounds,
         "repairs": {name: len(found) for name, found in repairs.items()},
         "warnings": [
             f"the {name} file is malformed; repairs made while reading it: {len(found)} (first: {found[0]})"
@@ -226,13 +259,78 @@ def _one_line(lines: list[str] | None) -> str:
     return " / ".join(ln.strip() for ln in lines) if lines else ""
 
 
+def left_out(row: dict) -> bool:
+    """The cue gets no translation and is not delivered: only sounds
+    described, a bare sound ("Oh."), or a song left out."""
+    return bool(row.get("sound_only") or row.get("left_out"))
+
+
+SONG_MODES = ("story", "skip", "all")
+SONGS_FILE = "songs.json"
+
+
+def read_song_choice(work: Path) -> list[tuple[int, int]]:
+    """The cue ranges of the songs the bible writer kept, from songs.json:
+    {"keep": [{"first": 520, "last": 526, "why": "..."}]}."""
+    path = work / SONGS_FILE
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        raise SystemExit(f"{SONGS_FILE} cannot be read: {e}") from e
+    keep = data.get("keep") if isinstance(data, dict) else None
+    if not isinstance(keep, list):
+        raise SystemExit(f'{SONGS_FILE} needs a "keep" list, empty when no song is kept')
+    out = []
+    for k, item in enumerate(keep):
+        first = item.get("first") if isinstance(item, dict) else None
+        last = item.get("last") if isinstance(item, dict) else None
+        if not (isinstance(first, int) and isinstance(last, int) and 0 < first <= last):
+            raise SystemExit(f'{SONGS_FILE}: keep[{k}] needs whole cue numbers "first" <= "last"')
+        out.append((first, last))
+    return out
+
+
+def songs(work: Path, mode: str) -> dict:
+    """Mark which song cues are left out, by the preferences' "Songs":
+    `story` keeps only the songs listed in songs.json, `skip` leaves every
+    song out and `all` keeps them all. Run it after the bible and before
+    `chunks`; running it again recomputes the choice."""
+    if mode not in SONG_MODES:
+        raise SystemExit(f"--mode is one of {', '.join(SONG_MODES)}")
+    rows = json.loads((work / "cues.json").read_text(encoding="utf-8"))
+    note = None
+    keep: list[tuple[int, int]] = []
+    song_rows = [r for r in rows if r.get("song")]
+    if mode == "story":
+        if (work / SONGS_FILE).exists():
+            keep = read_song_choice(work)
+        elif song_rows:
+            # A film with no songs needs no list, so no note either.
+            note = f"no {SONGS_FILE}: every song is left out"
+    for r in song_rows:
+        kept = mode == "all" or any(a <= r["n"] <= b for a, b in keep)
+        if kept:
+            r.pop("left_out", None)
+        else:
+            r["left_out"] = "song"
+    tmp = work / "cues.json.tmp"
+    tmp.write_text(json.dumps(rows, ensure_ascii=False, indent=0), encoding="utf-8")
+    _swap(tmp, work / "cues.json")
+    left = [r["n"] for r in song_rows if r.get("left_out")]
+    return {
+        "mode": mode,
+        "song_cues": len(song_rows),
+        "kept": len(song_rows) - len(left),
+        "left_out": len(left),
+        "note": note,
+    }
+
+
 def chunks(work: Path, target: int) -> list[dict]:
     rows = json.loads((work / "cues.json").read_text(encoding="utf-8"))
     speakers = json.loads((work / "speakers.json").read_text(encoding="utf-8"))
     cues = [
-        srt.Cue(n=r["n"], start=r["start"], end=r["end"], ts=r["ts"], lines=r["timing_lines"])
-        for r in rows
-        if not r.get("sound_only")
+        srt.Cue(n=r["n"], start=r["start"], end=r["end"], ts=r["ts"], lines=r["timing_lines"]) for r in rows if not left_out(r)
     ]
     bounds = srt.chunk(cues, target=target)
     out_dir = work / "chunks"
@@ -254,7 +352,7 @@ def chunks(work: Path, target: int) -> list[dict]:
             f.write("# src = text to translate; en = English cross-check; [..] = speaker hint\n")
             f.write("# ' / ' separates the source's own lines\n\n")
             for r in rows[first - 1 : last]:
-                if r.get("sound_only"):
+                if left_out(r):
                     continue
                 hint = speaker_hint(speakers.get(str(r["n"]), {}))
                 head = f"#{r['n']} {r['ts'][:8]}" + (f" [{hint}]" if hint else "")
@@ -302,6 +400,9 @@ def main(argv: list[str] | None = None) -> None:
         default="remove",
         help="hearing-impaired sound descriptions and speaker labels: remove them (default) or keep them",
     )
+    g = sub.add_parser("songs")
+    g.add_argument("--work", type=result.path, required=True)
+    g.add_argument("--mode", choices=SONG_MODES, default="story")
     c = sub.add_parser("chunks")
     c.add_argument("--work", type=result.path, required=True)
     c.add_argument("--target", type=int, default=250)
@@ -309,6 +410,8 @@ def main(argv: list[str] | None = None) -> None:
     a = result.parse(p, argv)
     if a.cmd == "build":
         result.emit(build(a.work, a.timing, a.source, a.en, a.keep_bible_check, a.hi), a.result)
+    elif a.cmd == "songs":
+        result.emit(songs(a.work, a.mode), a.result)
     else:
         result.emit(chunks(a.work, a.target), a.result)
 

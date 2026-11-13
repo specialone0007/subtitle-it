@@ -4,9 +4,28 @@ Rules every translator and the reviewer follow. The source can be any
 language; the target is always Turkish. The user's preferences file can
 override the defaults marked "(default)".
 
+## Readable in one glance
+
+The viewer reads each cue in about two seconds while watching. A line
+that is right but slow to read is a bad subtitle.
+
+- Say the same thing in fewer, plainer words. Reshape the sentence for clarity (Netflix Turkish style guide, I.22): split a nested clause, use an active verb instead of a passive or a noun made from a verb, put the point first.
+- Keep everything that is said: facts, names, jokes, threats and swearing strength. Cut only what carries nothing: hesitations, false starts, "you know", "I mean", a word said twice. Never summarise a line into something blander.
+- Aim for 17 characters a second or less (I.17). A cue the check marks as too fast gets shorter wording, not the same wording squeezed.
+- A word or phrase the same speaker repeats in a row is written once (I.18): "Come on. Come on." → "Hadi." Keep the repeat when it carries the scene (a chant, a count, someone pointing at things one by one).
+- Sounds alone ("Oh.", "Hmm?", "Uh...") are already left out of your chunk. Inside a line, drop them too: "Oh, I didn't know." → "Bilmiyordum." Keep a sound that means something the audience may not catch: "Ouch!" → "Ah!", "Yuck." → "Iyy."
+- A yes or no said as a sound ("Uh-huh.", "Mm-hmm.", "Nuh-uh.") that answers something is written as the word: "Evet.", "Hı hı.", "Hayır." (II.9).
+
+Before → after:
+
+- "Bütün itmeyi ben yapmıyorum." → "Hep ben itecek değilim."
+- "Baltanın bileylenmiş olarak geri getirilmesini rica ederim." → "Baltayı bileyip getirirseniz sevinirim."
+- "Durun, bekleyin. Gözlerinizi kapatın." → "Dur. Kapat gözlerini."
+- "Yukarıda sizden kimse kaldığını sanmıyordum." → "Yukarıda kimse kalmadı sanıyordum."
+
 ## Meaning before words
 
-- Write natural spoken Turkish, the way people in the scene would talk. Never word for word.
+- Write natural spoken Turkish, the way people in the scene would talk. Never word for word: an English sentence shape in Turkish words is a calque, rewrite it.
 - A sentence that runs over 2 or 3 cues is translated as one sentence, then spread back over those same cues. Turkish word order often moves the verb to the last cue; that is fine.
 - When the source language and the English disagree, the source language wins. English is a cross-check for meaning and for who speaks.
 - Keep names as written in the source. Do not translate place names that have no common Turkish form.
@@ -15,7 +34,7 @@ override the defaults marked "(default)".
 
 - At most 2 lines per cue, at most 42 characters per line, whatever the source has.
 - Keep `- ` dialogue dashes: same number of dash lines as the source cue, one speaker per dash line. In a cue with two speakers, each speaker's turn is one line. A turn too long for one line is still written; the delivery step then splits the cue into one cue per speaker when the time allows, and otherwise the cue comes back to be shortened.
-- No speaker labels (`NAME:`, `[Name]`) and no sound descriptions (`[kapı çarpar]`, `(iç çeker)`), even when the source has them. The automatic check fails square brackets in any cue, and a label or a description in parentheses in a cue whose source had tags. Parentheses the source uses as speech (`(Orada mısın?)`) and headings such as `BÖLÜM 1:` stay. Song lines keep their `♪`.
+- No speaker labels (`NAME:`, `[Name]`) and no sound descriptions (`[kapı çarpar]`, `(iç çeker)`), even when the source has them. The automatic check fails square brackets in any cue, and a label or a description in parentheses in a cue whose source had tags. Parentheses the source uses as speech (`(Orada mısın?)`) and headings such as `BÖLÜM 1:` stay. Song lines keep their `♪` (see Songs below).
 - Keep `<i>` and `</i>` exactly where the source has italics (voices off screen, songs, phone, thoughts). No italics where the source has none.
 - No stray byte-order marks, no `{\an8}` style tags unless the source has them.
 - Never merge or split cues yourself, never leave one empty. Every cue number in your chunk gets text. Only the delivery step splits a two-speaker cue, as above.
@@ -34,16 +53,31 @@ override the defaults marked "(default)".
 
 ## sen / siz
 
-- Follow the sen/siz map in the film bible. Never mix both inside one sentence or one exchange.
-- Defaults when the bible says nothing: family, friends, lovers and children → "sen"; court, police, doctors, strangers, staff → "siz"; adults to a child → a gentle "sen".
+- Follow the sen/siz map in the film bible: each pair's usual form, and the scenes where it shifts. Never mix both inside one sentence or one exchange.
+- Defaults when the bible says nothing: family, friends, lovers, children, and adults of about the same age who talk at ease (working side by side, joking, sharing a quiet moment) → "sen"; court, police, doctors, staff, officials, a first contact that is formal or wary, and clear respect shown to someone much older → "siz"; adults to a child → a gentle "sen".
+- siz in a teasing or tender moment between people already at ease sounds wrong in Turkish. Use it there only when the bible gives a reason (respect for an elder kept even in jokes, a cold distance the scene means).
+- A pair can speak unequally (a young man says siz to an old man who says sen to him). Keep that only where the bible says so.
 - A change between sen and siz must have a reason in the story (the bible notes it).
 
 ## Register
 
 - Swearing at the same strength as the source (default). The preferences file can say "one step softer".
 - Children and elderly characters speak like themselves; formal speech in court stays formal.
-- Song lyrics: a short, loose paraphrase that keeps the meaning, in italics if the source is.
+- Song lyrics: see Songs below.
 - Titles: "Bayan Voyter", "Bay Hartley", "Sayın Başkan", "Hâkim Bey/Hanım" (default). The preferences file can switch to "Sandra Hanım" style.
+
+## Songs
+
+Only songs that carry the story reach your chunk; the rest are left out
+before translation (Netflix Turkish style guide, I.20). For a song you do
+get:
+
+- A short, loose paraphrase that keeps the meaning; a rhyme is welcome, never at the cost of the meaning.
+- In italics, with `♪` and a space at the start and at the end of each cue: `<i>♪ Dönüp bakıyorum hayatıma ♪</i>`.
+- Each lyric line starts with a capital letter. No comma or full stop at the end of a line; only `?` and `!` may end one.
+- A song title goes in quotation marks.
+- When the song goes on under the next dialogue, end the last lyric line you write with `...`.
+- Dialogue always wins over a song in the same cue.
 
 ## Turkish writing
 
