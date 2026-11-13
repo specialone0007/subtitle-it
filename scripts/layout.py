@@ -7,7 +7,8 @@ cue for cue with the timing file; only this last step may change the
 layout:
 
 - A cue whose lines are too long or too many is rewrapped into two lines
-  when its text fits in them.
+  when its text fits in them. So is a two-line cue broken where Turkish
+  reads badly (`turkish.bad_break`), when the rewrap breaks better.
 - A cue with two speakers whose turns do not each fit on one line is split
   at the speaker change into one cue per speaker. The cue's time is shared
   in proportion to each part's length, with the file's usual gap between
@@ -28,6 +29,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import srt  # noqa: E402
+import turkish  # noqa: E402
 
 MAX_LINE = 42
 MAX_LINES = 2
@@ -67,7 +69,7 @@ def _rewrap(lines: list[str]) -> list[str] | None:
     stay where they are in the text."""
     italic = all(ITALIC_LINE_RE.match(ln) for ln in lines)
     parts = [ITALIC_LINE_RE.match(ln).group("inner").strip() if italic else ln.strip() for ln in lines]
-    out = srt.wrap(" ".join(p for p in parts if p), MAX_LINE)
+    out = srt.wrap(" ".join(p for p in parts if p), MAX_LINE, lang="tr")
     if italic:
         out = [f"<i>{ln}</i>" for ln in out]
     return out if fits(out) else None
@@ -107,9 +109,14 @@ def plan(start: int, end: int, lines: list[str], gap: int) -> tuple[list[Part], 
     as_is = [Part(start, end, list(lines))]
     speakers = srt.turns(lines)
     if len(speakers) < 2:
-        if fits(lines):
+        if fits(lines) and not (len(lines) == 2 and turkish.bad_break(*lines)):
             return as_is, None
         wrapped = _rewrap(lines)
+        if fits(lines):
+            # Two lines broken where Turkish reads badly ("senin" / "gibi
+            # biri"): the rewrap replaces them only when it breaks better.
+            better = wrapped is not None and (len(wrapped) == 1 or not turkish.bad_break(*wrapped))
+            return ([Part(start, end, wrapped)] if better else as_is), None
         if wrapped:
             return [Part(start, end, wrapped)], None
         return as_is, f"needs more than {MAX_LINES} lines of {MAX_LINE} characters: shorten it"
