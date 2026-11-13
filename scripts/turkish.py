@@ -6,7 +6,8 @@ From the Netflix Turkish Timed Text Style Guide:
 - I.12 line breaks: never start the second line with a postposition or a
   particle that belongs to the word before it ("gibi", "diye", "mi", "de"),
   break before a conjunction rather than after it, and never leave one
-  word alone on a line. "bir" stays with the word after it. Song lines
+  word alone on a line. A break right after a sentence end is always
+  fine ("Güzel bir gündü." / "Değil mi?"). "bir" stays with the word after it. Song lines
   keep the song's own line breaks.
 - I.22 accents: "hâlâ" (still) and "hala" (aunt), "âşık" (in love) and
   "aşık" (knucklebone) differ only by the circumflex, and the plain
@@ -60,14 +61,15 @@ def bad_break(first: str, second: str) -> str | None:
     first, second = TAG_RE.sub("", first), TAG_RE.sub("", second)
     if "♪" in first + second:
         return None  # a lyric keeps the song's own lines
+    if first.rstrip().endswith((".", "!", "?", "…")):
+        return None  # a break after a sentence end is always a good one ("Değil mi?")
     if [lower(w) for w in WORD_RE.findall(first)[-1:]] == ["bir"]:
         return 'the first line ends with "bir", which belongs to the line below'
     if leans_back(_first_word(second)):
         return f'the second line starts with "{_first_word(second)}", which belongs to the line above'
-    if not first.rstrip().endswith((".", "!", "?", "…")):
-        for line in (first, second):
-            if len(WORD_RE.findall(line)) == 1:
-                return f'"{line.strip()}" stands alone on a line'
+    for line in (first, second):
+        if len(WORD_RE.findall(line)) == 1:
+            return f'"{line.strip()}" stands alone on a line'
     return None
 
 
