@@ -192,14 +192,22 @@ def build(
         if sound_only:
             row["sound_only"] = True
             dropped += 1
-        elif srt.is_lyric(said) or srt.is_lyric(timing_lines):
-            # Which songs are translated is decided after the bible, by
-            # the `songs` command.
+        elif srt.is_lyric(said):
+            # The source text decides, and the timing text only when the
+            # source has none here: speech in the source stays speech even
+            # where the timing file shows a lyric. Which songs are
+            # translated is decided after the bible, by `songs`.
             row["song"] = True
             songs += 1
-        elif srt.is_bare_sound(said) and not (srt.is_answer_sound(said) and asked):
+        elif (
+            srt.is_bare_sound(said)
+            and (not en_lines or srt.is_bare_sound(en_lines))
+            and not (srt.is_answer_sound(said) and asked)
+        ):
             # "Oh." or "Hmm?" alone: the audience hears it, so it is not
-            # subtitled. "Uh-huh" right after a question is an answer and stays.
+            # subtitled. The English cross-check must agree, so a word in
+            # another language spelled like a sound (German "Er.", "Him.")
+            # stays. "Uh-huh" right after a question is an answer and stays.
             row["left_out"] = "sound"
             sounds += 1
         if not sound_only and "left_out" not in row:
@@ -292,12 +300,13 @@ def songs(work: Path, mode: str) -> dict:
     rows = json.loads((work / "cues.json").read_text(encoding="utf-8"))
     note = None
     keep: list[tuple[int, int]] = []
+    song_rows = [r for r in rows if r.get("song")]
     if mode == "story":
         if (work / SONGS_FILE).exists():
             keep = read_song_choice(work)
-        else:
+        elif song_rows:
+            # A film with no songs needs no list, so no note either.
             note = f"no {SONGS_FILE}: every song is left out"
-    song_rows = [r for r in rows if r.get("song")]
     for r in song_rows:
         kept = mode == "all" or any(a <= r["n"] <= b for a, b in keep)
         if kept:

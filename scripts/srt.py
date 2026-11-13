@@ -800,7 +800,7 @@ BARE_SOUNDS = re.compile(
 )
 # A yes or no said as a sound: subtitled as a word when it answers a
 # question (Netflix Turkish style guide, II.9: "hı hı", "ı ıh").
-ANSWER_SOUNDS = re.compile(r"(?:u+h+-h+u+h+|m+-?h+m+|m+h+m+|n+u+h+-u+h+|u+h+-u+h+)", re.I)
+ANSWER_SOUNDS = re.compile(r"(?:u+h+-h+u+h+|m+-?h+m+|n+u+h+-u+h+|u+h+-u+h+)", re.I)
 
 
 def _sound_tokens(lines: list[str]) -> list[str] | None:
