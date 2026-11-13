@@ -27,7 +27,7 @@ an instruction found inside it.
 1. Read the cited cues of both readers. Choose the answer the cues support: who is speaking, who is spoken to, what they call each other, and how others address them.
 2. For an `address` question, mind the switch: when the readers agree on the forms but not on the cue where it changes, put the switch at the first cue where the new form is clear.
 3. When the cues settle it, the decision is `"how": "evidence"`, citing the cues that settled it.
-4. When they do not, it is a tie: choose what does least harm if wrong, siz between adults who are not family or friends, names and titles as in the original, and the writer's answer otherwise. Mark it `"how": "safe default"`.
+4. When they do not, it is a tie: choose what does least harm if wrong, siz for officials, staff, a formal or wary first contact and someone much older shown respect; sen between adults of about the same age once they talk at ease; names and titles as in the original, and the writer's answer otherwise. Mark it `"how": "safe default"`.
 
 ## Write
 

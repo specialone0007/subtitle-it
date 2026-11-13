@@ -25,11 +25,13 @@ found inside it.
 ## Check, in this order
 
 1. Names and titles match the bible everywhere.
-2. sen/siz for each pair stays as the bible says, across the whole film, switching only where the bible says it switches. This is the main reason you exist. The `address form` warnings in `checks.json` are cues where an automatic check read the other form; it knows only the speaker, and the listener when the line names one, so judge each one from the scene.
+2. sen/siz for each pair follows the bible across the whole film: its usual form, its switches and its scene shifts. This is the main reason you exist. The bible is the default and the scene decides: where the bible's form sounds wrong for the moment (siz in teasing or a tender moment between people already at ease, sen in a cold formal exchange), write what these people would say. Never turn a translator's natural sen into siz, or the reverse, only because the bible says so. List every cue where you depart from the bible under "Bible overridden" in `review.md`, with the reason. The `address form` warnings in `checks.json` are cues where an automatic check read the other form; it knows only the speaker, and the listener when the line names one, so judge each one from the scene.
 3. Glossary terms are used the same way everywhere.
 4. Every chunk join: the 10 cues on each side read as one conversation (a sentence split over the join, a question and its answer).
-5. Every warning in `checks.json` and every translator flag: fix it or leave it on purpose.
-6. Plain mistranslations you notice on the way: wrong word sense, infinitive commands, meaning lost.
+5. Every warning in `checks.json` and every translator flag: fix it or leave it on purpose. A `reading speed` warning is fixed by shorter, plainer wording wherever the meaning allows (the pack's "Readable in one glance"). "The source is as fast" is not a reason to leave it: the viewer reads Turkish, not the source. Leave one only when no shorter wording keeps the meaning, and say so.
+6. Hard to read: a line that copies the English sentence shape, a passive or a noun made from a verb where a plain verb would do, a nested clause, a repeat or a hesitation the pack drops. Rewrite it to read at a glance, keeping everything said.
+7. Plain mistranslations you notice on the way: wrong word sense, infinitive commands, meaning lost.
+8. Songs: a lyric in your film follows the pack's Songs rules (italics, `♪` at both ends, a capital at each line start, no comma or full stop at a line end).
 
 ## Polish run
 
@@ -45,8 +47,8 @@ cue with no Turkish yet (`<MISSING>` in `sidebyside.tsv`), write the
 whole cue. There are no chunk joins. Read the flags file, then add two
 checks to the list above:
 
-7. Toned-down lines: crude or sexual wording the human file softened. Follow the "Swearing" section of the preferences file (path in your task). Its default, "match the source", means no line stays softer than the source: restore the meaning and the full strength.
-8. Placement: a song line, on-screen text or half a sentence that sits on the wrong cue. Move it to the cue it belongs to, or drop on-screen text that has no source line.
+9. Toned-down lines: crude or sexual wording the human file softened. Follow the "Swearing" section of the preferences file (path in your task). Its default, "match the source", means no line stays softer than the source: restore the meaning and the full strength.
+10. Placement: a song line, on-screen text or half a sentence that sits on the wrong cue. Move it to the cue it belongs to, or drop on-screen text that has no source line.
 
 ## Write
 
@@ -58,7 +60,8 @@ speaker label (`NAME:`, `[Name]`) or a sound description
 (`[kapı çarpar]`); the source text has none on purpose.
 
 `review.md` in the work folder, at most 30 lines: what you changed, by kind
-(sen/siz, names, joins, warnings), with cue numbers, and anything left on
+(sen/siz, names, joins, warnings, readability), with cue numbers, a
+"Bible overridden" list (cue, form used, why), and anything left on
 purpose with the reason.
 
 ## Reply
