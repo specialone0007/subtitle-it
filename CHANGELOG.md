@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.6.1 (2026-11-13)
+
+- A subtitle file with a missing blank line between two cues is now read
+  as two cues. Before, the second cue's number and timestamp became text
+  of the first. A blank line in the middle of a cue no longer drops the
+  text after it: that text stays with its cue. `prepare.py build` counts
+  these repairs per file under `repairs` and `warnings`, and the run
+  report says which file was malformed. `sources.py validate` and
+  `srt.py info` show the count as `repairs`; a repaired file still passes
+  validation.
+- Delivering twice to the same file within one second no longer writes
+  the second backup over the first: a backup name that is taken gets a
+  counter (`Film.tr.20261113-120000-2.srt`).
+- `opensubtitles.py` ends with its usual one-line error, and writes
+  nothing, when the subtitle file link answers with an HTTP error or the
+  network fails, when the API sends a reply that is not JSON, and when
+  `credentials.json` is not valid JSON or has no API key. Before, each of
+  these showed a Python traceback. A timeout is retried like other network
+  errors.
+- A download is cached through a temporary file, so a run stopped while
+  writing it never leaves half a file that later runs would reuse.
+
 ## 0.6.0 (2026-11-13)
 
 - The plugin is now called subtitle-it, since Turkish is the first
