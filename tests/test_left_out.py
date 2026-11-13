@@ -170,3 +170,63 @@ def test_check_and_where_leave_out_sounds_and_songs(work: Path):
         {"cue": 6, "delivered": [], "note": "a song left out: not in the delivered file"},
         {"cue": 8, "delivered": [4], "at": ["00:00:15,000"]},
     ]
+
+
+def test_a_film_with_no_songs_gets_no_song_note(tmp_path: Path):
+    src = tmp_path / "film.en.srt"
+    src.write_text("1\n00:00:01,000 --> 00:00:02,000\nCome here.\n", encoding="utf-8")
+    w = tmp_path / "work"
+    prepare.build(w, src, None, None)
+    assert prepare.songs(w, "story") == {"mode": "story", "song_cues": 0, "kept": 0, "left_out": 0, "note": None}
+
+
+SOURCE_DE = """1
+00:00:01,000 --> 00:00:02,000
+Wer war das?
+
+2
+00:00:03,000 --> 00:00:04,000
+Er.
+
+3
+00:00:05,000 --> 00:00:06,000
+Oh.
+
+4
+00:00:07,000 --> 00:00:08,000
+Mach das aus!
+"""
+
+TIMING_EN = """1
+00:00:01,000 --> 00:00:02,000
+Who was that?
+
+2
+00:00:03,000 --> 00:00:04,000
+Him.
+
+3
+00:00:05,000 --> 00:00:06,000
+Oh.
+
+4
+00:00:07,000 --> 00:00:08,000
+<i>♪ A song on the radio ♪</i>
+"""
+
+
+def test_a_separate_source_decides_sounds_and_songs(tmp_path: Path):
+    timing = tmp_path / "film.en.srt"
+    timing.write_text(TIMING_EN, encoding="utf-8")
+    source = tmp_path / "film.de.srt"
+    source.write_text(SOURCE_DE, encoding="utf-8")
+    w = tmp_path / "work"
+    out = prepare.build(w, timing, source, timing)
+    r = rows(w)
+    # German "Er." is a word: the English "Him." says so, and it stays.
+    assert "left_out" not in r[2]
+    # "Oh." in both is a bare sound and goes.
+    assert r[3]["left_out"] == "sound"
+    # Speech in the source stays speech, whatever the timing file shows.
+    assert "song" not in r[4] and "left_out" not in r[4]
+    assert out["song_cues"] == 0 and out["bare_sound_cues_dropped"] == 1
