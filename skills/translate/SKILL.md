@@ -265,7 +265,7 @@ from the cited cues.
 2. When the second reader is done, and with voices also the voice round and `bible.py voices`, run `bible.py compare --work WORK`. It reads both answer files and writes `WORK/compare.json`. If `bible.py voices` gave up in item 5, delete `WORK/second.voices.json` first, after the voice round is done, so the judge is not handed every voice.
    When `unanswered` lists question ids, the second reader skipped them. Start the same `subtitle-it:second-reader` once more with the same paths and the line `Answer these questions you left out, keeping your other answers in the file: <ids>` (for a `voice:` id, point it at `WORK/second.voices.json` and `WORK/questions.voices.json` instead), then run `compare` again. Once only: questions still unanswered go to the judge as before; name them in the report.
 3. If `to_judge` is above 0, start one `subtitle-it:bible-judge` subagent with the paths (WORK, `WORK/compare.json`) and this command for reading cues, with the paths filled in: `uv run 'SCRIPTS/bible.py' --result '${CLAUDE_PLUGIN_DATA}/results/bible-cues.json' cues --work 'WORK' --cues <numbers>`, and the note that it must read the result file, not the printed output. It writes `WORK/judged.json` and updates `bible.md`.
-4. Run `bible.py apply --work WORK`. Keep its `ties` for the report.
+4. Run `bible.py apply --work WORK`. Keep its `ties` for the report. Its `term_conflicts` lists generic entries that give a family word ("brother") another rendering than a pair's family-word decision ("abi"); the checks follow the pair's decision, so name them in the report and go on.
 
 When `questions`, `compare` or `apply` refuses a file it reads, start one
 subagent of the type that wrote the file, with the error, asking it to
