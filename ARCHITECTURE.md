@@ -210,6 +210,18 @@ model of `sonnet` also runs at low effort; that is untested.
   such cue, even when the source is as fast), glossary variants, sen or
   siz against the bible, a plain "hala" or "aşık" that probably lacks its
   circumflex, and a few Turkish style checks. They go to the reviewer.
+  Some keep the film consistent: a cue whose source says a term the bible
+  decided but whose Turkish has none of the bible's rendering (`term
+  rendering`), a second form of a word the rest of the film writes one way
+  ("ağabey" among "abi", `term drift`), a TDK spelling slip ("sağol" for
+  "sağ ol"), and a name suffix that does not fit how the name sounds
+  ("Joey'in" for "Joey'nin"). `split sentence` looks at each run of cues
+  whose source sentence goes on without a full stop, and warns when the
+  Turkish writes a part twice, leaves a cue with nothing of its own, or
+  puts a name in another cue than the one that says it. The address check
+  leaves out a question and its answer heard as one voice, and a name
+  spoken about rather than to, since there the speaker or the listener
+  may be the wrong one.
 
 The last part of the check lays out every cue as it is shown
 (`layout.py`): at most 2 lines of 42 characters, and in a two-speaker cue
@@ -234,8 +246,12 @@ One subagent reads the whole film side by side with the source and fixes
 what the chunk translators could not see. The bible is its default for
 sen/siz, but the scene decides: it never turns a natural sen into siz only
 to match the bible, and lists each cue where it departs from the bible.
-It fixes reading-speed warnings with shorter wording, and family words
-("amca" or "dayı") and circumflexes that differ from the bible or the pack.
+Meaning comes before reading speed: it shortens a fast line only by
+rephrasing or dropping filler, never by dropping a clause, a question, a
+name or a second sentence, and a fast line that keeps the meaning stays.
+It takes the cues of a `split sentence` warning as one unit, and fixes
+family words ("amca" or "dayı"), slang, terms and circumflexes that differ
+from the bible or the pack.
 
 In a polish run, `polish.py soft` then lists the lines that are still
 softer than the English swearing. The polish fixer restores them once, and
@@ -248,7 +264,14 @@ the video's name so TVs pick it up, as UTF-8 with a BOM. Any file already
 there is moved to a backups folder, and the result says what it was:
 `earlier delivery`, `Turkish` or `not Turkish` (an English `<film>.srt`,
 say). For an `.srt` input the name keeps the input's, with `tr` as its
-language, so the input is never written over. The cue map is kept with the
+language, so the input is never written over. When it delivers to that
+default name next to the video (`--video`), this plugin's earlier
+deliveries of the film under another name, such as a `<film>.tr.srt` from
+before 0.6.2 or from the plugin's old name turkish-subtitles, go to the
+backups folder too, so the TV finds one Turkish file. It knows them from
+the `delivered.json` of every work folder, the old plugin's included, and
+only moves a file that still holds Turkish. `sources.py local` reads the
+same records, so such a file is never taken as a source. The cue map is kept with the
 delivered copy, and with a backup of an earlier delivery, so the report,
 learn mode and old files can still name each cue. `assemble.py where`
 turns a work folder cue number into its delivered number and time. `report.md` ends with "Check after
@@ -262,6 +285,9 @@ agents' completion notices. It names what a run cannot see: the main
 session's own tokens and the split into new and cached tokens, so it gives
 no cost in money. `usage.py summary` also saves the same figures as
 `usage.json` in the work folder, so several films can be compared.
+Agents are not waited on for their completion notice, which can come many
+minutes after the work: `usage.py wait` returns once an agent's output
+files exist and have stopped changing, and the run goes on from there.
 
 ## Learn mode
 

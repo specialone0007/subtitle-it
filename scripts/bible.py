@@ -536,6 +536,42 @@ def detect_form(text: str) -> str | None:
     return "siz" if has_siz else "sen"
 
 
+BREAK_CHARS = ',.!?;:-–—…"“”'
+
+
+def _vocative(text: str, m: re.Match) -> bool:
+    """The name at `m` stands apart, as a name said to someone does: only
+    punctuation or the end of the text on each side of it."""
+    before, after = text[: m.start()].rstrip(), text[m.end() :].lstrip()
+    return (not before or before[-1] in BREAK_CHARS) and (not after or after[0] in BREAK_CHARS)
+
+
+def _ends_with_question(row: dict | None) -> bool:
+    lines = (row or {}).get("en") or (row or {}).get("source") or (row or {}).get("timing_lines") or []
+    return bool(lines) and re.sub(r"<[^>]*>", "", lines[-1]).rstrip().endswith("?")
+
+
+def _two_speakers(row: dict) -> bool:
+    lines = row.get("en") or row.get("source") or row.get("timing_lines") or []
+    return sum(1 for ln in lines if re.match(r"\s*(?:<i>)?\s*-", ln)) >= 2
+
+
+def unsure_turns(rows: dict[int, dict], speakers: dict) -> set[int]:
+    """Cues whose voice hint may belong to the other speaker of a two-person
+    exchange. The audio step sometimes hears two voices as one, so a
+    question and its answer get the same voice: when a cue and the cue
+    next to it share a voice, and the first of the two ends in a question,
+    one of them is most likely the other person's turn. Both are unsure.
+    Cues whose speaker comes from a label in the subtitle are not."""
+    out: set[int] = set()
+    order = sorted(rows)
+    for a, b in zip(order, order[1:]):
+        va, vb = (speakers.get(str(n)) or {} for n in (a, b))
+        if va.get("voice") and va.get("voice") == vb.get("voice") and _ends_with_question(rows[a]):
+            out |= {n for n, e in ((a, va), (b, vb)) if not (e.get("name") or e.get("label"))}
+    return out
+
+
 class AddressBook:
     """Who speaks a cue, to whom, and the form the bible expects."""
 
@@ -571,8 +607,12 @@ class AddressBook:
         return self.name(label) or self.voice.get(entry.get("voice") or "")
 
     def listener(self, speaker: str, text: str) -> str | None:
+        """The one character the line speaks to by name: a name set off by
+        punctuation or the line's ends ("Nora, sit down.", "Sit down,
+        Nora."). A name inside the sentence is spoken about, not to: in
+        "you and them mugs and Father Barry" the listener is someone else."""
         low = text.casefold()
-        named = {n for rx, n in self._mention if n != speaker and rx.search(low)}
+        named = {n for rx, n in self._mention if n != speaker and any(_vocative(low, m) for m in rx.finditer(low))}
         return named.pop() if len(named) == 1 else None
 
     def expected(self, speaker: str, listener: str | None, n: int) -> str | None:
@@ -600,13 +640,16 @@ def address_readings(work: Path, texts: dict[int, list[str]], rows: dict[int, di
         return []
     speakers_file = work / "speakers.json"
     speakers = json.loads(speakers_file.read_text(encoding="utf-8")) if speakers_file.exists() else {}
+    unsure = unsure_turns(rows, speakers)
     out = []
     for n, tr in sorted(texts.items()):
         row = rows.get(n)
         got = detect_form(" ".join(tr))
         if row is None or got is None:
             continue
-        sp = book.speaker(speakers.get(str(n), {}))
+        # A two-speaker cue holds both people's turns, and an unsure turn
+        # may be the other person's: the speaker is not known there.
+        sp = None if n in unsure or _two_speakers(row) else book.speaker(speakers.get(str(n), {}))
         li = exp = None
         if sp is not None:
             said = " ".join(row.get("en") or row.get("source") or row.get("timing_lines") or [])
@@ -638,6 +681,48 @@ def address_warnings(work: Path, texts: dict[int, list[str]], rows: dict[int, di
         for r in address_readings(work, texts, rows)
         if address_off(r)
     ]
+
+
+# --- term renderings ---------------------------------------------------------
+
+QUOTED_RE = re.compile(r"[\"“]([^\"”]+)[\"”]")
+
+
+def term_renderings(work: Path) -> dict[str, set[str]]:
+    """The Turkish the bible gives for each quoted source term of its term
+    decisions: {"shape-up": {"işçi seçimi"}}. Name decisions are left out:
+    "father" may be "Peder" in one cue and "baba" in another. A question that
+    quotes several terms ("canary" / "sing") pairs them with an answer
+    split the same way ("kanarya / ötmek"). Answers that depend on the
+    scene (with a ";" or "for", as in "X for the birds; Y for the job") are
+    left out: no single word can be checked. Two decisions on one term (a
+    word with two senses, each its own decision) give it two renderings,
+    and either one will do. Empty when there is no usable decisions.json."""
+    if not (work / "decisions.json").exists():
+        return {}
+    try:
+        data = load_decisions(work)
+    except SystemExit:
+        return {}
+    out: dict[str, set[str]] = {}
+    for d in data["decisions"]:
+        if d.get("kind") != "term" or not isinstance(d.get("answer"), str):
+            continue
+        answer = re.sub(r"\([^)]*\)", "", d["answer"]).strip()
+        if not answer or ";" in answer or re.search(r"\bfor\b", answer):
+            continue
+        terms = [t.strip() for t in QUOTED_RE.findall(d.get("question", "")) if t.strip()]
+        parts = [p.strip() for p in answer.split(" / ")]
+        if len(parts) == len(terms):
+            pairs = zip(terms, parts)
+        elif len(parts) == 1:
+            pairs = ((t, answer) for t in terms)
+        else:
+            continue
+        for term, rendering in pairs:
+            if rendering.casefold() != term.casefold():
+                out.setdefault(term.casefold(), set()).add(rendering)
+    return out
 
 
 def main(argv: list[str] | None = None) -> None:

@@ -12,6 +12,14 @@ From the Netflix Turkish Timed Text Style Guide:
 - I.22 accents: "hâlâ" (still) and "hala" (aunt), "âşık" (in love) and
   "aşık" (knucklebone) differ only by the circumflex, and the plain
   spelling is the common slip.
+
+From the TDK spelling rules, for the checks:
+
+- Common spelling slips: "herşey" for "her şey", "sağol" for "sağ ol",
+  "bir çok" for "birçok", "yanlız" for "yalnız".
+- Name suffixes follow how the name sounds: "Joey'nin", "Ray'in".
+- One form of a word with two ("abi" or "ağabey", "celp" or "celpname")
+  for the whole film, and the bible's rendering of each term it decided.
 """
 
 from __future__ import annotations
@@ -90,3 +98,167 @@ def accent_slips(text: str) -> list[tuple[str, str]]:
     with what was most likely meant."""
     words = WORD_RE.findall(TAG_RE.sub("", text))
     return [(w, ACCENT_SLIPS[lower(w)]) for w in words if lower(w) in ACCENT_SLIPS]
+
+
+# Spellings the TDK dictionary writes otherwise, which slip into subtitles
+# often: words written together that are two ("her şey", "sağ ol"), two
+# that are one ("birçok", "hiçbir"), and common misspellings. A pattern
+# matches a whole word in lower case and keeps any ending after it
+# ("herşeyi" -> "her şeyi").
+SPELLING_SLIPS = [
+    (re.compile(r"(hiç)?(bir|her)şey(\w*)"), lambda m: f"{m[1] or ''}{m[2]} şey{m[3]}"),
+    (re.compile(r"bişey(\w*)"), lambda m: f"bir şey{m[1]}"),
+    (re.compile(r"sağol(\w*)"), lambda m: f"sağ ol{m[1]}"),
+    (re.compile(r"birarada"), lambda m: "bir arada"),
+    (re.compile(r"herzaman"), lambda m: "her zaman"),
+    (re.compile(r"hergün"), lambda m: "her gün"),
+    (re.compile(r"birdaha"), lambda m: "bir daha"),
+    (re.compile(r"birsürü"), lambda m: "bir sürü"),
+    (re.compile(r"şuan(da)?"), lambda m: f"şu an{m[1] or ''}"),
+    (re.compile(r"yinede"), lambda m: "yine de"),
+    (re.compile(r"yada"), lambda m: "ya da"),
+    (re.compile(r"yanlız(\w*)"), lambda m: f"yalnız{m[1]}"),
+    (re.compile(r"yalnış(\w*)"), lambda m: f"yanlış{m[1]}"),
+    (re.compile(r"herkez(\w*)"), lambda m: f"herkes{m[1]}"),
+    (re.compile(r"malesef"), lambda m: "maalesef"),
+    (re.compile(r"orjinal(\w*)"), lambda m: f"orijinal{m[1]}"),
+    (re.compile(r"deyil(\w*)"), lambda m: f"değil{m[1]}"),
+    (re.compile(r"pekala"), lambda m: "pekâlâ"),
+]
+# Two words the TDK writes as one.
+JOINED = {("bir", "çok"): "birçok", ("hiç", "bir"): "hiçbir", ("hiç", "biri"): "hiçbiri", ("her", "hangi"): "herhangi",
+          ("bir", "kaç"): "birkaç"}  # fmt: skip
+
+
+def spelling_slips(text: str) -> list[tuple[str, str]]:
+    """Each spelling in `text` that the TDK writes otherwise, with the
+    TDK form, a capital kept: [("herşey", "her şey"), ("Bir çok", "Birçok")]."""
+    plain = TAG_RE.sub("", text)
+    out = []
+    words = list(WORD_RE.finditer(plain))
+    for m in words:
+        low = lower(m.group())
+        for rx, fix in SPELLING_SLIPS:
+            hit = rx.fullmatch(low)
+            if hit:
+                out.append((m.group(), _same_case(m.group(), fix(hit))))
+                break
+    for a, b in zip(words, words[1:]):
+        pair = (lower(a.group()), lower(b.group()))
+        if pair in JOINED and plain[a.end() : b.start()] == " ":
+            out.append((f"{a.group()} {b.group()}", _same_case(a.group(), JOINED[pair])))
+    return out
+
+
+def _same_case(found: str, fix: str) -> str:
+    """`fix` with a capital first letter when `found` starts with one, so a
+    slip that opens a sentence keeps its capital: "Sağol" -> "Sağ ol"."""
+    if not found[:1].isupper():
+        return fix
+    first = "İ" if fix[0] == "i" else fix[0].upper()
+    return first + fix[1:]
+
+
+# --- apostrophe suffixes on names -----------------------------------------
+
+NAME_SUFFIX_RE = re.compile(r"(?<![\w'’])([A-ZÇĞİÖŞÜ][\wçğıöşüâîû]*)['’]([a-zçğıöşüâîû]+)")
+VOWELS = set("aeıioöuüâîû")
+GENITIVE = {"in", "ın", "un", "ün"}
+
+
+def ends_in_vowel_sound(name: str) -> bool | None:
+    """Whether a name ends in a vowel when said aloud, which decides the
+    suffix after its apostrophe: "Joey'nin", "Ray'in". None when the
+    spelling cannot tell: a final "e" is silent in "Mike" and said in
+    "Ayşe", and a final "h" or "w" may be either."""
+    low = lower(name)
+    last = low[-1]
+    if low == "bey":
+        return False  # the title in "Ahmet Bey'in": its "y" is a consonant
+    if last == "y":
+        # "Joey", "Terry", "Charley" end in an "i" sound; "Ray", "Roy" and
+        # "Guy" in a "y" that Turkish hears as a consonant.
+        return len(low) < 2 or low[-2] not in "aou"
+    if last == "e":
+        return True if low.endswith(("ie", "ee")) else None
+    if last in "hw":
+        return None
+    return last in VOWELS
+
+
+def name_suffix_slips(text: str) -> list[tuple[str, str]]:
+    """Each name whose apostrophe suffix does not fit how the name ends
+    when said aloud, with the suffix it needs: after a vowel sound a
+    suffix that starts with a vowel takes "n" (genitive) or "y"
+    ("Joey'in" -> "Joey'nin", "Joey'e" -> "Joey'ye"); after a consonant
+    it takes neither ("John'nun" -> "John'un"). Names in capitals (FBI)
+    are read letter by letter and left alone."""
+    out = []
+    for m in NAME_SUFFIX_RE.finditer(TAG_RE.sub("", text)):
+        name, suffix = m.group(1), m.group(2)
+        if name.isupper():
+            continue  # a letter or an acronym, said by its letter names ("D'yi", "FBI'ın")
+        vowel = ends_in_vowel_sound(name)
+        if vowel and suffix[0] in VOWELS:
+            buffer = "n" if suffix[:2] in GENITIVE and suffix[2:] in ("", "ki") else "y"
+            out.append((m.group(), f"{name}'{buffer}{suffix}"))
+        elif vowel is False and len(suffix) > 1 and suffix[1] in VOWELS:
+            if (suffix[0] == "n" and suffix[:3] in {"nin", "nın", "nun", "nün"}) or suffix[0] == "y":
+                out.append((m.group(), f"{name}'{suffix[1:]}"))
+    return out
+
+
+# --- one rendering per term ------------------------------------------------
+
+# Words with two accepted spellings or forms that a film should not mix:
+# whichever the draft uses most wins, and the others are flagged. Each
+# pattern matches a whole word in lower case, endings included.
+VARIANT_FAMILIES = [
+    {"abi": re.compile(r"abi(?:[mn]|si|ler\w*|y[ei]|nin|ciğim|cim)?"), "ağabey": re.compile(r"ağabey\w*")},
+    {"celp": re.compile(r"cel(?:p|bi\w*|be|pler\w*)"), "celpname": re.compile(r"celpname\w*")},
+    {"abla": re.compile(r"abla(?:[mn]|sı|lar\w*|y[aı]|nın|cığım|cım)?"), "ablacım": re.compile(r"ablacı(?:m|ğım)")},
+]
+
+
+def family_drift(texts: dict[int, list[str]], bible_text: str = "") -> list[tuple[int, str, str, int]]:
+    """Cues that use a less common member of a variant family than the rest
+    of the film: (cue, word used, the film's usual form, how many cues use
+    that). A member the bible's answers use (`bible_text`) wins whatever
+    the counts."""
+    bible_words = [lower(w) for w in WORD_RE.findall(bible_text)]
+    out = []
+    for family in VARIANT_FAMILIES:
+        prefer = {m for m, rx in family.items() if any(rx.fullmatch(w) for w in bible_words)}
+        used: dict[str, list[int]] = {}
+        for n, lines in texts.items():
+            words = [lower(w) for w in WORD_RE.findall(TAG_RE.sub("", " ".join(lines)))]
+            for member, rx in family.items():
+                if any(rx.fullmatch(w) for w in words):
+                    used.setdefault(member, []).append(n)
+        if len(used) < 2:
+            continue
+        order = list(family)
+        main = max(used, key=lambda k: (k in prefer, len(used[k]), -order.index(k)))
+        for member, cues in used.items():
+            if member != main:
+                out += [(n, member, main, len(used[main])) for n in cues if n not in used[main]]
+    return sorted(out)
+
+
+def stem(word: str) -> str:
+    """The part of a Turkish word its endings attach to, loosely: a last
+    vowel or a last hard consonant that softens ("celp" -> "celbi") is
+    dropped from words of four letters or more."""
+    w = lower(word)
+    if len(w) >= 5 and w.endswith(("mek", "mak")):
+        return w[:-3]  # a verb: "ötmek" -> "öt" ("ötecek", "öttü")
+    return w[:-1] if len(w) >= 4 and w[-1] in "pçtkaeıioöuü" else w
+
+
+def has_rendering(text: str, answer: str) -> bool:
+    """`text` holds a form of `answer`, by the stem of any of its words of
+    three letters or more. An answer with no such word ("S ve D") cannot
+    be checked and always passes."""
+    stems = [stem(w) for w in WORD_RE.findall(answer) if len(w) >= 3]
+    words = [lower(w) for w in WORD_RE.findall(TAG_RE.sub("", text))]
+    return not stems or any(w.startswith(s) for s in stems for w in words)

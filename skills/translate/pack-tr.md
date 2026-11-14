@@ -11,7 +11,7 @@ that is right but slow to read is a bad subtitle.
 
 - Say the same thing in fewer, plainer words. Reshape the sentence for clarity (Netflix Turkish style guide, I.22): split a nested clause, use an active verb instead of a passive or a noun made from a verb, put the point first.
 - Keep everything that is said: facts, names, jokes, threats and swearing strength. Cut only what carries nothing: hesitations, false starts, "you know", "I mean", a word said twice. Never summarise a line into something blander.
-- Aim for 17 characters a second or less (I.17). The check warns about every cue above that, even when the source line is as fast: the viewer reads Turkish, not the source. A cue marked too fast gets shorter wording, not the same wording squeezed.
+- Meaning comes before reading speed. Aim for 17 characters a second or less (I.17); the check warns about every cue above that. Shorten only by rephrasing or by dropping filler. Never drop a clause, a question, a name or a second sentence to reach the speed. A fast line that keeps the whole meaning stays as it is, and its warning stays: a lost clause is a mistranslation, a fast line is not.
 - A word or phrase the same speaker repeats in a row is written once (I.18): "Come on. Come on." → "Hadi." Keep the repeat when it carries the scene (a chant, a count, someone pointing at things one by one).
 - Sounds alone ("Oh.", "Hmm?", "Uh...") are already left out of your chunk. Inside a line, drop them too: "Oh, I didn't know." → "Bilmiyordum." Keep a sound that means something the audience may not catch: "Ouch!" → "Ah!", "Yuck." → "Iyy."
 - A yes or no said as a sound ("Uh-huh.", "Mm-hmm.", "Nuh-uh.") that answers something is written as the word: "Evet.", "Hı hı.", "Hayır." (II.9).
@@ -26,7 +26,8 @@ Before → after:
 ## Meaning before words
 
 - Write natural spoken Turkish, the way people in the scene would talk. Never word for word: an English sentence shape in Turkish words is a calque, rewrite it.
-- A sentence that runs over 2 or 3 cues is translated as one sentence, then spread back over those same cues. Turkish word order often moves the verb to the last cue; that is fine.
+- A sentence that runs over 2, 3 or more cues is translated as one sentence first, then spread back over those same cues so each part appears exactly once: no part written twice, no cue left with nothing of its own, and a name in the cue where it is said. Turkish word order often moves the verb to the last cue; that is fine. The check warns about such a group as `split sentence`.
+- Slang and idioms are translated by their meaning, never word for word: the bible's "Slang and idioms" section gives what each one means in this film ("pigeon" = an easy mark, "chasers" = drinks after a shot).
 - When the source language and the English disagree, the source language wins. English is a cross-check for meaning and for who speaks.
 - Keep names as written in the source. Do not translate place names that have no common Turkish form.
 
@@ -90,13 +91,15 @@ get:
 
 Turkish names the side of the family that English leaves open (I.22). "Uncle" is "amca" (father's brother) or "dayı" (mother's brother); "aunt" is "hala" (father's sister) or "teyze" (mother's sister); "brother" is "abi" (older) or "kardeş" (younger, or when the age is not known); "sister" is "abla" or "kardeş"; "grandma" is "anneanne" (mother's mother) or "babaanne" (father's mother).
 
-- Use the word the film bible gives for each relation. When the bible says nothing and the film does not show the side, take the more common word ("amca", "teyze", "kardeş") and keep it for the whole film.
+- Use the word the film bible gives for each relation, older or younger included: when the bible says a brother is the older one ("abi"), he is "abi" in every cue, never "ağabey" in one and "kardeş" in another. When the bible says nothing and the film does not show the side, take the more common word ("amca", "teyze", "kardeş") and keep it for the whole film.
 - "Abi" and "abla" are also what a younger speaker calls an older one, family or not; "amca" and "teyze" are what a child calls any older adult. Use them where the scene sounds like that, not as a translation of a name.
 
 ## Turkish writing
 
 - Use correct Turkish characters: ç ğ ı İ ö ş ü. Capital of "i" is "İ", of "ı" is "I".
 - Write the circumflex wherever it changes the meaning or the sound (I.22): "hâlâ" (still) vs "hala" (aunt), "âşık" (in love) vs "aşık", "kâr" (profit) vs "kar" (snow), "hâl" (state) vs "hal" (market hall), "resmî", "millî", "dinî" (the adjective forms). The check warns about a plain "hala" or "aşık" it finds; a "hala" that really means aunt stays.
-- Apostrophe before suffixes on proper names: "Sandra'nın", "Paris'te".
+- Apostrophe before suffixes on proper names: "Sandra'nın", "Paris'te". The suffix follows how the name sounds, not how it is spelled: "Joey" ends in an "i" sound, so "Joey'nin", "Joey'yi", "Joey'ye", never "Joey'in"; "Ray" ends in a consonant sound, so "Ray'in". The check warns about a suffix that does not fit (`name suffix`).
+- One spelling per word for the whole film, as the TDK writes it: "sağ ol", "her şey", "bir şey", "bir arada", "şu an", "ya da", "yine de", "birçok", "hiçbir", "herhangi", "yalnız", "yanlış", "pekâlâ". Pick one of two accepted forms ("abi" or "ağabey") and keep it. The check warns about the common slips (`spelling`) and about a second form of a word (`term drift`).
+- One Turkish rendering for each term the bible decides, in every cue that says it (`term rendering` when a cue has none of it).
 - Numbers: write small numbers as words in speech ("iki gün"), times and years in digits.
 - Ellipsis as three dots "...", no space before "?" or "!".

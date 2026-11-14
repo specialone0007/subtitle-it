@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import bisect
+import json
 import os
 import re
 import sys
@@ -241,6 +242,42 @@ def delivered_paths(info: dict) -> list[str]:
     if info.get("delivered_to"):
         paths.append(info["delivered_to"])
     return paths
+
+
+# The plugin was called turkish-subtitles before 0.6; its data folder sits
+# beside this one's, and its runs delivered `Film.tr.srt`.
+OLD_PLUGIN_DATA = "turkish-subtitles*"
+
+
+def delivery_records(work: Path) -> list[Path]:
+    """Every delivered.json that may name a file next to this film: this
+    work folder's, the other work folders beside it (a run started afresh
+    under another name), and the pre-rename plugin's work folders."""
+    work = Path(work)
+    records = [work / "delivered.json"]
+    if work.parent.name == "films":
+        records += sorted(work.parent.glob("*/delivered.json"))
+        data = work.parent.parent.parent
+        records += sorted(data.glob(f"{OLD_PLUGIN_DATA}/films/*/delivered.json"))
+    seen, out = set(), []
+    for r in records:
+        if r.is_file() and path_key(r) not in seen:
+            seen.add(path_key(r))
+            out.append(r)
+    return out
+
+
+def all_delivered_paths(work: Path) -> set[str]:
+    """Every file any delivery record names, as a `path_key`. A file in it
+    that still holds Turkish is this plugin's earlier delivery."""
+    keys = set()
+    for r in delivery_records(work):
+        try:
+            info = json.loads(r.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        keys |= {path_key(p) for p in delivered_paths(info)}
+    return keys
 
 
 # Dotless ı, dotted İ and soft ğ: common in any Turkish text, absent from

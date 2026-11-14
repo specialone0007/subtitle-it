@@ -526,3 +526,34 @@ def test_local_keeps_an_english_file_at_the_delivered_path_as_a_source(tmp_path:
     _no_tools(monkeypatch)
     [c] = sources.local(video, work)["candidates"]
     assert c["confidence"] == "likely" and c["check"]["cues"] == 60
+
+
+def test_local_marks_a_delivery_recorded_by_another_run_or_the_old_plugin(tmp_path: Path, monkeypatch):
+    film, video = _film_folder(tmp_path)
+    for name in ("Film.tr.srt", "Film.srt"):
+        (film / name).write_text(TR_TEXT, encoding="utf-8")
+    data = tmp_path / "plugins" / "data"
+    work = data / "subtitle-it-subtitle-it" / "films" / "film-new"
+    work.mkdir(parents=True)
+    # An earlier run of this plugin under another work folder name, and a
+    # run of the plugin when it was still called turkish-subtitles.
+    other = data / "subtitle-it-subtitle-it" / "films" / "film"
+    old = data / "turkish-subtitles-turkish-subtitles" / "films" / "film"
+    for folder, name in ((other, "Film.srt"), (old, "Film.tr.srt")):
+        folder.mkdir(parents=True)
+        (folder / "delivered.json").write_text(json.dumps({"delivered_to": str(film / name)}), encoding="utf-8")
+    _no_tools(monkeypatch)
+    out = sources.local(video, work)["candidates"]
+    assert sorted(Path(c["path"]).name for c in out) == ["Film.srt", "Film.tr.srt"]
+    assert all(c["confidence"] == sources.EARLIER_DELIVERY for c in out)
+
+
+def test_local_reads_no_other_records_outside_a_films_folder(tmp_path: Path, monkeypatch):
+    film, video = _film_folder(tmp_path)
+    (film / "Film.tr.srt").write_text(TR_TEXT, encoding="utf-8")
+    other = tmp_path / "elsewhere" / "other"
+    other.mkdir(parents=True)
+    (other / "delivered.json").write_text(json.dumps({"delivered_to": str(film / "Film.tr.srt")}), encoding="utf-8")
+    _no_tools(monkeypatch)
+    [c] = sources.local(video, tmp_path / "elsewhere" / "work")["candidates"]
+    assert c["confidence"] == "existing Turkish file, not a source"
