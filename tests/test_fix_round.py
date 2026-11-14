@@ -66,6 +66,10 @@ def _checks(r: dict, kind: str) -> set[tuple[int, str]]:
         (["<i>To</i>"], False),
         (["Plain."], False),
         (["<i>To all", "of them.</i>"], False),
+        # One speaker's whole line in italics (off screen) is no stray word.
+        (["- <i>Hello?</i>", "- Who's there?"], False),
+        (["- Who's there?", "- <i>Me.</i>"], False),
+        (["- <i>To</i> the ships!", "- Who's there?"], True),
     ],
 )
 def test_word_italics(lines: list[str], stray: bool):
@@ -146,6 +150,17 @@ def test_fix_round_replaces_its_own_old_files_only(work: Path):
     (fixes / "r2_01.txt").write_text("other round", encoding="utf-8")
     assemble.fix_round(work, "r1")
     assert sorted(p.name for p in fixes.iterdir()) == ["r1_01.txt", "r2_01.txt"]
+
+
+def test_fixround_command_writes_its_result(work: Path, tmp_path: Path):
+    (work / "out" / "tr_01.txt").write_text(GOOD.replace("Düz satır.", "<i>Düz satır.</i>"), encoding="utf-8")
+    assemble.run_checks(work)
+    res = tmp_path / "fixround.json"
+    assemble.main(["--result", str(res), "fixround", "--work", str(work), "--round", "r1"])
+    [group] = json.loads(res.read_text(encoding="utf-8"))["chunks"]
+    assert group["cues"] == [5]
+    assert group["write_to"] == str(work / "out" / "fix_r1_01.txt")
+    assert Path(group["fix_file"]).exists()
 
 
 def test_fix_round_rejects_a_label_that_is_a_path(work: Path):
