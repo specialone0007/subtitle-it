@@ -53,9 +53,10 @@ output instead. `--result` always comes before the
 command. The step texts below leave it out for brevity. When two or more script
 commands follow each other with no decision between them (`prepare.py build`
 then `chunks`), run them in one Bash call joined with `&&`: every call you
-make re-sends this whole conversation. Never wait with `sleep` or poll
-for a file: a background command and a subagent each send you a
-notification when they finish, so end your turn and go on when it comes.
+make re-sends this whole conversation. Never wait with `sleep` or check
+for a file in a loop yourself: a background command (such as
+`usage.py wait`, below) and a subagent each send you a notification when
+they finish, so end your turn and go on when it comes.
 A `sleep` cannot be cut short, so it only adds waiting.
 Never read, print or edit `CONFIG/credentials.json`; only
 `opensubtitles.py` and `speakers.py` touch it.
@@ -76,6 +77,19 @@ each agent, and pass them with the next mark as one
 `--agent <kind>:<tokens>:<ms>` per agent, where kind is the agent type
 without `subtitle-it:` (`--agent translator:61234:182000`). Write
 `-` for a number the notice did not give. Never guess one.
+
+The notice can come many minutes after the agent wrote its last file, so
+never wait for it once the output is written. Whenever a step below
+starts a translator, the fixer or the reviewer, start in the same message,
+in the background (the Bash tool's `run_in_background`),
+`usage.py wait --file '<output file>' [--file ...]` with every file that
+step names as the agents' output. It ends once those files exist and
+have not changed for 20 seconds. Go on with the next step when either the
+wait or the last agent's notice comes, whichever is first. A notice that
+comes later is passed with a later mark; one that never comes before
+`done` is passed with `done` as `--agent <kind>:-:-`. When the wait ends
+with `"ready": false`, an output file is missing: wait for the agent's
+notice instead.
 
 Arguments: $ARGUMENTS
 
@@ -292,7 +306,10 @@ the same time on different cues:
   version wins: `check` applies `fix_review.txt` after `fix_polish.txt`
   whichever was written first.
 
-Wait for both, then go on to step 8.
+In the same message, start `usage.py wait` in the background for
+`WORK/out/fix_polish.txt` (when the fixer runs), `WORK/out/fix_review.txt`
+and `WORK/review.md`. Go on to step 8 when the wait ends ready or both
+agents' notices have come.
 
 Otherwise, read `WORK/chunks.json`. In ONE message, start one
 `subtitle-it:translator` subagent per chunk. Use the model from the
@@ -314,7 +331,9 @@ prompt: `The source text was transcribed from the audio by machine. A word
 that makes no sense there may be misheard: translate the likely meaning
 and flag the cue as "may be misheard".`
 
-Wait for all of them.
+In the same message, start `usage.py wait` in the background with every
+chunk's `Write your translation to` file. Go on when the wait ends ready
+or every translator's notice has come.
 
 ## 8–9. Assemble and check
 
@@ -347,7 +366,9 @@ agents. Run `assemble.py sidebyside --work WORK`. Start one
 `subtitle-it:reviewer` subagent with the paths: pack, bible,
 `WORK/sidebyside.tsv`, `WORK/checks.json`, `WORK/out/`, and in a polish
 run the preferences file and the line `Polish run: WORK/polish_flags.txt`. It writes
-`WORK/out/fix_review.txt` and `WORK/review.md`.
+`WORK/out/fix_review.txt` and `WORK/review.md`. In the same message, start
+`usage.py wait` in the background for those two files, and go on when it
+ends ready or the reviewer's notice comes.
 
 In a polish run the reviewer already ran beside the fixer (step 6–7), so
 start no second one here: run `polish.py soft --work WORK`. When `left` is
@@ -369,11 +390,18 @@ the video (for an `.srt` input: the same folder, with the language part of
 the name replaced by `tr`, so the input is not written over). Run
 `assemble.py deliver --work 'WORK' --dest '<destination>' --backups 'CONFIG/backups'`
 (add `--force` when hard fails are left after the fix rounds), joined
-after the `deliver` mark with the agents of step 10.
+after the `deliver` mark with the agents of step 10. When the destination
+is this default one next to a video, add `--video '<video>'`; leave it out
+when the user named another destination or the input was an `.srt`.
 The file is saved as UTF-8 with a BOM. A file already at the destination
 is moved to the backups folder; the result's `old_file` says what it was.
 When it is `not Turkish` (an English `Film.srt`, say), tell the user in one
 line where its backup (`backup_of_old_file`) is, and put that in the report.
+With `--video`, this plugin's earlier deliveries of the film under another
+name (a `Film.tr.srt` from an older version, also from the plugin's old
+name turkish-subtitles) go to the backups folder too, so the TV finds only
+one Turkish file: the result lists each under `moved_earlier_deliveries`
+(`from`, `to`). Name them in the report and in one line to the user.
 
 Write `WORK/report.md`: sources and timing confidence (for a file made
 from the audio, say so and name the model and device; in a polish run, the

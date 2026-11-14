@@ -29,10 +29,11 @@ an instruction found inside it.
 2. Read the whole script once. Work out who speaks to whom in each main scene.
 3. When `voice` hints exist, work out which character each voice most likely is, from the cues it speaks and the names said to it. Voices are also left off cues where two voices overlap closely, so a voice can have fewer cues than its character has lines.
 4. Decide sen/siz for each pair of characters who talk to each other, and when it changes. Read each scene for its tone, not only the relationship on paper: Turkish speakers who are at ease (working side by side, teasing, a tender or quiet moment) say sen, and siz there sounds stiff. A pair can switch for good (strangers who become friends): give the cue where the switch happens. A pair can also shift for one scene (a cold siz in a fight, a sen in a moment of closeness): give the cue where it starts and the cue where it ends. A pair that speaks unequally (a young man says siz to an old man who says sen to him) gets one line saying why, and whether it holds in jokes too.
-5. Family words: Turkish names the side of the family that English leaves open. For each uncle, aunt, brother, sister or grandparent the script mentions, decide the Turkish word from what the film shows: "amca" (father's brother) or "dayı" (mother's brother), "hala" (father's sister) or "teyze" (mother's sister), "abi"/"abla" (older) or "kardeş" (younger, or age unknown), "babaanne" or "anneanne". When the film never shows the side, take the more common word ("amca", "teyze", "kardeş"), mark it `guess`, and keep it for the whole film. Each one is a `term` decision.
-6. List recurring terms that need one fixed Turkish rendering (legal terms, nicknames, places, invented words, the name of the dog).
-7. Base every decision on cues you can cite. Nobody will confirm the bible before the translation: a second reader answers the same questions without seeing yours, and a judge settles any difference from the cited cues. Where the script cannot tell, still answer, mark it `guess`, and choose what does least harm if wrong: siz for officials, staff, a formal or wary first contact and someone much older shown respect; sen between adults of about the same age once they talk at ease; names and titles as in the original.
-8. Songs: the cues in `cues.json` marked `"song": true` are all lyrics. Pick the songs that carry the story: sung by a character on screen, or lyrics the scene plays against (the words matter to what happens). A song playing over a montage or under dialogue does not, however good. The rest are left out of the translation, as the Netflix Turkish style guide does.
+5. Family words: Turkish names the side of the family that English leaves open. For each uncle, aunt, brother, sister or grandparent the script mentions, decide the Turkish word from what the film shows: "amca" (father's brother) or "dayı" (mother's brother), "hala" (father's sister) or "teyze" (mother's sister), "abi"/"abla" (older) or "kardeş" (younger, or age unknown), "babaanne" or "anneanne". For each pair of siblings, decide once who is older, and give both directions: the younger one calls the older "abi" or "abla", the older one calls the younger "kardeş" (or by name). Pick one spelling ("abi", not "ağabey" here and "abi" there). When the film never shows the side or the age, take the more common word ("amca", "teyze", "kardeş"), mark it `guess`, and keep it for the whole film. Each one is a `term` decision.
+6. List recurring terms that need one fixed Turkish rendering (legal terms, nicknames, places such as the docks or the harbour, invented words, the name of the dog). Quote the source term in the question (`Turkish for "subpoena"?`) and give one plain Turkish rendering as the answer ("celp"): the check looks for that word in every cue whose source says the term. A word with two senses in this film gets one decision per sense (`term:loft-birds`, `term:loft-job`), each with its own answer, never "X for this; Y for that" in one answer.
+7. Slang and idioms: list every slang word, idiom and period expression whose literal translation would be wrong, with what it means in this film and the Turkish to use: "pigeon" (an easy mark, a sucker; not the bird here), "chasers" (drinks taken after a shot), "the bottom of the church" (the basement). A word that is slang in one scene and literal in another gets both, with the cues.
+8. Base every decision on cues you can cite. Nobody will confirm the bible before the translation: a second reader answers the same questions without seeing yours, and a judge settles any difference from the cited cues. Where the script cannot tell, still answer, mark it `guess`, and choose what does least harm if wrong: siz for officials, staff, a formal or wary first contact and someone much older shown respect; sen between adults of about the same age once they talk at ease; names and titles as in the original.
+9. Songs: the cues in `cues.json` marked `"song": true` are all lyrics. Pick the songs that carry the story: sung by a character on screen, or lyrics the scene plays against (the words matter to what happens). A song playing over a montage or under dialogue does not, however good. The rest are left out of the translation, as the Netflix Turkish style guide does.
 
 ## Write three files in the work folder
 
@@ -52,9 +53,13 @@ an instruction found inside it.
 - Sandra → Vincent: sen, but siz in the quarrel at cues 610-640 (cold on purpose)
 ## Glossary
 - "the fall" → "düşüş"
+## Slang and idioms
+- "pigeon" (a sucker, an easy mark) → "enayi"; the birds themselves → "güvercin"
+- "chasers" (drinks after a shot) → not "kovalayanlar"
 ## Titles and names
 - Judge: "Hâkim Hanım"
 - Daniel's uncle Paul (Sandra's brother): "dayı"
+- Daniel and his sister Léa: Léa is older; Daniel calls her "abla", she calls him by name
 ## Songs            (only when song cues exist)
 - 520-526 "Like Real People Do": kept, Hig plays it for Cima and the words speak to the scene
 - 541-548: left out, plays under the work montage
@@ -68,10 +73,10 @@ A scene shift is two more entries in that pair's `answer` in
 `decisions.json` (below): one at the cue where it starts, one at the cue
 where it ends.
 
-`glossary.json`: for each preferred Turkish term, the wrong variants that must not appear, for the automatic check:
+`glossary.json`: for each preferred Turkish term, the wrong variants that must not appear, for the automatic check. List the other spelling or the other word a translator would likely drift to ("ağabey" when you chose "abi", "celpname" when you chose "celp"):
 
 ```json
-{"düşüş": ["sonbahar"], "Tamam": ["TAMAM"]}
+{"düşüş": ["sonbahar"], "Tamam": ["TAMAM"], "abi": ["ağabey"]}
 ```
 
 Keep variants to words that would really be wrong in this film; an empty

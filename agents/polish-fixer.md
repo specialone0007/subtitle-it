@@ -37,15 +37,24 @@ check that every number is in your file.
 - `address form`: the bible's sen/siz for that pair wins, unless the scene clearly shows a switch the bible describes. Change only the verb and pronoun forms; keep the rest of the line.
 - `address form, same scene`: another cue in this scene has the wrong form, and this cue uses the same one. The flag names that cue and its pair, as in `cue 1200 (Nora Hale → anyone here) uses sen`. The check could not tell who speaks or who is spoken to here, so read the scene first. Change it only when the speaker and listener are the pair the flag names, or another pair the bible gives the other form; otherwise leave the cue out.
 - `term variant`: use the glossary's preferred term.
+- `term rendering`: the source says a term the bible decides, and the Turkish has none of the bible's rendering. Use it, unless the cue means the word in another sense (a "hook" that is not the docker's tool); then leave the cue out.
+- `term drift`: the cue writes a word in a second form the rest of the film does not use ("ağabey" where the film says "abi"). Use the form the flag names.
+- `spelling` and `name suffix`: write what the flag gives ("sağ ol", "Joey'nin"). Change nothing else.
+- `split sentence`: the flag names a run of cues that hold one source sentence, and what went wrong (a part written twice, a cue with nothing of its own, a name in another cue than the one that says it). Every cue of the run carries the same flag. Take them as one unit: read the whole source sentence, translate it whole first, then spread it over the same cues so each part appears exactly once and each name sits in the cue where it is said. Write every cue of the run you change.
 - `untranslated`: translate the line. A name, a title or a song left in its original language on purpose may stay; then leave the cue out of your file.
-- `line length` and `lines per cue`: the flag says why the cue could not be laid out. A cue is at most 2 lines of 42 characters; in a cue with two speakers each speaker gets one line starting with `- `. A two-speaker cue is split into one cue per speaker automatically when each part lasts at least a second and reads at 17 characters a second or less, so shorten until each speaker's turn fits one line or until the split works. Keep the cue's dash count.
+- `line length` and `lines per cue`: the flag says why the cue could not be laid out. A cue is at most 2 lines of 42 characters; in a cue with two speakers each speaker gets one line starting with `- `. A two-speaker cue is split into one cue per speaker automatically when each part lasts at least a second and reads at 17 characters a second or less, so shorten, by rephrasing, until each speaker's turn fits one line or until the split works. Keep the cue's dash count.
 - `speaker label` and `sound description`: remove the label (`NAME:`, `[Name]`) or the description (`[kapı çarpar]`). A cue that holds only a description gets the spoken Turkish of its `src:` or `en:`, or of its `timing_lines` in `cues.json` when both are empty. Never leave such a cue out: a missing cue is a hard fail, and cues that are only sounds in the source are already left out of the work. Never invent a line the source does not say: Turkish for a cue whose source is only sounds is rejected and not delivered.
 - `cue count: missing`: see "First: cues with no Turkish" above.
 - `dialogue dashes` and `italic tags`: match the source's marks.
 - `toned down`: the English has a crude or sexual word and the Turkish has nothing as strong. Follow the "Swearing" preference. Its default, "match the source", means the same strength: never leave the line softer than the source, and never swap a strong word for a mild one ("lanet olsun" for "fuck"). Only a preference that asks for softer swearing allows that. Keep the rest of the human wording. When the Turkish is already as strong in other words, leave the cue out.
 - `placement`: a Turkish line may sit on the wrong cue: a song line, on-screen text, or half a sentence joined onto a neighbour. Compare with the `en:` of this cue and its neighbours in `cues.json`. Move text to the cue it belongs to, drop on-screen text that has no source line, and leave correct cues out.
 
-Keep the human wording wherever a flag does not force a change.
+Keep the human wording wherever a flag does not force a change. Meaning
+comes before length: when a fix makes a line shorter, shorten only by
+rephrasing or by dropping filler. Never drop a clause, a question, a name
+or a second sentence to make a line fit or read faster; a line that keeps
+the whole meaning and still reads fast is left to the reviewer as a
+warning.
 
 The whole-film reviewer reads the film while you work and may rewrite a
 few of your flagged cues for other reasons. Where you both write a cue,

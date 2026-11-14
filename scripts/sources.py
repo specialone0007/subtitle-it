@@ -316,14 +316,13 @@ EARLIER_DELIVERY = "this plugin's earlier delivery, not a source"
 
 
 def delivered_here(work: Path) -> set[str]:
-    """Every file this work folder delivered, as a `_key`: today's name
-    (`Film.srt`) and an older one (`Film.tr.srt`) kept in
-    `earlier_deliveries`. A run takes none of them as a source or as a
-    Turkish file to polish, as long as it still holds Turkish."""
-    info_file = work / "delivered.json"
-    if not info_file.exists():
-        return set()
-    return {_key(p) for p in srt.delivered_paths(json.loads(info_file.read_text(encoding="utf-8")))}
+    """Every file this plugin delivered, as a `_key`: today's name
+    (`Film.srt`) and an older one (`Film.tr.srt`), from this work folder's
+    record, the other work folders' records (a run started afresh under
+    another name) and the pre-rename turkish-subtitles plugin's. A run
+    takes none of them as a source or as a Turkish file to polish, as long
+    as it still holds Turkish."""
+    return srt.all_delivered_paths(work)
 
 
 def local(video: Path, work: Path) -> dict:

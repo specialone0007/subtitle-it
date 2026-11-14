@@ -7,6 +7,7 @@
     uv run usage.py step    --work W --name NAME [--new] [--at-file F] [--agent KIND:TOKENS:MS ...]
     uv run usage.py agent   --work W --agent KIND:TOKENS:MS [--agent ...]
     uv run usage.py summary --work W
+    uv run usage.py wait    --file F [--file ...] [--settle-s 20] [--timeout-min 60]
 
 `step` marks the start of a group of steps (`find`, `hints_bible`,
 `translate`, `polish`, `check`, `review`, `deliver`), and `done` marks the
@@ -28,6 +29,12 @@ report.md. It says plainly which figures it does not have: the main
 session's own tokens, the split into new and cached tokens, and any agent
 whose notice gave no number. It never gives a cost in money, since that
 needs the split.
+
+`wait` returns once every file exists and none has changed for
+`--settle-s` seconds: a subagent's output is written. A subagent's
+completion notice can come many minutes after its last file, so the skill
+runs `wait` in the background beside the subagent and goes on when either
+ends. It gives up after `--timeout-min` minutes with `"ready": false`.
 """
 
 from __future__ import annotations
@@ -36,6 +43,7 @@ import argparse
 import json
 import re
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -250,6 +258,36 @@ def summary(work: Path) -> dict:
     return {"usage": s, "markdown": markdown(s), "saved": str(work / "usage.json")}
 
 
+def _state(files: list[Path]) -> tuple | None:
+    """Size and modification time of each file, or None while one is missing."""
+    out = []
+    for f in files:
+        try:
+            st = f.stat()
+        except OSError:
+            return None
+        out.append((st.st_size, st.st_mtime_ns))
+    return tuple(out)
+
+
+def wait(files: list[Path], settle_s: float, timeout_min: float, poll_s: float = 2.0) -> dict:
+    """Return once every file exists and stayed unchanged for settle_s seconds."""
+    start = time.monotonic()
+    deadline = start + timeout_min * 60
+    last, since = None, start
+    while True:
+        now = time.monotonic()
+        state = _state(files)
+        if state != last:
+            last, since = state, now
+        elif state is not None and now - since >= settle_s:
+            return {"ready": True, "files": [str(f) for f in files], "waited_s": round(now - start)}
+        if now >= deadline:
+            missing = [str(f) for f in files if not f.exists()]
+            return {"ready": False, "missing": missing, "waited_s": round(now - start)}
+        time.sleep(poll_s)
+
+
 def main(argv: list[str] | None = None) -> None:
     sys.stdout.reconfigure(encoding="utf-8")
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -265,12 +303,18 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--agent", type=agent_arg, action="append", required=True)
     s = sub.add_parser("summary")
     s.add_argument("--work", type=result.path, required=True)
+    s = sub.add_parser("wait")
+    s.add_argument("--file", type=result.path, action="append", required=True)
+    s.add_argument("--settle-s", type=float, default=20)
+    s.add_argument("--timeout-min", type=float, default=60)
     result.add_argument(p)
     a = result.parse(p, argv)
     if a.cmd == "step":
         result.emit(record(a.work, a.name, a.agent, new=a.new, at_file=a.at_file), a.result)
     elif a.cmd == "agent":
         result.emit(record(a.work, None, a.agent), a.result)
+    elif a.cmd == "wait":
+        result.emit(wait(a.file, a.settle_s, a.timeout_min), a.result)
     else:
         result.emit(summary(a.work), a.result)
 
