@@ -69,13 +69,18 @@ def word_italics(lines: list[str]) -> bool:
     stress on one word, which Turkish puts on another word or none. So a
     Turkish cue without them is fine, and one with them only gets a
     warning. Italics on a whole line, or on more than one word, still must
-    match the source."""
+    match the source: a line whose words are all in italics, such as one
+    speaker's off-screen `- <i>Hello?</i>` beside a plain second line, is
+    a whole italic line, not a stray word."""
     text = " ".join(lines)
     spans = ITALIC_SPAN_RE.findall(text)
     if not spans or len(ITALIC_RE.findall(text)) != 2 * len(spans):
         return False
     if not all(WORDISH_RE.search(s) and len(srt.strip_tags(s).split()) == 1 for s in spans):
         return False
+    for ln in lines:
+        if ITALIC_SPAN_RE.search(ln) and not WORDISH_RE.search(srt.strip_tags(ITALIC_SPAN_RE.sub(" ", ln))):
+            return False
     return bool(WORDISH_RE.search(srt.strip_tags(ITALIC_SPAN_RE.sub(" ", text))))
 
 
