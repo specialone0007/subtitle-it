@@ -64,7 +64,7 @@ Artık bilmiyorum.
 - Slang and idioms by their meaning, as the bible's "Slang and idioms" section gives it, never word for word.
 - Names take the suffix their sound needs ("Joey'nin", not "Joey'in"), and words are spelled as the TDK writes them ("sağ ol", "her şey"): the pack's "Turkish writing".
 - Write the file with UTF-8 encoding.
-- When you spot a mistake in a cue you already wrote, write the whole file again with Write, corrected.
+- Check every cue before you write, then write the output file once, whole: the run goes on as soon as it is written and stays unchanged for a moment, so a second write may come too late to count.
 
 ## Flags
 

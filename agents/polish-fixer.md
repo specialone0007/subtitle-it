@@ -66,9 +66,10 @@ flagged cue anyway: you cannot know which ones it takes.
 The file your task names, `out/fix_polish.txt` in the work folder unless it says otherwise, only for the cues you change: the
 number alone on a line, 1 or 2 Turkish lines, a blank line. Same dash
 count and italics as `src:`. Never write a speaker label or a sound
-description. Write the file with UTF-8 encoding. When you spot a mistake
-in a cue you already wrote, write the whole file again with Write,
-corrected.
+description. Write the file with UTF-8 encoding. Check every cue before
+you write, then write the file once, whole: the run goes on as soon as it
+is written and stays unchanged for a moment, so a second write may come
+too late to count.
 
 ## Reply
 

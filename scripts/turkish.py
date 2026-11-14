@@ -132,7 +132,7 @@ JOINED = {("bir", "çok"): "birçok", ("hiç", "bir"): "hiçbir", ("hiç", "biri
 
 def spelling_slips(text: str) -> list[tuple[str, str]]:
     """Each spelling in `text` that the TDK writes otherwise, with the
-    TDK form: [("herşey", "her şey"), ("bir çok", "birçok")]."""
+    TDK form, a capital kept: [("herşey", "her şey"), ("Bir çok", "Birçok")]."""
     plain = TAG_RE.sub("", text)
     out = []
     words = list(WORD_RE.finditer(plain))
@@ -141,13 +141,22 @@ def spelling_slips(text: str) -> list[tuple[str, str]]:
         for rx, fix in SPELLING_SLIPS:
             hit = rx.fullmatch(low)
             if hit:
-                out.append((m.group(), fix(hit)))
+                out.append((m.group(), _same_case(m.group(), fix(hit))))
                 break
     for a, b in zip(words, words[1:]):
         pair = (lower(a.group()), lower(b.group()))
         if pair in JOINED and plain[a.end() : b.start()] == " ":
-            out.append((f"{a.group()} {b.group()}", JOINED[pair]))
+            out.append((f"{a.group()} {b.group()}", _same_case(a.group(), JOINED[pair])))
     return out
+
+
+def _same_case(found: str, fix: str) -> str:
+    """`fix` with a capital first letter when `found` starts with one, so a
+    slip that opens a sentence keeps its capital: "Sağol" -> "Sağ ol"."""
+    if not found[:1].isupper():
+        return fix
+    first = "İ" if fix[0] == "i" else fix[0].upper()
+    return first + fix[1:]
 
 
 # --- apostrophe suffixes on names -----------------------------------------
@@ -164,6 +173,8 @@ def ends_in_vowel_sound(name: str) -> bool | None:
     "Ayşe", and a final "h" or "w" may be either."""
     low = lower(name)
     last = low[-1]
+    if low == "bey":
+        return False  # the title in "Ahmet Bey'in": its "y" is a consonant
     if last == "y":
         # "Joey", "Terry", "Charley" end in an "i" sound; "Ray", "Roy" and
         # "Guy" in a "y" that Turkish hears as a consonant.

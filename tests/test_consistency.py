@@ -19,14 +19,14 @@ import turkish
 @pytest.mark.parametrize(
     ("text", "slips"),
     [
-        ("Herşeyi biliyorum.", [("Herşeyi", "her şeyi")]),
-        ("Sağol, dostum.", [("Sağol", "sağ ol")]),
-        ("Hiçbirşey yok.", [("Hiçbirşey", "hiçbir şey")]),
+        ("Herşeyi biliyorum.", [("Herşeyi", "Her şeyi")]),
+        ("Sağol, dostum.", [("Sağol", "Sağ ol")]),
+        ("Hiçbirşey yok.", [("Hiçbirşey", "Hiçbir şey")]),
         ("Yine de geldim, yinede gelirim.", [("yinede", "yine de")]),
-        ("Bir çok insan geldi.", [("Bir çok", "birçok")]),
-        ("Hiç bir şey demedi.", [("Hiç bir", "hiçbir")]),
-        ("Yanlız kaldım.", [("Yanlız", "yalnız")]),
-        ("<i>Şuanda buradayım.</i>", [("Şuanda", "şu anda")]),
+        ("Bir çok insan geldi.", [("Bir çok", "Birçok")]),
+        ("Hiç bir şey demedi.", [("Hiç bir", "Hiçbir")]),
+        ("Yanlız kaldım.", [("Yanlız", "Yalnız")]),
+        ("<i>Şuanda buradayım.</i>", [("Şuanda", "Şu anda")]),
         ("Her şey yolunda, sağ ol.", []),
         ("Birçok kez, hiçbir zaman.", []),
         ("Bir, çok uzak.", []),
@@ -53,6 +53,7 @@ def test_spelling_slips(text, slips):
         ("Mike'ın arabası.", []),  # a final "e" may be silent: left alone
         ("FBI'ın adamı, D'yi bul.", []),  # letters and acronyms
         ("Joey'ninki burada.", []),
+        ("Ahmet Bey'in evi, Terry Bey'e söyle.", []),  # the title "Bey" ends in a consonant
     ],
 )
 def test_name_suffix_slips(text, slips):

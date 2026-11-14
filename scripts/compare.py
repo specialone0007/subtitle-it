@@ -97,11 +97,14 @@ def write_rows(rows: list[dict], labels: list[str], out: Path, seed: int, parts:
         lines.append("\t".join(cells))
     header = "\t".join(["id", "time", "english", *letters])
     parts = max(1, min(parts, len(lines) or 1))
-    size = -(-len(lines) // parts) if lines else 0
+    size, extra = divmod(len(lines), parts)  # the first `extra` parts take one row more, so none is empty
     files = []
+    start = 0
     for p in range(parts):
         name = "rows.tsv" if parts == 1 else f"rows_{p + 1}.tsv"
-        chunk = lines[p * size : (p + 1) * size]
+        end = start + size + (1 if p < extra else 0)
+        chunk = lines[start:end]
+        start = end
         (out / name).write_text("\n".join([header, *chunk]) + "\n", encoding="utf-8")
         files.append(str(out / name))
     key_file = out / "key.json"
