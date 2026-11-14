@@ -203,9 +203,16 @@ model of `sonnet` also runs at low effort; that is untested.
 - **Hard fails** are missing, extra or empty cues, italics or dialogue
   dashes that differ from the source, a cue that cannot be laid out (see
   below), and square brackets in the Turkish, or a speaker label or a
-  description in parentheses where the source cue had tags removed. They go
-  back to the chunk's translator, and after two rounds one more round runs
-  on a stronger model.
+  description in parentheses where the source cue had tags removed.
+  Italics on single words beside plain ones (`<i>To</i> all Marc Antony's
+  cavalry`) are mostly a slip in the source file: the Turkish may leave
+  them out, and a Turkish cue that keeps italics there only gets a `stray
+  italics` warning. Hard fails go back to the chunk's translator, and
+  after two rounds one more round runs on a stronger model. Each round
+  starts with `assemble.py fixround`, which writes every failing cue's
+  checks, source and current Turkish (seed or chunk output with every fix
+  file applied) to `W/fixes/`. The translator edits that text, so the
+  reviewed wording and the bible's terms stay.
 - **Warnings** are reading speed above 17 characters a second (every
   such cue, even when the source is as fast), glossary variants, sen or
   siz against the bible, a plain "hala" or "aşık" that probably lacks its

@@ -55,7 +55,7 @@ Artık bilmiyorum.
 ```
 
 - Keep the same number of `- ` dash lines as the source cue.
-- Keep `<i>` tags where the source has them.
+- Keep `<i>` tags where the source has them. One exception: italics on a single word of a line that is otherwise plain (`<i>To</i> all Marc Antony's cavalry`) are mostly a slip in the source file. Leave them out unless that word is really stressed; never move them onto another Turkish word.
 - At most 2 lines and 42 characters per line. Every line should read at a glance: follow the pack's "Readable in one glance". Shorten only by rephrasing or by dropping filler; never drop a clause, a question, a name or a second sentence to save characters or reading speed. A line that keeps the meaning and still reads fast is fine. Break a two-line cue where the sentence breaks, as the pack's "Form of each cue" says: never start the second line with "gibi", "diye", "de" or "mi", never leave one word alone on a line.
 - Family words ("amca" or "dayı", "teyze" or "hala", "abi" or "kardeş") as the bible gives them, and circumflexes where they change the meaning ("hâlâ", "âşık"): the pack's "Family words" and "Turkish writing".
 - A cue with two speakers: each speaker on one line, starting with `- `. When a speaker's turn cannot fit one line, write it anyway; a later step splits that cue into one cue per speaker, if the time allows.
@@ -65,6 +65,23 @@ Artık bilmiyorum.
 - Names take the suffix their sound needs ("Joey'nin", not "Joey'in"), and words are spelled as the TDK writes them ("sağ ol", "her şey"): the pack's "Turkish writing".
 - Write the file with UTF-8 encoding.
 - Check every cue before you write, then write the output file once, whole: the run goes on as soon as it is written and stays unchanged for a moment, so a second write may come too late to count.
+
+## Fix round
+
+When your task says "Fix round", the cues already have Turkish that was
+checked, reviewed and kept to the bible. Your job is to repair one failed
+check per cue, not to translate again.
+
+- "Read first" still applies in full: read the pack and the bible before
+  you write a line, even for one cue. A fix that breaks a bible term or
+  the sen/siz map is worse than the fail it repairs.
+- Your task names a fix file. For each cue it lists `fail:` (what the
+  check found), `src:` and `en:` (the source) and `now:` (the Turkish the
+  cue has now). Start from `now`: change only what the failed check
+  needs and keep every other word as it is. Translate from the source
+  only when `now` says `<none: write this cue>`.
+- Write only the cues your task names, in the output format above, to
+  the path your task gives.
 
 ## Flags
 

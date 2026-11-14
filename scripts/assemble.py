@@ -9,6 +9,7 @@ deliver the result next to the video.
     uv run assemble.py sidebyside  --work W
     uv run assemble.py deliver     --work W --dest FILM.srt --backups DIR [--force] [--video FILM.mkv]
     uv run assemble.py where       --work W --cues 12,340
+    uv run assemble.py fixround    --work W --round r1
 
 `check` reads W/out/tr_*.txt, then W/out/fix_*.txt in the order they were
 written (later files win; in a polish run fix_review.txt also wins over
@@ -24,6 +25,10 @@ without the cues that hold only sounds, and numbered from 1. W/cue_map.json
 maps each draft number to the timing file's cue; `deliver` keeps it as
 W/delivered_map.json, and `where` answers from it which delivered cues and
 times a timing cue became.
+
+`fixround` writes, per chunk with a hard fail, W/fixes/<round>_<NN>.txt:
+each failing cue with its checks, its source and its current Turkish, so a
+fix round edits what is there instead of translating the cue again.
 """
 
 from __future__ import annotations
@@ -53,6 +58,25 @@ DELIVERED_MAP_FILE = "delivered_map.json"
 INFINITIVE_RE = re.compile(r"^[A-ZÇĞİÖŞÜ][a-zçğıöşü]+(mak|mek)[.!]$")
 CAPS_RE = re.compile(r"\b(TAMAM|HAYIR)\b")
 ITALIC_RE = re.compile(r"</?i>", re.I)
+ITALIC_SPAN_RE = re.compile(r"<i>(.*?)</i>", re.I | re.S)
+WORDISH_RE = re.compile(r"\w")
+
+
+def word_italics(lines: list[str]) -> bool:
+    """The cue's italics sit on single words only, with plain words beside
+    them: `<i>To</i> all Marc Antony's cavalry`, `We've gotten <i>off</i>
+    to a bad start`. That is mostly a slip in the source file, and at best
+    stress on one word, which Turkish puts on another word or none. So a
+    Turkish cue without them is fine, and one with them only gets a
+    warning. Italics on a whole line, or on more than one word, still must
+    match the source."""
+    text = " ".join(lines)
+    spans = ITALIC_SPAN_RE.findall(text)
+    if not spans or len(ITALIC_RE.findall(text)) != 2 * len(spans):
+        return False
+    if not all(WORDISH_RE.search(s) and len(srt.strip_tags(s).split()) == 1 for s in spans):
+        return False
+    return bool(WORDISH_RE.search(srt.strip_tags(ITALIC_SPAN_RE.sub(" ", text))))
 
 
 def fix_order(out: Path) -> list[Path]:
@@ -352,7 +376,15 @@ def run_checks(work: Path) -> dict:
             continue
         src = c.lines
         ref = rows[c.n]["en"] or rows[c.n]["source"] or src
-        if bool(ITALIC_RE.search("".join(src))) != bool(ITALIC_RE.search("".join(tr))):
+        src_italic, tr_italic = bool(ITALIC_RE.search("".join(src))), bool(ITALIC_RE.search("".join(tr)))
+        if src_italic and word_italics(src):
+            if tr_italic:
+                w(
+                    c.n,
+                    "stray italics",
+                    "the source has italics on one word only, mostly a slip in its file: drop them unless that word is stressed",
+                )
+        elif src_italic != tr_italic:
             h(c.n, "italic tags", "source and Turkish differ")
         if srt.dash_lines(src) != srt.dash_lines(tr):
             h(c.n, "dialogue dashes", f"source {srt.dash_lines(src)}, Turkish {srt.dash_lines(tr)}")
@@ -495,6 +527,76 @@ def sidebyside(work: Path) -> Path:
             tr = " / ".join(texts.get(n, ["<MISSING>"]))
             f.write(f"{n}\t{who}\t{src}\t{tr}\n")
     return path
+
+
+FIX_DIR = "fixes"
+ROUND_RE = re.compile(r"^[a-z0-9]+$")
+NO_TURKISH = "<none: write this cue>"
+
+
+def fix_round(work: Path, label: str) -> dict:
+    """Hand a fix round its cues: the hard fails of the last `check`,
+    grouped by chunk. For each chunk with a failing cue it writes
+    W/fixes/<label>_<NN>.txt with each cue's failed checks, its source and
+    the Turkish it has now (the chunk output or seed with every fix file
+    applied, as `check` reads it), so the translator edits that text
+    instead of translating the cue again. The files sit outside W/out:
+    `check` reads only W/out, and `deliver` refuses W/out files newer than
+    the check."""
+    if not ROUND_RE.match(label):
+        raise SystemExit("--round takes a short label of lowercase letters and digits, such as r1 or post")
+    checks = json.loads((work / "checks.json").read_text(encoding="utf-8"))
+    failed: dict[int, list[str]] = {}
+    no_cue = []
+    for x in checks["hard"]:
+        if x["cue"] is None:
+            no_cue.append(x["detail"])
+        else:
+            failed.setdefault(x["cue"], []).append(x["check"] + (f" ({x['detail']})" if x["detail"] else ""))
+    rows = {r["n"]: r for r in json.loads((work / "cues.json").read_text(encoding="utf-8"))}
+    texts, _ = load_translation(work)
+    chunks_file = work / "chunks.json"
+    chunks = json.loads(chunks_file.read_text(encoding="utf-8")) if chunks_file.exists() else []
+    if not chunks:
+        chunks = [{"chunk": 1, "file": None, "first": min(rows, default=1), "last": max(rows, default=1)}]
+    fix_dir = work / FIX_DIR
+    fix_dir.mkdir(exist_ok=True)
+    for old in fix_dir.glob(f"{label}_*.txt"):
+        old.unlink()
+    groups = []
+    for ch in chunks:
+        cues = sorted(n for n in failed if ch["first"] <= n <= ch["last"])
+        if not cues:
+            continue
+        nn = f"{ch['chunk']:02d}"
+        path = fix_dir / f"{label}_{nn}.txt"
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(f"# fix round {label}, chunk {nn}: {len(cues)} cues\n")
+            f.write("# fail = what the check found; src/en = the source; now = the Turkish this cue has now.\n")
+            f.write("# Start from `now`: change only what the failed check needs, keep the rest word for word.\n\n")
+            for n in cues:
+                row = rows.get(n, {})
+                f.write(f"#{n}\n")
+                for fail in failed[n]:
+                    f.write(f"fail: {fail}\n")
+                f.write("src: " + prepare._one_line(row.get("source") or row.get("timing_lines")) + "\n")
+                if row.get("en") is not None and row.get("en") != row.get("source"):
+                    f.write("en: " + prepare._one_line(row["en"]) + "\n")
+                f.write("now:\n" + "\n".join(texts.get(n) or [NO_TURKISH]) + "\n\n")
+        groups.append(
+            {
+                "chunk": nn,
+                "chunk_file": ch["file"],
+                "fix_file": str(path),
+                "write_to": str(work / "out" / f"fix_{label}_{nn}.txt"),
+                "flags_to": str(work / "out" / f"flags_{label}_{nn}.txt"),
+                "cues": cues,
+            }
+        )
+    # A cue no chunk holds: one the timing file does not have.
+    covered = {n for g in groups for n in g["cues"]}
+    outside = sorted(set(failed) - covered)
+    return {"round": label, "cues": len(failed), "chunks": groups, "outside_chunks": outside, "no_cue": no_cue}
 
 
 UTF8_BOM = b"\xef\xbb\xbf"
@@ -648,6 +750,9 @@ def main(argv: list[str] | None = None) -> None:
     wh = sub.add_parser("where")
     wh.add_argument("--work", type=result.path, required=True)
     wh.add_argument("--cues", required=True, help="comma-separated cue numbers of the timing file")
+    fr = sub.add_parser("fixround")
+    fr.add_argument("--work", type=result.path, required=True)
+    fr.add_argument("--round", required=True, help="the round's label: r1, r2, r3, post")
     result.add_argument(p)
     a = result.parse(p, argv)
     if a.cmd == "check":
@@ -660,6 +765,8 @@ def main(argv: list[str] | None = None) -> None:
         except ValueError as e:
             raise SystemExit("--cues takes cue numbers separated by commas") from e
         result.emit(where(a.work, numbers), a.result)
+    elif a.cmd == "fixround":
+        result.emit(fix_round(a.work, a.round), a.result)
     else:
         result.emit(deliver(a.work, a.dest, a.backups, a.force, a.video), a.result)
 
