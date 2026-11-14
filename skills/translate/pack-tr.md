@@ -36,7 +36,7 @@ Before → after:
 - At most 2 lines per cue, at most 42 characters per line, whatever the source has.
 - Keep `- ` dialogue dashes: same number of dash lines as the source cue, one speaker per dash line. In a cue with two speakers, each speaker's turn is one line. A turn too long for one line is still written; the delivery step then splits the cue into one cue per speaker when the time allows, and otherwise the cue comes back to be shortened.
 - No speaker labels (`NAME:`, `[Name]`) and no sound descriptions (`[kapı çarpar]`, `(iç çeker)`), even when the source has them. The automatic check fails square brackets in any cue, and a label or a description in parentheses in a cue whose source had tags. Parentheses the source uses as speech (`(Orada mısın?)`) and headings such as `BÖLÜM 1:` stay. Song lines keep their `♪` (see Songs below).
-- Keep `<i>` and `</i>` exactly where the source has italics (voices off screen, songs, phone, thoughts). No italics where the source has none.
+- Keep `<i>` and `</i>` exactly where the source has italics (voices off screen, songs, phone, thoughts). No italics where the source has none. Italics on a single word of an otherwise plain line (`<i>To</i> all Marc Antony's cavalry`) are mostly a slip in the source file: leave them out unless that word is really stressed, and never put them on another Turkish word.
 - No stray byte-order marks, no `{\an8}` style tags unless the source has them.
 - Break a two-line cue where the sentence breaks, so each line reads as one piece (I.12):
   - after a full stop, a question mark or a comma first; otherwise before a conjunction ("ve", "ama", "çünkü", "yoksa"), never after it;
