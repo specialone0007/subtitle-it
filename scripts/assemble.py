@@ -7,7 +7,7 @@ deliver the result next to the video.
 
     uv run assemble.py check       --work W
     uv run assemble.py sidebyside  --work W
-    uv run assemble.py deliver     --work W --dest FILM.srt --backups DIR [--force]
+    uv run assemble.py deliver     --work W --dest FILM.srt --backups DIR [--force] [--video FILM.mkv]
     uv run assemble.py where       --work W --cues 12,340
 
 `check` reads W/out/tr_*.txt, then W/out/fix_*.txt in the order they were
@@ -29,6 +29,7 @@ times a timing cue became.
 from __future__ import annotations
 
 import argparse
+import glob
 import hashlib
 import json
 import re
@@ -220,6 +221,93 @@ def hi_problems(lines: list[str], tagged: bool) -> list[tuple[str, str]]:
     return out
 
 
+# A sentence that runs over more cues than this is a song or a list, not a
+# sentence a translator could have spread wrongly.
+MAX_SENTENCE_CUES = 6
+SENTENCE_END_RE = re.compile(r"[.?!][\"'”’)\]]*$")
+STOP_WORDS = {"bir", "şey", "ile", "çok", "daha", "için", "gibi", "ama", "ben", "sen", "biz", "siz", "onu", "ona", "var",
+              "yok", "değil", "kadar", "olan", "her", "hiç", "neden", "nasıl"}  # fmt: skip
+
+
+def _source_lines(row: dict) -> list[str]:
+    return [srt.strip_tags(ln).strip() for ln in (row.get("en") or row.get("source") or row.get("timing_lines") or [])]
+
+
+def _runs_on(lines: list[str]) -> bool:
+    """The cue's sentence goes on in the next cue: a line ends without a
+    full stop, a question mark or an exclamation mark ("..." counts as
+    going on). In a two-speaker cue any speaker's line may be the one
+    that goes on ("- in order to... / - Turn that off.")."""
+    ends = [turn[-1] for turn in srt.turns(lines)]
+    return any(ln and (ln.endswith(("...", "…")) or not SENTENCE_END_RE.search(ln)) for ln in ends)
+
+
+def sentence_groups(kept: list[srt.Cue], rows: dict[int, dict]) -> list[list[int]]:
+    """Runs of two or more cues that one source sentence spans, in timing
+    order. Songs are left out: their lines rarely end in punctuation."""
+    groups: list[list[int]] = []
+    run: list[int] = []
+    for c in kept:
+        row = rows.get(c.n, {})
+        if row.get("song") or "♪" in " ".join(c.lines):
+            run = []
+            continue
+        run.append(c.n)
+        if not _runs_on(_source_lines(row)):
+            if 2 <= len(run) <= MAX_SENTENCE_CUES:
+                groups.append(run)
+            run = []
+    if 2 <= len(run) <= MAX_SENTENCE_CUES:
+        groups.append(run)
+    return groups
+
+
+def _pairs(text: str) -> set[tuple[str, str]]:
+    """Neighbouring word pairs, without the short words any sentence repeats."""
+    words = [turkish.lower(w) for w in turkish.WORD_RE.findall(srt.strip_tags(text))]
+    return {(a, b) for a, b in zip(words, words[1:]) if len(a) >= 3 and len(b) >= 3 and not {a, b} & STOP_WORDS}
+
+
+def _content_words(text: str) -> set[str]:
+    return {w.casefold() for w in turkish.WORD_RE.findall(text) if len(w) >= 4} - EN_STOP_WORDS
+
+
+EN_STOP_WORDS = {"that", "this", "what", "with", "have", "your", "from", "they", "them", "there", "about", "just", "like",
+                 "would", "could", "been", "were", "when", "then", "than", "into", "some", "will", "know"}  # fmt: skip
+# A capitalised source word that is the first word of its line may be any
+# word; a name is told apart by appearing in the Turkish as it is.
+NAME_RE = re.compile(r"(?<![\w'’])[A-Z][a-z]{2,}")
+
+
+def split_sentence_problems(group: list[int], texts: dict[int, list[str]], rows: dict[int, dict]) -> list[str]:
+    """What goes wrong when a sentence spread over `group` was placed
+    badly: a cue whose Turkish says nothing for its source part, the same
+    words in two cues (one part written twice) where the source of those
+    two cues shares no word, or a name written in another cue than the one
+    that says it."""
+    problems = []
+    src = {n: " ".join(_source_lines(rows.get(n, {}))) for n in group}
+    tr = {n: srt.strip_tags(" ".join(texts.get(n, []))) for n in group}
+    for n in group:
+        tr_words, src_words = turkish.WORD_RE.findall(tr[n]), turkish.WORD_RE.findall(src[n])
+        if not tr_words and src_words:
+            problems.append(f"cue {n} has no words for its part")
+        elif len(tr_words) == 1 and len(src_words) >= 5:
+            problems.append(f"cue {n} has one word for {len(src_words)} source words")
+    seen: dict[tuple[str, str], int] = {}
+    for n in group:
+        for pair in sorted(_pairs(tr[n])):
+            first = seen.setdefault(pair, n)
+            if first != n and not _content_words(src[first]) & _content_words(src[n]):
+                problems.append(f'"{" ".join(pair)}" is in cue {first} and cue {n}')
+    for name in sorted({m.group() for n in group for m in NAME_RE.finditer(src[n])}):
+        said = [n for n in group if re.search(rf"(?<!\w){name}(?!\w)", src[n])]
+        written = [n for n in group if re.search(rf"(?<!\w){name}", tr[n])]
+        if len(said) == 1 and written and said[0] not in written:
+            problems.append(f'"{name}" is said in cue {said[0]} but written in cue {written[0]}')
+    return problems
+
+
 def run_checks(work: Path) -> dict:
     timing, _ = srt.parse(work / "timing.srt")
     rows = {r["n"]: r for r in json.loads((work / "cues.json").read_text(encoding="utf-8"))}
@@ -290,6 +378,10 @@ def run_checks(work: Path) -> dict:
                 w(c.n, "caps", ln)
         for word, meant in turkish.accent_slips(" ".join(tr)):
             w(c.n, "accent", f'"{word}": probably {meant}')
+        for word, right in turkish.spelling_slips(" ".join(tr)):
+            w(c.n, "spelling", f'"{word}": the TDK writes "{right}"')
+        for word, right in turkish.name_suffix_slips(" ".join(tr)):
+            w(c.n, "name suffix", f'"{word}": the name ends in another sound when said; write "{right}"')
 
     glossary_file = work / "glossary.json"
     if glossary_file.exists():
@@ -306,6 +398,36 @@ def run_checks(work: Path) -> dict:
                 hits = [n for n, t in texts.items() if rx.search(" ".join(t).casefold() if fold else " ".join(t))]
                 for n in hits:
                     w(n, "term variant", f"'{alt}' used; glossary says '{preferred}'")
+
+    # One rendering per term across the film: the bible's Turkish for each
+    # source term it decided, and one spelling for words that have two.
+    drafted = {c.n: texts[c.n] for c in kept if c.n in texts}
+    renderings = bible.term_renderings(work)
+    for c in kept:
+        if c.n not in drafted:
+            continue
+        said = " ".join(_source_lines(rows[c.n])).casefold()
+        for term, answers in sorted(renderings.items()):
+            if re.search(r"(?<!\w)" + re.escape(term) + r"(?:s|es|ed|ing|'s)?(?!\w)", said) and not any(
+                turkish.has_rendering(" ".join(drafted[c.n]), a) for a in answers
+            ):
+                w(c.n, "term rendering", f"'{term}' is '{' or '.join(sorted(answers))}' in the bible; this cue has no form of it")
+    bible_words = " ".join(a for answers in renderings.values() for a in answers)
+    for n, used, usual, count in turkish.family_drift(drafted, bible_words):
+        w(n, "term drift", f"'{used}' here, '{usual}' in {count} other cues: use one form for the whole film")
+
+    # A sentence spread over several cues: each part must appear exactly once.
+    for group in sentence_groups(kept, rows):
+        if not all(n in drafted for n in group):
+            continue
+        problems = split_sentence_problems(group, drafted, rows)
+        if problems:
+            detail = (
+                f"cues {group[0]}-{group[-1]} are one source sentence: {'; '.join(problems)}. "
+                "Translate the whole sentence first, then spread it so each part appears exactly once"
+            )
+            for n in group:
+                w(n, "split sentence", detail)
 
     warn += bible.address_warnings(work, texts, rows)
 
@@ -386,15 +508,44 @@ def _old_file_kind(work: Path, dest: Path) -> str:
     does not make a file the earlier delivery: the user may have put an
     English file there since, so it must also hold Turkish."""
     turkish = srt.looks_turkish(dest)
-    info_file = work / "delivered.json"
-    if turkish and info_file.exists():
-        info = json.loads(info_file.read_text(encoding="utf-8"))
-        if srt.path_key(dest) in {srt.path_key(p) for p in srt.delivered_paths(info)}:
-            return "earlier delivery"
+    if turkish and srt.path_key(dest) in srt.all_delivered_paths(work):
+        return "earlier delivery"
     return "Turkish" if turkish else "not Turkish"
 
 
-def deliver(work: Path, dest: Path, backups: Path, force: bool) -> dict:
+def _backup_name(backups: Path, path: Path) -> Path:
+    """A new name in the backups folder: the file's stem, the time, a
+    counter when two land in the same second, so no backup is written over."""
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    named = backups / f"{path.stem}.{stamp}{path.suffix}"
+    count = 1
+    while named.exists() or named.with_name(named.name + ".map.json").exists():
+        count += 1
+        named = backups / f"{path.stem}.{stamp}-{count}{path.suffix}"
+    return named
+
+
+def earlier_beside(work: Path, dest: Path, video: Path) -> list[Path]:
+    """This plugin's earlier deliveries of this video still next to it under
+    another name than `dest` (`Film.tr.srt` from before 0.6.2, from this
+    work folder, another one or the pre-rename plugin). Only files named
+    after the video, in its folder, that still hold Turkish: one the user
+    has since replaced with another language is theirs."""
+    known = srt.all_delivered_paths(work)
+    out = []
+    for p in sorted(video.parent.glob(f"{glob.escape(video.stem)}.*")):
+        key = srt.path_key(p)
+        if key in known and key != srt.path_key(dest) and p.is_file() and srt.looks_turkish(p):
+            out.append(p)
+    return out
+
+
+def deliver(work: Path, dest: Path, backups: Path, force: bool, video: Path | None = None) -> dict:
+    """Write the draft to `dest`, moving any file already there to
+    `backups`. With `video` (the run delivers to the default place, the
+    video's own name), this plugin's earlier deliveries of that video under
+    another name go to `backups` too and are listed under
+    `moved_earlier_deliveries`; without it, files beside `dest` stay put."""
     checks = json.loads((work / "checks.json").read_text(encoding="utf-8"))
     draft = work / "draft.tr.srt"
     if not checks.get("draft") or not draft.exists():
@@ -410,17 +561,19 @@ def deliver(work: Path, dest: Path, backups: Path, force: bool) -> dict:
     old_info_file = work / "delivered.json"
     old_info = json.loads(old_info_file.read_text(encoding="utf-8")) if old_info_file.exists() else {}
     earlier = [p for p in srt.delivered_paths(old_info) if srt.path_key(p) != srt.path_key(dest)]
+    moved = []
+    if video is not None:
+        for p in earlier_beside(work, dest, video):
+            backups.mkdir(parents=True, exist_ok=True)
+            to = _backup_name(backups, p)
+            shutil.move(p, to)
+            moved.append({"from": str(p), "to": str(to)})
+        gone = {srt.path_key(m["from"]) for m in moved}
+        earlier = [p for p in earlier if srt.path_key(p) not in gone]
     if dest.exists():
         old_file = _old_file_kind(work, dest)
         backups.mkdir(parents=True, exist_ok=True)
-        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        backed_up = backups / f"{dest.stem}.{stamp}{dest.suffix}"
-        # The name changes once a second: a second delivery within the same
-        # second gets a counter, so no backup is ever written over.
-        count = 1
-        while backed_up.exists() or backed_up.with_name(backed_up.name + ".map.json").exists():
-            count += 1
-            backed_up = backups / f"{dest.stem}.{stamp}-{count}{dest.suffix}"
+        backed_up = _backup_name(backups, dest)
         # When the old file is this folder's earlier delivery, its cue map
         # goes with it, so the backup's numbers can still be traced to the
         # timing file's cues.
@@ -442,6 +595,9 @@ def deliver(work: Path, dest: Path, backups: Path, force: bool) -> dict:
         # Paths delivered before under another name, still next to the
         # video: `sources.py local` must not take them as sources either.
         "earlier_deliveries": earlier,
+        # Earlier deliveries under another name moved to the backups folder
+        # by this delivery: the run report names them.
+        "moved_earlier_deliveries": moved,
         "backup_of_old_file": str(backed_up) if backed_up else None,
         "old_file": old_file,
         "sha256": hashlib.sha256(data).hexdigest(),
@@ -488,6 +644,7 @@ def main(argv: list[str] | None = None) -> None:
     d.add_argument("--dest", type=result.path, required=True)
     d.add_argument("--backups", type=result.path, required=True)
     d.add_argument("--force", action="store_true")
+    d.add_argument("--video", type=result.path, help="the film; pass it only when --dest is the default name next to it")
     wh = sub.add_parser("where")
     wh.add_argument("--work", type=result.path, required=True)
     wh.add_argument("--cues", required=True, help="comma-separated cue numbers of the timing file")
@@ -504,7 +661,7 @@ def main(argv: list[str] | None = None) -> None:
             raise SystemExit("--cues takes cue numbers separated by commas") from e
         result.emit(where(a.work, numbers), a.result)
     else:
-        result.emit(deliver(a.work, a.dest, a.backups, a.force), a.result)
+        result.emit(deliver(a.work, a.dest, a.backups, a.force, a.video), a.result)
 
 
 if __name__ == "__main__":

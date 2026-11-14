@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
+
 import usage
 
 
@@ -130,3 +131,36 @@ def test_a_time_some_agents_did_not_give_is_named_in_the_cell(tmp_path: Path):
     assert out["usage"]["agents"]["translator"]["minutes_missing"] == 1
     assert "| translator | 2 | 3,000 | 1.0 (1 not given) |" in out["markdown"]
     assert "- time of 1 of 2 agents: their notice gave no number" in out["markdown"]
+
+
+def test_wait_returns_once_the_files_exist_and_settle(tmp_path: Path):
+    a, b = tmp_path / "fix_review.txt", tmp_path / "review.md"
+    a.write_text("", encoding="utf-8")
+    b.write_text("done", encoding="utf-8")
+    out = usage.wait([a, b], settle_s=0, timeout_min=1, poll_s=0.01)
+    assert out["ready"] is True and out["files"] == [str(a), str(b)]
+
+
+def test_wait_gives_up_and_names_the_missing_file(tmp_path: Path):
+    a = tmp_path / "tr_01.txt"
+    out = usage.wait([a], settle_s=0, timeout_min=0, poll_s=0.01)
+    assert out == {"ready": False, "missing": [str(a)], "waited_s": 0}
+
+
+def test_wait_waits_for_a_file_to_stop_changing(tmp_path: Path, monkeypatch):
+    a = tmp_path / "tr_01.txt"
+    a.write_text("1", encoding="utf-8")
+    writes = iter(["12", "123"])
+
+    def fake_sleep(_s):
+        # The translator is still writing: the file changes twice.
+        try:
+            a.write_text(next(writes), encoding="utf-8")
+        except StopIteration:
+            pass
+
+    clock = iter(range(0, 1000))
+    monkeypatch.setattr(usage.time, "sleep", fake_sleep)
+    monkeypatch.setattr(usage.time, "monotonic", lambda: next(clock))
+    out = usage.wait([a], settle_s=3, timeout_min=10, poll_s=1)
+    assert out["ready"] is True and a.read_text(encoding="utf-8") == "123" and out["waited_s"] >= 5
