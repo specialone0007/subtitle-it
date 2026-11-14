@@ -60,6 +60,17 @@ when no other command uses that name.)
 - **It learns from you.** Fix lines after watching, and it turns your edits
   into rules for the next film.
 
+## Languages
+
+- **From:** any language. The plugin reads the film's subtitle file, or
+  writes one from the audio when none exists.
+- **Into:**
+  - Turkish
+
+Turkish is the only target language today. The design is meant for more:
+each target language gets its own language pack of rules, and this list
+grows as they are added.
+
 ![One run, by the numbers: about 17 minutes, about 8 dollars at API list prices on Opus, 1,838 cues, 0 questions asked. Measured once, on one 2-hour film on Windows](docs/assets/ticket.svg)
 
 ## How a run goes
