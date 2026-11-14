@@ -48,6 +48,15 @@ def test_rows_with_all_and_parts(files, tmp_path: Path):
     assert got["rows"] == 4 and [Path(f).name for f in got["files"]] == ["rows_1.tsv", "rows_2.tsv"]
 
 
+def test_parts_never_leave_a_file_empty(tmp_path: Path):
+    rows = [
+        {"cue": n, "time": "00:00:01,000", "english": f"Line {n}.", "texts": {"old": "a", "new": f"b{n}"}} for n in range(1, 6)
+    ]
+    got = compare.write_rows(rows, ["old", "new"], tmp_path / "blind", seed=1, parts=4)
+    sizes = [len(Path(f).read_text(encoding="utf-8").splitlines()) - 1 for f in got["files"]]
+    assert sizes == [2, 1, 1, 1]
+
+
 def test_the_same_seed_gives_the_same_letters(files, tmp_path: Path):
     timing, _ = srt.parse(files["en"])
     versions = {k: srt.parse(files[k])[0] for k in ("old", "new")}
