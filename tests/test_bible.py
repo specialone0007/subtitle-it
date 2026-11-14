@@ -334,7 +334,25 @@ def test_apply_with_nothing_to_judge_needs_no_judged_file(work):
         work, [ans("address:Sam>Nora", [{"from_cue": 1, "form": "siz"}]), ans("voice:V1", "Sam"), ans("term:sport", "koçum")]
     )
     bible.compare(work)
-    assert bible.apply(work) == {"agreed": 3, "judged": 0, "changed": [], "added": [], "ties": []}
+    assert bible.apply(work) == {"agreed": 3, "judged": 0, "changed": [], "added": [], "ties": [], "term_conflicts": []}
+
+
+def test_apply_lists_a_generic_family_word_that_a_pair_decision_contradicts(work):
+    data = decisions()
+    data["decisions"] += [
+        {"id": "term:sam-paul", "kind": "term", "question": 'Sam calls his older brother Paul "abi" or "kardeş"?',
+         "answer": "abi (Paul is older)", "evidence": [1], "confidence": "sure"},
+        {"id": "term:brothers", "kind": "term", "question": 'Turkish for "brother"?',
+         "answer": "kardeş", "evidence": [2], "confidence": "sure"},
+    ]  # fmt: skip
+    (work / "decisions.json").write_text(json.dumps(data), encoding="utf-8")
+    (work / "glossary.json").write_text(json.dumps({"kardeş": ["abi"], "celp": ["celpname"]}), encoding="utf-8")
+    write_second(work, [ans(d["id"], d["answer"]) for d in data["decisions"]])
+    bible.compare(work)
+    assert bible.apply(work)["term_conflicts"] == [
+        {"id": "term:brothers", "term": "brother", "answer": "kardeş", "family_words": ["abi"]},
+        {"id": "glossary.json", "term": "kardeş", "answer": "kardeş", "family_words": ["abi"]},
+    ]
 
 
 @pytest.mark.parametrize(
