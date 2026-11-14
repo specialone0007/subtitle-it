@@ -341,7 +341,7 @@ Run `assemble.py check --work WORK`, joined after the `check` mark with
 the agents of steps 6–7. Its result has counts and the first hard
 fails.
 
-- Hard fails: group the failing cues by chunk. For each affected chunk start one `subtitle-it:translator` subagent with the first five lines of that chunk's prompt from step 6 (language pack, bible, preferences, chunk, neighbour chunks), never its two `Write` lines, plus: "Fix only these cues: <numbers and the failed check>. Write only those cues to WORK/out/fix_r<round>_<NN>.txt. Write flags to WORK/out/flags_r<round>_<NN>.txt." Use the same model as in step 6: the preferences' "Translator model" (`session` means do not set a model). The chunk's first output and flags stay as they are. Then run `check` again. At most 2 rounds.
+- Hard fails: run `assemble.py fixround --work WORK --round r<round>`. It groups the failing cues by chunk and writes, per chunk, a file with each cue's failed checks, source and current Turkish (the chunk output or, in a polish run, the seed, with every fix file so far applied). For each chunk in its result start one `subtitle-it:translator` subagent with the first five lines of that chunk's prompt from step 6 (language pack, bible, preferences, chunk, neighbour chunks), never its two `Write` lines, plus: "Fix round. Current Turkish and failed checks: <its fix_file>. Fix only these cues: <its cues>. Write only those cues to WORK/out/fix_r<round>_<NN>.txt. Write flags to WORK/out/flags_r<round>_<NN>.txt." (the result's `write_to` and `flags_to`). Use the same model as in step 6: the preferences' "Translator model" (`session` means do not set a model). The chunk's first output and flags stay as they are. Then run `check` again. At most 2 rounds. A cue in the result's `outside_chunks` is not in the timing file: name it in the report.
 - Still failing after 2 rounds: one more round the same way, with the model set to `opus`.
 - Still failing after that: go on. Step 11 delivers with `--force` and lists the failing cues in the report. If `check` wrote no draft (a cue is missing or a file is malformed), there is nothing to deliver: stop and tell the user which cues are missing (its result's `missing_cues` names every one).
 - Warnings never block. They go to the reviewer.
@@ -378,7 +378,7 @@ paths plus the lines `Flags: WORK/polish_soft.txt` and
 `left` and `cue_numbers` for the report.
 
 Run `check` again; a new
-hard fail gets one fix round as in step 9, written to
+hard fail gets one fix round as in step 9, with `--round post`, written to
 `WORK/out/fix_post_<NN>.txt`. Fix files apply in the order they were
 written, so that round's files win over `fix_review.txt`.
 
