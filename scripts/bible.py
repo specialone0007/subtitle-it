@@ -443,7 +443,14 @@ def apply(work: Path) -> dict:
             at = [{"n": n, "at": rows[n]["ts"][:8]} for n in j["evidence"][:3] if n in rows]
             ties.append({"id": j["id"], "question": t["question"], "answer": j["answer"], "cues": at})
     (work / "decisions.json").write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
-    return {"agreed": len(cmp["agreed"]), "judged": len(judged), "changed": changed, "added": added, "ties": ties}
+    return {
+        "agreed": len(cmp["agreed"]),
+        "judged": len(judged),
+        "changed": changed,
+        "added": added,
+        "ties": ties,
+        "term_conflicts": term_conflicts(data) + glossary_conflicts(work, data),
+    }
 
 
 # --- voices added after the bible ---------------------------------------
@@ -622,6 +629,42 @@ class AddressBook:
         forms = {form_at(steps, n) for (sp, _), steps in self.address.items() if sp == speaker}
         return forms.pop() if len(forms) == 1 else None
 
+    def answering(self, speaker: str, form: str, n: int) -> set[str]:
+        """Who says `form` to `speaker` at cue n, by the bible: the other
+        side of the speaker's pairs whose own form back is this one."""
+        return {other for (other, to), steps in self.address.items() if to == speaker and form_at(steps, n) == form}
+
+
+# A cue's scene for the address check: this many cues on each side.
+SCENE_CUES = 5
+
+
+def _said(row: dict) -> str:
+    said = " ".join(row.get("en") or row.get("source") or row.get("timing_lines") or [])
+    return said + " " + " ".join(row.get("source") or [])
+
+
+def _other_turn(n: int, sp: str, got: str, book: AddressBook, rows: dict[int, dict], speakers: dict) -> bool:
+    """The cue may be the other side's turn, heard as the speaker's voice:
+    its speaker comes from the voice alone, a cue next to it has that same
+    voice (the audio step hears two people as one at times), its form is
+    the one the other side of a pair says back to the speaker, and that
+    other person is in the scene (speaks, or is spoken to by name, within
+    SCENE_CUES cues). The speaker is not known with enough confidence then."""
+    entry = speakers.get(str(n)) or {}
+    voice = entry.get("voice")
+    if not voice or entry.get("name") or entry.get("label"):
+        return False
+    if not any((speakers.get(str(m)) or {}).get("voice") == voice for m in (n - 1, n + 1)):
+        return False
+    others = book.answering(sp, got, n)
+    for m in range(n - SCENE_CUES, n + SCENE_CUES + 1):
+        if m == n or m not in rows:
+            continue
+        if book.speaker(speakers.get(str(m)) or {}) in others or book.listener(sp, _said(rows[m])) in others:
+            return True
+    return False
+
 
 def address_readings(work: Path, texts: dict[int, list[str]], rows: dict[int, dict]) -> list[dict]:
     """Every cue whose Turkish uses only sen or only siz, with the speaker,
@@ -652,10 +695,12 @@ def address_readings(work: Path, texts: dict[int, list[str]], rows: dict[int, di
         sp = None if n in unsure or _two_speakers(row) else book.speaker(speakers.get(str(n), {}))
         li = exp = None
         if sp is not None:
-            said = " ".join(row.get("en") or row.get("source") or row.get("timing_lines") or [])
-            said += " " + " ".join(row.get("source") or [])
-            li = book.listener(sp, said)
+            li = book.listener(sp, _said(row))
             exp = book.expected(sp, li, n)
+            # The speaker's form is off, and it is the one the other side of
+            # the pair uses: most likely the other person's turn.
+            if exp is not None and exp != got and li is None and _other_turn(n, sp, got, book, rows, speakers):
+                sp = exp = None
         out.append({"cue": n, "speaker": sp, "listener": li, "expected": exp, "got": got})
     return out
 
@@ -686,6 +731,132 @@ def address_warnings(work: Path, texts: dict[int, list[str]], rows: dict[int, di
 # --- term renderings ---------------------------------------------------------
 
 QUOTED_RE = re.compile(r"[\"“]([^\"”]+)[\"”]")
+ARTICLE_RE = re.compile(r"^(?:the|a|an)\s+")
+# Family words: the English word and the Turkish words a family-word
+# decision may give for it. Turkish names the side of the family or the
+# age that English leaves open, so the word depends on whose relative it is.
+KIN: dict[str, set[str]] = {
+    "brother": {"abi", "ağabey", "kardeş"},
+    "sister": {"abla", "kardeş", "bacı"},
+    "uncle": {"amca", "dayı", "enişte"},
+    "aunt": {"hala", "teyze", "yenge"},
+    "grandmother": {"babaanne", "anneanne", "nine"},
+    "grandma": {"babaanne", "anneanne", "nine"},
+    "grandfather": {"dede", "büyükbaba"},
+    "grandpa": {"dede", "büyükbaba"},
+}
+TR_KIN = set().union(*KIN.values())
+
+
+def term_key(term: str) -> str:
+    """A quoted source term as the check groups it: lower case, without a
+    leading article, so "the loft" and "loft" are one word."""
+    return ARTICLE_RE.sub("", term.strip().casefold())
+
+
+def _answer_text(d: dict) -> str:
+    return re.sub(r"\([^)]*\)", "", d["answer"]).strip()
+
+
+def _kin_words(answer: str) -> set[str]:
+    return {w for w in (tr_lower(x) for x in re.findall(r"\w+", answer)) if w in TR_KIN}
+
+
+def _quoted_terms(d: dict) -> list[str]:
+    # A family-word question names an English family word and quotes its
+    # Turkish choices ("abi" or "kardeş"): those are answers to pick from,
+    # not source terms. A question naming no family word keeps every quoted
+    # term, so an English "Nine" stays a source term.
+    question = d.get("question", "")
+    kin_question = bool(KIN_NAMED_RE.search(question.casefold()))
+    terms = [t.strip() for t in QUOTED_RE.findall(question) if t.strip()]
+    return [t for t in terms if not (kin_question and tr_lower(t) in TR_KIN)]
+
+
+def _bare_kin(d: dict) -> list[str]:
+    """The bare family words ("brother", "the uncle") a term decision quotes
+    as its source term: a rendering meant for every cue that says it."""
+    return [k for k in (term_key(t) for t in _quoted_terms(d)) if k in KIN]
+
+
+def _term_decisions(data: dict) -> list[dict]:
+    return [d for d in data.get("decisions", []) if d.get("kind") == "term" and isinstance(d.get("answer"), str)]
+
+
+KIN_NAMED_RE = re.compile(r"\b(" + "|".join(KIN) + r")s?\b")
+
+
+def family_words(data: dict) -> dict[str, set[str]]:
+    """The Turkish family words the bible's family-word decisions give, per
+    English family word: {"brother": {"abi", "kardeş"}}. A family-word
+    decision is a term decision about one person or pair: its question
+    names the English family word ("Sam's brother Paul: "abi" or
+    "kardeş"?") and its answer gives a Turkish one ("abi (Sam is older)",
+    "Paul Dayı"). Its Turkish goes only to the words its question names,
+    so a brother's "kardeş" is no rendering of "sister", and an answer
+    whose "hala" means "still" gives "aunt" nothing. A decision that quotes
+    the bare word ("brother") for the whole film is not one."""
+    out: dict[str, set[str]] = {}
+    for d in _term_decisions(data):
+        if _bare_kin(d):
+            continue
+        named = set(KIN_NAMED_RE.findall(d.get("question", "").casefold()))
+        used = _kin_words(_answer_text(d))
+        for en in named:
+            if used & KIN[en]:
+                out.setdefault(en, set()).update(used & KIN[en])
+    return out
+
+
+def term_conflicts(data: dict) -> list[dict]:
+    """Term decisions that give a bare family word ("brother") one Turkish
+    rendering for the whole film while a family-word decision gives it
+    another one for a pair (the younger brother says "abi"). The check
+    accepts the family words wherever the bare word is said, so the pair's
+    decision wins; `apply` lists these for the report."""
+    family = family_words(data)
+    out = []
+    for d in _term_decisions(data):
+        for key in _bare_kin(d):
+            others = family.get(key, set()) - _kin_words(_answer_text(d))
+            if others:
+                out.append({"id": d["id"], "term": key, "answer": _answer_text(d), "family_words": sorted(family[key])})
+    return out
+
+
+def prescribed_family_words(data: dict) -> set[str]:
+    return set().union(*family_words(data).values())
+
+
+def work_family_words(work: Path) -> set[str]:
+    """`prescribed_family_words` of the work folder's bible; empty when
+    there is no usable decisions.json."""
+    if not (work / "decisions.json").exists():
+        return set()
+    try:
+        return prescribed_family_words(load_decisions(work))
+    except SystemExit:
+        return set()
+
+
+def glossary_conflicts(work: Path, data: dict) -> list[dict]:
+    """glossary.json entries that list as a wrong variant a family word the
+    bible's family-word decisions give ({"kardeş": ["abi"]} while the
+    younger brother says "abi"). The `term variant` check skips those."""
+    path = work / "glossary.json"
+    try:
+        glossary = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(glossary, dict):
+        return []
+    family = prescribed_family_words(data)
+    out = []
+    for preferred, alts in glossary.items():
+        hit = family & {tr_lower(a) for a in alts if isinstance(a, str)} if isinstance(alts, list) else set()
+        if hit:
+            out.append({"id": "glossary.json", "term": preferred, "answer": preferred, "family_words": sorted(hit)})
+    return out
 
 
 def term_renderings(work: Path) -> dict[str, set[str]]:
@@ -697,7 +868,12 @@ def term_renderings(work: Path) -> dict[str, set[str]]:
     scene (with a ";" or "for", as in "X for the birds; Y for the job") are
     left out: no single word can be checked. Two decisions on one term (a
     word with two senses, each its own decision) give it two renderings,
-    and either one will do. Empty when there is no usable decisions.json."""
+    and either one will do, also when one quotes it with an article ("the
+    loft") and the other without ("loft"). A family word ("brother") also
+    takes every Turkish word the bible's family-word decisions give it
+    ("abi" for one pair, "kardeş" for another): the check cannot tell whose
+    brother a cue means, and the pair's decision must never be flagged.
+    Empty when there is no usable decisions.json."""
     if not (work / "decisions.json").exists():
         return {}
     try:
@@ -705,13 +881,11 @@ def term_renderings(work: Path) -> dict[str, set[str]]:
     except SystemExit:
         return {}
     out: dict[str, set[str]] = {}
-    for d in data["decisions"]:
-        if d.get("kind") != "term" or not isinstance(d.get("answer"), str):
-            continue
-        answer = re.sub(r"\([^)]*\)", "", d["answer"]).strip()
+    for d in _term_decisions(data):
+        answer = _answer_text(d)
         if not answer or ";" in answer or re.search(r"\bfor\b", answer):
             continue
-        terms = [t.strip() for t in QUOTED_RE.findall(d.get("question", "")) if t.strip()]
+        terms = _quoted_terms(d)
         parts = [p.strip() for p in answer.split(" / ")]
         if len(parts) == len(terms):
             pairs = zip(terms, parts)
@@ -722,7 +896,11 @@ def term_renderings(work: Path) -> dict[str, set[str]]:
         for term, rendering in pairs:
             if rendering.casefold() != term.casefold():
                 out.setdefault(term.casefold(), set()).add(rendering)
-    return out
+    by_key: dict[str, set[str]] = {}
+    for term, answers in out.items():
+        by_key.setdefault(term_key(term), set()).update(answers)
+    family = family_words(data)
+    return {term: by_key[term_key(term)] | family.get(term_key(term), set()) for term in out}
 
 
 def main(argv: list[str] | None = None) -> None:

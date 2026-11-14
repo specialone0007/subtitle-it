@@ -226,9 +226,17 @@ model of `sonnet` also runs at low effort; that is untested.
   whose source sentence goes on without a full stop, and warns when the
   Turkish writes a part twice, leaves a cue with nothing of its own, or
   puts a name in another cue than the one that says it. The address check
-  leaves out a question and its answer heard as one voice, and a name
-  spoken about rather than to, since there the speaker or the listener
-  may be the wrong one.
+  leaves out a question and its answer heard as one voice, a name
+  spoken about rather than to, and a cue whose form is the one the other
+  side of the pair uses back while the audio gave the cue next to it the
+  same voice and that other person is in the scene: there the speaker or
+  the listener may be the wrong one. A speaker's own slip into the other
+  side's form on two cues in a row is silent then too; the reviewer
+  still reads every cue's sen or siz. A term's senses count together
+  ("loft" and "the loft"), and a family word ("brother") takes every word
+  the bible's family-word decisions give it ("abi" for one pair, "kardeş"
+  for another), so a pair's decision is never flagged against a generic
+  entry. `bible.py apply` lists such generic entries as `term_conflicts`.
 
 The last part of the check lays out every cue as it is shown
 (`layout.py`): at most 2 lines of 42 characters, and in a two-speaker cue

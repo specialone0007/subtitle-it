@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.7.3 (2026-11-14)
+
+Fixes for warnings the checks raised on correct Turkish in a full run,
+13 of them at delivery on one film.
+
+- Family words win over generic terms: when a bible decision gives
+  "brother" one rendering for the whole film and a pair's family-word
+  decision gives "abi", the `term rendering` and `term variant` checks
+  accept the pair's word. `bible.py apply` lists such clashes as
+  `term_conflicts` for the report, and the bible writer is told never to
+  give a bare family word one rendering for the whole film. The Turkish
+  choices a family question quotes ("abi" or "kardeş") are no longer
+  read as source terms.
+- One word, several senses: decisions that quote a term with and without
+  an article ("the loft", "loft") count as one term, so either sense's
+  rendering passes. The run's three `term rendering` warnings on this were
+  all correct Turkish.
+- The address check stays silent on a cue that is most likely the other
+  person's turn: its speaker comes from the voice alone, the cue next to
+  it has the same voice, its form is the one the other side of the pair
+  uses back, and that person is in the scene. The cost: a speaker's own
+  slip into the other side's form, on two cues in a row with that person
+  in the scene, is silent too. The reviewer still reads sen and siz for
+  the whole film.
+- The README has a Languages section: from any language, into Turkish
+  today, a list meant to grow. The plugin and marketplace descriptions
+  say the same.
+
 ## 0.7.2 (2026-11-14)
 
 Fixes from a side-by-side reading of two full runs on one film: lines
