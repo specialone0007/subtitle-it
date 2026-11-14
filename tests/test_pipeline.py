@@ -447,3 +447,64 @@ def test_check_warns_on_the_other_address_form(work: Path):
     (work / "out" / "tr_01.txt").write_text(GOOD.replace("Gel.", "Sen gel."), encoding="utf-8")
     r = assemble.run_checks(work)
     assert [(w["cue"], w["check"]) for w in r["warnings"]] == [(1, "address form")]
+
+
+def _films_work(tmp_path: Path) -> tuple[Path, Path]:
+    """A checked work folder under plugins/data/<plugin>/films, as on disk."""
+    (tmp_path / "fr.srt").write_text(FR, encoding="utf-8")
+    (tmp_path / "en.srt").write_text(EN, encoding="utf-8")
+    data = tmp_path / "plugins" / "data"
+    w = data / "subtitle-it-subtitle-it" / "films" / "film-new"
+    prepare.build(w, tmp_path / "fr.srt", None, tmp_path / "en.srt")
+    (w / "out").mkdir(exist_ok=True)
+    (w / "out" / "tr_01.txt").write_text(GOOD, encoding="utf-8")
+    assemble.run_checks(w)
+    return w, data
+
+
+def test_deliver_with_the_video_moves_the_old_plugins_delivery_to_backups(tmp_path: Path):
+    work, data = _films_work(tmp_path)
+    film = tmp_path / "Film"
+    film.mkdir()
+    video = film / "Film.mkv"
+    video.write_bytes(b"x")
+    old = film / "Film.tr.srt"
+    old.write_text(TURKISH, encoding="utf-8")
+    record = data / "turkish-subtitles-turkish-subtitles" / "films" / "film"
+    record.mkdir(parents=True)
+    (record / "delivered.json").write_text(json.dumps({"delivered_to": str(old)}), encoding="utf-8")
+    # The user's own English file beside the video is no delivery: it stays.
+    (film / "Film.en.srt").write_text(ENGLISH, encoding="utf-8")
+    backups = tmp_path / "backups"
+    info = assemble.deliver(work, film / "Film.srt", backups, force=False, video=video)
+    [moved] = info["moved_earlier_deliveries"]
+    assert moved["from"] == str(old) and not old.exists()
+    assert Path(moved["to"]).parent == backups and Path(moved["to"]).read_text(encoding="utf-8") == TURKISH
+    assert (film / "Film.en.srt").exists() and (film / "Film.srt").exists()
+    assert info["earlier_deliveries"] == []
+
+
+def test_deliver_without_the_video_leaves_earlier_deliveries_in_place(tmp_path: Path):
+    work, _ = _films_work(tmp_path)
+    film = tmp_path / "Film"
+    film.mkdir()
+    old = film / "Film.tr.srt"
+    assemble.deliver(work, old, tmp_path / "backups", force=False)
+    assemble.run_checks(work)
+    # The user named another destination: nothing beside it is moved.
+    info = assemble.deliver(work, tmp_path / "elsewhere.srt", tmp_path / "backups", force=False)
+    assert old.exists() and info["moved_earlier_deliveries"] == [] and info["earlier_deliveries"] == [str(old)]
+
+
+def test_deliver_keeps_a_recorded_path_that_now_holds_another_language(tmp_path: Path):
+    work, _ = _films_work(tmp_path)
+    film = tmp_path / "Film"
+    film.mkdir()
+    video = film / "Film.mkv"
+    video.write_bytes(b"x")
+    old = film / "Film.tr.srt"
+    assemble.deliver(work, old, tmp_path / "backups", force=False)
+    old.write_text(ENGLISH, encoding="utf-8")
+    assemble.run_checks(work)
+    info = assemble.deliver(work, film / "Film.srt", tmp_path / "backups", force=False, video=video)
+    assert old.read_text(encoding="utf-8") == ENGLISH and info["moved_earlier_deliveries"] == []

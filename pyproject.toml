@@ -2,7 +2,7 @@
 # the top of each file and run with `uv run scripts/<name>.py`.
 [project]
 name = "subtitle-it-dev"
-version = "0.7.1"
+version = "0.7.2"
 license = "Apache-2.0"
 requires-python = ">=3.11"
 dependencies = []
@@ -27,4 +27,4 @@ select = ["E", "F", "W", "I", "B", "UP"]
 ignore = ["E741", "B905"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["result", "srt", "prepare", "assemble", "learn", "sources", "opensubtitles", "speakers", "bible", "transcribe", "polish", "layout", "settings", "turkish"]
+known-first-party = ["result", "srt", "prepare", "assemble", "learn", "sources", "opensubtitles", "speakers", "bible", "transcribe", "polish", "layout", "settings", "turkish", "compare", "usage"]
