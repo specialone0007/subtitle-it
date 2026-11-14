@@ -1,5 +1,52 @@
 # Changelog
 
+## 0.7.2 (2026-11-14)
+
+Fixes from a side-by-side reading of two full runs on one film: lines
+that lost meaning to reading speed, sentences split badly over cues, and
+words the film did not write one way.
+
+- Meaning before reading speed: the translator, the polish fixer, the
+  reviewer and the Turkish pack shorten a fast line only by rephrasing or
+  by dropping filler. A clause, a question, a name or a second sentence is
+  never dropped; a fast line that keeps the meaning stays a warning.
+- Split sentences: a new `split sentence` warning covers each run of cues
+  whose source sentence goes on without a full stop. It fires when the
+  Turkish writes one part twice, leaves a cue with nothing of its own, or
+  puts a name in another cue than the one that says it. The fixer and the
+  reviewer take the run as one unit: the whole sentence first, then each
+  part exactly once.
+- The bible lists slang and idioms with their meaning in the film
+  ("pigeon" for a sucker, "chasers", "the bottom of the church" for the
+  basement), and decides once who is older in each pair of siblings, with
+  one spelling ("abi", not "abi" and "ağabey").
+- One rendering per term: `term rendering` warns when a cue's source says
+  a term the bible decided and the Turkish has none of its rendering;
+  `term drift` warns on a second form of a word the film otherwise writes
+  one way (abi/ağabey, celp/celpname).
+- Name suffixes follow how the name sounds: `name suffix` warns on
+  "Joey'in" (write "Joey'nin") and "John'nun" (write "John'un").
+- TDK spellings: `spelling` warns on common slips such as "sağol",
+  "herşey", "bir çok", "yanlız" and "malesef".
+- The address-form check no longer warns when it may have the wrong
+  speaker: a question and its answer heard as one voice, a two-speaker
+  cue, or a name spoken about rather than to ("you and Father Barry").
+- The run goes on as soon as an agent's output files are written and
+  stop changing (`usage.py wait`), rather than waiting for the agent's
+  completion notice, which can come many minutes later. A notice that
+  comes late is still recorded; one that never comes is recorded as `-`.
+- Earlier deliveries under another name, such as `Film.tr.srt` from before
+  0.6.2 or from the plugin's old name turkish-subtitles, are recognised
+  from every work folder's record. `sources.py local` marks them as this
+  plugin's earlier delivery, and a delivery to the default name next to
+  the video (`deliver --video`) moves them to the backups folder and says
+  so in the report. A delivery to another destination moves nothing.
+- `scripts/compare.py` is a local tool for blind comparisons: it writes
+  shuffled side-by-side rows of two or three delivered files with the
+  English, keeps the key apart, and turns a judge's verdicts back into
+  per-version and head-to-head numbers. It refuses to write inside the
+  repository, so no film text is committed.
+
 ## 0.7.1 (2026-11-14)
 
 Four rules from the Netflix Turkish Timed Text Style Guide that change how
