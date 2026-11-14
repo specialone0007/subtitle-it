@@ -423,8 +423,13 @@ def run_checks(work: Path) -> dict:
     glossary_file = work / "glossary.json"
     if glossary_file.exists():
         glossary = json.loads(glossary_file.read_text(encoding="utf-8"))
+        # A family word a pair's decision gives ("abi") is never a wrong
+        # variant, even when a generic glossary entry lists it as one.
+        family = bible.work_family_words(work)
         for preferred, alts in glossary.items():
             for alt in alts:
+                if bible.tr_lower(alt) in family:
+                    continue
                 # A variant that differs from the preferred term only by case
                 # (TAMAM for Tamam) is matched case-sensitively; otherwise the
                 # correct term itself would be flagged.
