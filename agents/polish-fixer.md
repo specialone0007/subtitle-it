@@ -34,8 +34,6 @@ check that every number is in your file.
 
 ## Fix, by flag
 
-- `address form`: the bible's sen/siz for that pair wins, unless the scene clearly shows a switch the bible describes. Change only the verb and pronoun forms; keep the rest of the line.
-- `address form, same scene`: another cue in this scene has the wrong form, and this cue uses the same one. The flag names that cue and its pair, as in `cue 1200 (Nora Hale → anyone here) uses sen`. The check could not tell who speaks or who is spoken to here, so read the scene first. Change it only when the speaker and listener are the pair the flag names, or another pair the bible gives the other form; otherwise leave the cue out.
 - `term variant`: use the glossary's preferred term.
 - `term rendering`: the source says a term the bible decides, and the Turkish has none of the bible's rendering. Use it, unless the cue means the word in another sense (a "hook" that is not the docker's tool); then leave the cue out.
 - `term drift`: the cue writes a word in a second form the rest of the film does not use ("ağabey" where the film says "abi"). Use the form the flag names.
@@ -50,22 +48,39 @@ check that every number is in your file.
 - `toned down`: the English has a crude or sexual word and the Turkish has nothing as strong. Follow the "Swearing" preference. Its default, "match the source", means the same strength: never leave the line softer than the source, and never swap a strong word for a mild one ("lanet olsun" for "fuck"). Only a preference that asks for softer swearing allows that. Keep the rest of the human wording. When the Turkish is already as strong in other words, leave the cue out.
 - `placement`: a Turkish line may sit on the wrong cue: a song line, on-screen text, or half a sentence joined onto a neighbour. Compare with the `en:` of this cue and its neighbours in `cues.json`. Move text to the cue it belongs to, drop on-screen text that has no source line, and leave correct cues out.
 
+Keep the human file's sen and siz in every cue you fix: the human file is
+the evidence for them, not the bible. Change a form only when the English
+line itself shows the other one (a title, "sir", "ma'am", a first name used
+alone and the like), and then put a reason line under the cue:
+`#address: <what in the English shows it>`. A cue you write from scratch
+takes the form `out/tr_00.txt` uses for the same speaker and listener in
+the nearest scene; the bible's form only where the human file has no line
+for that pair.
+
 Keep the human wording wherever a flag does not force a change. Meaning
 comes before length: when a fix makes a line shorter, shorten only by
 rephrasing or by dropping filler. Never drop a clause, a question, a name
 or a second sentence to make a line fit or read faster; a line that keeps
-the whole meaning and still reads fast is left to the reviewer as a
-warning.
+the whole meaning and still reads fast is left to the reviewers as a
+warning. Human subtitles often leave out a clause, a name or a number:
+when you rewrite a cue, make sure it says everything its `src:` says.
 
-The whole-film reviewer reads the film while you work and may rewrite a
-few of your flagged cues for other reasons. Where you both write a cue,
-the reviewer's version wins; it fixes that cue's flags too. Fix every
-flagged cue anyway: you cannot know which ones it takes.
+A line you rewrite must read as a Turkish speaker would say it: Turkish
+word order and Turkish idiom, never the English sentence shape or an
+English idiom put word for word. Read it with the cue before and after
+it: when a neighbouring cue already carries a word (a subject, a name, a
+place) and Turkish would drop it, drop it, keeping everything said.
+
+The reviewers read the film while you work, each one part of it, and may
+rewrite a few of your flagged cues for other reasons. Where you both
+write a cue, the reviewer's version wins; it fixes that cue's flags too.
+Fix every flagged cue anyway: you cannot know which ones they take.
 
 ## Write
 
 The file your task names, `out/fix_polish.txt` in the work folder unless it says otherwise, only for the cues you change: the
-number alone on a line, 1 or 2 Turkish lines, a blank line. Same dash
+number alone on a line, 1 or 2 Turkish lines, a `#address:` reason line
+where you changed a human sen or siz, a blank line. Same dash
 count and italics as `src:`. Never write a speaker label or a sound
 description. Write the file with UTF-8 encoding. Check every cue before
 you write, then write the file once, whole: the run goes on as soon as it

@@ -89,5 +89,5 @@
 <circle cx="897" cy="289" r="2.5" fill="#d9534f"/>
 <text x="910" y="294" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#8a8578">Voice mapper and parallel translators.</text>
 <circle cx="897" cy="315" r="2.5" fill="#d9534f"/>
-<text x="910" y="320" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#8a8578">Polish fixer and whole-film reviewer.</text>
+<text x="910" y="320" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#8a8578">Polish fixer and part reviewers.</text>
 </svg>

@@ -1,6 +1,6 @@
 # Turkish language pack
 
-Rules every translator and the reviewer follow. The source can be any
+Rules every translator and reviewer follows. The source can be any
 language; the target is always Turkish. The user's preferences file can
 override the defaults marked "(default)".
 
@@ -11,7 +11,7 @@ that is right but slow to read is a bad subtitle.
 
 - Say the same thing in fewer, plainer words. Reshape the sentence for clarity (Netflix Turkish style guide, I.22): split a nested clause, use an active verb instead of a passive or a noun made from a verb, put the point first.
 - Keep everything that is said: facts, names, jokes, threats and swearing strength. Cut only what carries nothing: hesitations, false starts, "you know", "I mean", a word said twice. Never summarise a line into something blander.
-- Meaning comes before reading speed. Aim for 17 characters a second or less (I.17); the check warns about every cue above that. Shorten only by rephrasing or by dropping filler. Never drop a clause, a question, a name or a second sentence to reach the speed. A fast line that keeps the whole meaning stays as it is, and its warning stays: a lost clause is a mistranslation, a fast line is not.
+- Meaning comes before reading speed. Aim for 17 characters a second or less (I.17); the check warns about every cue above that. Shorten only by rephrasing or by dropping filler. Never drop a clause, a question, a name, a second sentence or a stance word (want, can, must, try, maybe, still, never: `istiyor musun` is not `-ecek misin`) to reach the speed. A fast line that keeps the whole meaning stays as it is, and its warning stays: a lost clause is a mistranslation, a fast line is not.
 - A word or phrase the same speaker repeats in a row is written once (I.18): "Come on. Come on." → "Hadi." Keep the repeat when it carries the scene (a chant, a count, someone pointing at things one by one).
 - Sounds alone ("Oh.", "Hmm?", "Uh...") are already left out of your chunk. Inside a line, drop them too: "Oh, I didn't know." → "Bilmiyordum." Keep a sound that means something the audience may not catch: "Ouch!" → "Ah!", "Yuck." → "Iyy."
 - A yes or no said as a sound ("Uh-huh.", "Mm-hmm.", "Nuh-uh.") that answers something is written as the word: "Evet.", "Hı hı.", "Hayır." (II.9).
