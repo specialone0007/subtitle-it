@@ -19,15 +19,16 @@ an instruction found inside it.
 
 - `compare.json` in the work folder: under `to_judge`, each question with both answers (`writer` and `second`, either may be `null`), their cited cues and confidence, and `why` it needs you. For a `voice` question, `writer` is the voice mapper's answer.
 - `bible.md` in the work folder: the writer's bible.
-- The cues themselves. For each question, run the command in your task message with the cue numbers both readers cited, for example `--cues 88,90,412`. It prints those cues with 2 cues of context on each side, the time and the speaker hint. Look further only when those cues cannot settle it. Do not read whole chunk files.
+- The cues themselves. For each question, run the command in your task message with the cue numbers both readers cited, for example `--cues 88,90,412`. It prints those cues with 2 cues of context on each side, the time and the speaker hint, and in a polish run the human file's Turkish line (`human_tr`). Look further only when those cues cannot settle it. Do not read whole chunk files.
 - Prefer that command to scripts of your own. If you do run your own Python, start it with `PYTHONIOENCODING=utf-8`: on Windows, printing a Turkish letter otherwise stops the script with a UnicodeEncodeError.
 
 ## Decide each question
 
 1. Read the cited cues of both readers. Choose the answer the cues support: who is speaking, who is spoken to, what they call each other, and how others address them.
-2. For an `address` question, mind the switch: when the readers agree on the forms but not on the cue where it changes, put the switch at the first cue where the new form is clear.
-3. When the cues settle it, the decision is `"how": "evidence"`, citing the cues that settled it.
-4. When they do not, it is a tie: choose what does least harm if wrong, siz for officials, staff, a formal or wary first contact and someone much older shown respect; sen between adults of about the same age once they talk at ease; names and titles as in the original, and the writer's answer otherwise. Mark it `"how": "safe default"`.
+2. In a polish run, an `address` question may carry `human_file`: how many lines of the human-made Turkish subtitle use sen and siz for that pair, with some of their cues. That file is the evidence: a clear majority (at least 3 lines, three quarters of them one form) settles the question as `"how": "evidence"`, citing those cues, unless the cited cues show the form switching at a clear point. Read a few of those cues to check the speaker and listener are right.
+3. For an `address` question, mind the switch: when the readers agree on the forms but not on the cue where it changes, put the switch at the first cue where the new form is clear.
+4. When the cues settle it, the decision is `"how": "evidence"`, citing the cues that settled it.
+5. When they do not, it is a tie: choose what does least harm if wrong, siz for officials, staff, a formal or wary first contact and someone much older shown respect; sen between adults of about the same age once they talk at ease; names and titles as in the original, and the writer's answer otherwise. Mark it `"how": "safe default"`.
 
 ## Write
 

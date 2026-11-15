@@ -185,6 +185,52 @@ def test_local_lists_tracks_and_sidecars(tmp_path: Path, monkeypatch):
     assert [c[0] for c in calls] == ["ffprobe", "ffmpeg"]
 
 
+def test_local_keeps_a_forced_track_that_holds_the_full_dialogue(tmp_path: Path, monkeypatch):
+    film = tmp_path / "Film"
+    film.mkdir()
+    video = film / "Film.mkv"
+    video.write_bytes(b"x")
+    # A 10-minute film: a full track has about 10 cues a minute, a real
+    # forced track a few signs.
+    streams = [
+        {"codec_type": "video", "codec_name": "h264"},
+        {
+            "codec_type": "subtitle",
+            "codec_name": "subrip",
+            "tags": {"language": "eng", "title": "forced"},
+            "disposition": {"forced": 1},
+        },
+        {"codec_type": "subtitle", "codec_name": "subrip", "tags": {"language": "eng"}, "disposition": {"forced": 1}},
+    ]
+    sizes = iter([100, 6])
+
+    def fake_run(cmd):
+        if cmd[0] == "ffprobe":
+            return json.dumps({"format": {"duration": "600.0"}, "streams": streams})
+        Path(cmd[-1]).write_text(_srt(next(sizes)), encoding="utf-8")
+        return ""
+
+    monkeypatch.setattr(sources, "_run", fake_run)
+    tracks = [c for c in sources.local(video, tmp_path / "work")["candidates"] if c["source"] == "built-in track"]
+    assert [(c["forced"], c["forced_only"], c["check"]["cues"]) for c in tracks] == [(True, False, 100), (True, True, 6)]
+
+
+@pytest.mark.parametrize(
+    ("candidate", "duration_ms", "forced_only"),
+    [
+        ({"forced": False, "check": {"cues": 5}}, 3_600_000, False),
+        ({"forced": True, "check": {"cues": 5}}, 3_600_000, True),
+        ({"forced": True, "check": {"cues": 239}}, 3_600_000, True),
+        ({"forced": True, "check": {"cues": 240}}, 3_600_000, False),
+        ({"forced": True, "check": {"cues": 299}}, None, True),
+        ({"forced": True, "check": {"cues": 300}}, None, False),
+        ({"forced": True}, None, True),
+    ],
+)
+def test_forced_only_needs_the_flag_and_few_cues(candidate, duration_ms, forced_only):
+    assert sources.forced_only(candidate, duration_ms) is forced_only
+
+
 def _item(file_id, **attrs):
     return {"attributes": {"files": [{"file_id": file_id}], "download_count": 10, **attrs}}
 

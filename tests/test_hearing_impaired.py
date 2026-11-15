@@ -239,8 +239,8 @@ def test_check_delivers_without_the_sound_only_cue_and_maps_the_numbers(films: P
         {"cue": 2, "delivered": [], "note": "sound only: not in the delivered file"},
         {"cue": 3, "delivered": [2], "at": ["00:00:07,000"]},
     ]
-    rows = assemble.sidebyside(w).read_text(encoding="utf-8").splitlines()
-    assert [ln.split("\t")[0] for ln in rows[1:]] == ["1", "3", "4"]
+    rows = Path(assemble.review_parts(w)["parts"][0]["file"]).read_text(encoding="utf-8").splitlines()[2:]
+    assert [ln.split("\t")[0] for ln in rows] == ["1", "3", "4"]
 
 
 def test_check_hard_fails_a_label_or_description_put_back(films: Path):
@@ -377,9 +377,9 @@ def test_check_rejects_turkish_for_a_sound_only_cue_an_older_build_kept(tmp_path
     assert "indistinct" not in (w / "draft.tr.srt").read_text(encoding="utf-8")
     # The fixer is not sent to it, for any reason.
     assert polish.flags(w)["flagged"] == 0
-    # The reviewer's side-by-side file has no row for it.
-    lines = assemble.sidebyside(w).read_text(encoding="utf-8").splitlines()
-    assert [ln.split("\t")[0] for ln in lines] == ["n", "1", "3"]
+    # The review's part file has no row for it.
+    lines = Path(assemble.review_parts(w)["parts"][0]["file"]).read_text(encoding="utf-8").splitlines()[2:]
+    assert [ln.split("\t")[0] for ln in lines] == ["1", "3"]
     # A polish run seeds no Turkish into it.
     turkish = TWO_LINE_SOUND.replace("SANDRA: Viens.", "SANDRA: Gel.")
     turkish = turkish.replace("[Woman calling out,\nindistinct]", "Toplanın millet!").replace("Tu es là ?", "Orada mısın?")

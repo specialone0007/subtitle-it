@@ -1,5 +1,64 @@
 # Changelog
 
+## 0.8.0 (2026-11-15)
+
+Every line gets a careful look: the review runs in parts of about 250
+cues, each with its own reviewer, and on the polish path the human Turkish
+file decides sen and siz. Long films cost more: about 250,000 review tokens
+per 1,000 cues.
+
+- In a polish run the human Turkish file is the evidence for sen and siz.
+  The fixer gets no address flags and the part reviewers no address notes;
+  both keep a human line's form unless the English line shows the other
+  one, and give the reason on an `#address:` line in their fix file.
+  `bible.py compare` counts the human file's forms per pair for the judge,
+  and `check` lists every changed form (`address_changes`), warning on
+  those with no reason. The same-scene address flag is gone.
+- A line the part reviewer or the polish fixer rewrites must read as a
+  Turkish speaker would say it, not follow English word order or idiom,
+  and drops a word the neighbouring cue already carries when Turkish
+  would.
+- The "story" song setting stays the default. The bible writer brief now
+  says that in a musical every song the characters sing is translated, and
+  that opening, end-credits and background songs are left out unless their
+  words carry the plot.
+
+- The sync check finds an offset in fast, overlapping talk. It now asks
+  the best offset to stand out from chance (the median count over all
+  offsets tried) instead of beating the runner-up by half again. On a
+  test film 10.5 seconds off, the old rule said "no clear offset".
+- Songs marked only with italics are found: a run of at least four
+  whole-italic cues that end no sentence, in a file that marks no lyric
+  with `♪`, `♫` or `#`.
+- A built-in track flagged forced that holds the full dialogue is used as
+  a source. `sources.py local` marks a candidate `forced_only` only when
+  it also holds few cues (under 4 a minute of video).
+- The `term rendering` check knows which cues each bible decision covers.
+  Term decisions take `applies_to` (`"film"` or cue numbers and ranges);
+  older bibles fall back to the evidence cues for one sense of a word and
+  for a family word about one pair. Notes after a `;` or in parentheses
+  no longer hide a decision, and cue numbers in them exempt those cues.
+  A term the next cue of the same sentence carries counts. On four saved
+  test runs this removed 23 of 24 term warnings (22 false, one arguable)
+  and kept the one real one.
+- Every line gets a careful look. The whole-film review is split into
+  parts of about 250 cues (`assemble.py reviewparts`), each with its own
+  reviewer, who compares every Turkish line with its source: missing
+  meaning, text on the wrong cue, case endings and verb forms, sen/siz,
+  names and terms, and lines only the Turkish makes too fast. In a polish
+  run they rewrite human lines that leave out part of what is said.
+  `assemble.py reviews` joins the parts' notes into `review.md`. The
+  single side-by-side file and its command are gone.
+- The part reviewers run at medium reasoning effort (`effort: medium` in
+  `agents/reviewer.md`), whatever effort the session uses. That is the
+  effort the split review was tested at: about 50,000 tokens per part.
+- The reading speed warning says when only the Turkish is fast, so the
+  reviewers know which lines a shorter wording can fix.
+- The sen/siz check guesses the listener when a speaker uses different
+  forms to different people and the line names nobody: the one other
+  character speaking right before or after, in the same scene. On a test
+  film this found a judged slip the check missed before.
+
 ## 0.7.3 (2026-11-14)
 
 Fixes for warnings the checks raised on correct Turkish in a full run,

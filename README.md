@@ -276,7 +276,7 @@ scripts/opensubtitles.py        OpenSubtitles login, search, download
 scripts/prepare.py              build the work folder and chunks
 scripts/bible.py                questions, blind comparison and judging for the film bible; adds the voices
 scripts/polish.py               start from an existing Turkish subtitle: seed it, list cues to fix
-scripts/assemble.py             assemble, checks, review file, delivery
+scripts/assemble.py             assemble, checks, review parts, delivery
 scripts/learn.py                find user edits for learn mode
 scripts/compare.py              blind side-by-side comparison of two or three delivered files
 scripts/speakers.py             voices per cue from the audio, sync check
