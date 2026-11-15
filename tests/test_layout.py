@@ -216,3 +216,81 @@ def test_two_deliveries_in_one_second_keep_both_backups(work: Path, tmp_path: Pa
         "Film.20261113-120000-3.srt",
     ]
     assert [p.read_text(encoding="utf-8") for p in (one, two, three)] == ["first", "second", "third"]
+
+
+# A fast cue stays on screen into the silence after it (`available_end`).
+
+
+def test_a_cue_at_or_under_17_keeps_its_end():
+    # 34 characters over 2 s is exactly 17 a second.
+    assert layout.available_end(0, 2000, 5000, 80, 34) == 2000
+
+
+def test_a_fast_cue_gets_just_the_time_it_needs():
+    # 40 characters need 2353 ms to read at 17 a second.
+    assert layout.available_end(0, 2000, 5000, 80, 40) == 2353
+
+
+def test_a_fast_cue_stops_at_the_usual_gap_before_the_next_cue():
+    assert layout.available_end(0, 2000, 2300, 80, 60) == 2220
+
+
+def test_a_fast_cue_gets_half_a_second_at_most():
+    assert layout.available_end(0, 2000, 9000, 80, 60) == 2500
+    assert layout.available_end(0, 2000, None, 80, 60) == 2500
+
+
+def test_a_fast_cue_is_never_shown_past_seven_seconds():
+    assert layout.available_end(0, 6800, 9000, 80, 200) == layout.MAX_SHOWN_MS
+    # A cue already longer than that keeps its own end.
+    assert layout.available_end(0, 7500, 9000, 80, 200) == 7500
+
+
+def test_a_fast_cue_with_no_room_keeps_its_end():
+    # The next cue starts within the usual gap, or overlaps.
+    assert layout.available_end(0, 2000, 2050, 80, 60) == 2000
+    assert layout.available_end(0, 2000, 1900, 80, 60) == 2000
+
+
+def test_a_split_gives_the_extra_time_to_the_last_part():
+    parts, why = layout.plan(10_000, 18_000, [ASK, ANSWER], 120)
+    longer, why_longer = layout.plan(10_000, 18_000, [ASK, ANSWER], 120, 18_400)
+    assert why is None and why_longer is None
+    assert longer[0] == parts[0] and longer[1].start == parts[1].start and longer[1].end == 18_400
+
+
+FAST = "Sana bunu kaç kere söyledim, hiç dinlemiyorsun."  # 47 characters
+
+
+def _fast_work(tmp_path: Path, next_start: str) -> Path:
+    fr = f"1\n00:00:01,000 --> 00:00:03,000\nJe te l'ai dit cent fois.\n\n2\n{next_start} --> 00:00:12,000\nD'accord.\n"
+    (tmp_path / "fr.srt").write_text(fr, encoding="utf-8")
+    w = tmp_path / "work"
+    prepare.build(w, tmp_path / "fr.srt", None, None)
+    prepare.chunks(w, target=250)
+    (w / "out" / "tr_01.txt").write_text(f"1\n{FAST}\n\n2\nTamam.\n", encoding="utf-8")
+    return w
+
+
+def test_check_shows_a_fast_cue_longer_and_measures_it_over_that_time(tmp_path: Path):
+    w = _fast_work(tmp_path, "00:00:10,000")
+    r = assemble.run_checks(w)
+    assert r["hard_fail_count"] == 0, r["hard"]
+    assert r["extended_cues"] == 1
+    draft, _ = srt.parse(w / "draft.tr.srt")
+    # Half a second more, the start as written; the next cue is untouched.
+    assert draft[0].ts == "00:00:01,000 --> 00:00:03,500"
+    assert draft[1].ts == "00:00:10,000 --> 00:00:12,000"
+    # 47 characters over 2.5 s, the source's 25 over the same time.
+    assert [x["detail"] for x in r["warnings"] if x["check"] == "reading speed"] == [
+        f"18.8 chars/s, source 10.0; {assemble.TURKISH_ONLY_FAST}"
+    ]
+
+
+def test_check_never_runs_a_fast_cue_into_the_next_one(tmp_path: Path):
+    w = _fast_work(tmp_path, "00:00:03,100")
+    r = assemble.run_checks(w)
+    assert r["extended_cues"] == 0
+    draft, _ = srt.parse(w / "draft.tr.srt")
+    assert draft[0].ts == "00:00:01,000 --> 00:00:03,000"
+    assert [x["detail"][:4] for x in r["warnings"] if x["check"] == "reading speed"] == ["23.5"]

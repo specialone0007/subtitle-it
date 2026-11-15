@@ -15,6 +15,9 @@ layout:
   the parts; a part that would get less than MIN_PART_MS gets the minimum,
   taken from the other parts by their length. The split is allowed only
   when every part stays at or under MAX_CPS.
+- A cue whose Turkish reads above MAX_CPS over its own time stays on
+  screen a little longer, into the silence before the next cue
+  (`available_end`). In a split cue the extra time goes to the last part.
 
 What cannot be laid out this way is a problem for the fix round, which
 shortens the text.
@@ -22,6 +25,7 @@ shortens the text.
 
 from __future__ import annotations
 
+import math
 import re
 import sys
 from dataclasses import dataclass
@@ -38,6 +42,10 @@ MIN_PART_MS = 1000
 # The gap between the two parts of a split cue is the file's usual gap
 # between cues, never more than this.
 MAX_GAP_MS = 250
+# A fast cue stays on screen at most this much longer than its timing, and
+# never longer than MAX_SHOWN_MS in all.
+MAX_EXTRA_MS = 500
+MAX_SHOWN_MS = 7000
 ITALIC_LINE_RE = re.compile(r"^\s*<i>(?P<inner>(?:(?!</?i>).)*)</i>\s*$", re.I)
 
 
@@ -53,6 +61,21 @@ def usual_gap(cues: list[srt.Cue]) -> int:
     gaps under a second; capped at MAX_GAP_MS."""
     gaps = sorted(b.start - a.end for a, b in zip(cues, cues[1:]) if 0 <= b.start - a.end < 1000)
     return min(gaps[len(gaps) // 2], MAX_GAP_MS) if gaps else 80
+
+
+def available_end(start: int, end: int, next_start: int | None, gap: int, chars: int) -> int:
+    """Until when a cue of `chars` characters is shown. A cue that reads
+    above MAX_CPS over its own time stays on screen longer, into the
+    silence before the next cue, until it reads at MAX_CPS: never closer
+    to the next cue than the file's usual gap, never more than MAX_EXTRA_MS
+    later, never past MAX_SHOWN_MS on screen. Any other cue keeps its end,
+    and so does a fast one with no silence after it."""
+    if chars * 1000 <= MAX_CPS * max(end - start, 1):
+        return end
+    limit = min(end + MAX_EXTRA_MS, start + MAX_SHOWN_MS)
+    if next_start is not None:
+        limit = min(limit, next_start - gap)
+    return max(end, min(start + math.ceil(chars * 1000 / MAX_CPS), limit))
 
 
 def _width(line: str) -> int:
@@ -103,10 +126,14 @@ def share(room: float, sizes: list[int]) -> list[float]:
         fixed.update(low)
 
 
-def plan(start: int, end: int, lines: list[str], gap: int) -> tuple[list[Part], str | None]:
+def plan(start: int, end: int, lines: list[str], gap: int, shown_end: int | None = None) -> tuple[list[Part], str | None]:
     """The parts a cue is shown as, and None; or the cue unchanged as one
-    part and the reason it cannot be laid out within the limits."""
-    as_is = [Part(start, end, list(lines))]
+    part and the reason it cannot be laid out within the limits. The cue is
+    shown until `shown_end` (`available_end`), its own end by default; a
+    split shares the cue's own time and gives the extra time to the last
+    part."""
+    shown_end = end if shown_end is None else shown_end
+    as_is = [Part(start, shown_end, list(lines))]
     speakers = srt.turns(lines)
     if len(speakers) < 2:
         if fits(lines) and not (len(lines) == 2 and turkish.bad_break(*lines)):
@@ -116,13 +143,13 @@ def plan(start: int, end: int, lines: list[str], gap: int) -> tuple[list[Part], 
             # Two lines broken where Turkish reads badly ("senin" / "gibi
             # biri"): the rewrap replaces them only when it breaks better.
             better = wrapped is not None and (len(wrapped) == 1 or not turkish.bad_break(*wrapped))
-            return ([Part(start, end, wrapped)] if better else as_is), None
+            return ([Part(start, shown_end, wrapped)] if better else as_is), None
         if wrapped:
-            return [Part(start, end, wrapped)], None
+            return [Part(start, shown_end, wrapped)], None
         return as_is, f"needs more than {MAX_LINES} lines of {MAX_LINE} characters: shorten it"
     one_each = [one_line(t) for t in speakers]
     if len(speakers) == MAX_LINES and fits(one_each):
-        return [Part(start, end, one_each)], None
+        return [Part(start, shown_end, one_each)], None
     texts = [_rewrap([srt.undash(t[0]), *t[1:]]) for t in speakers]
     if any(t is None for t in texts):
         return as_is, f"one speaker's turn needs more than {MAX_LINES} lines of {MAX_LINE} characters: shorten it"
@@ -139,7 +166,7 @@ def plan(start: int, end: int, lines: list[str], gap: int) -> tuple[list[Part], 
     for k, (t, ms) in enumerate(zip(texts, durations)):
         a = start + round(used) + gap * k
         used += ms
-        b = end if k == len(texts) - 1 else start + round(used) + gap * k
+        b = shown_end if k == len(texts) - 1 else start + round(used) + gap * k
         parts.append(Part(a, b, t))
     for p, size in zip(parts, sizes):
         ms = p.end - p.start
