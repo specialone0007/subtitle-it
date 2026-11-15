@@ -208,9 +208,10 @@ model of `sonnet` also runs at low effort; that is untested.
   reviewer's version wins, and it fixes that cue's flags too.
 - The human file is the evidence for sen and siz. `polish.py seed` also
   runs before the bible check, so `bible.py compare` can count the human
-  file's sen and siz lines per pair: the judge gets the counts, and a clear
-  majority (3 lines or more, three quarters one form) against both
-  readers' answer sends the pair to the judge. A seeded line keeps its
+  file's sen and siz lines per pair: the judge gets the counts, and 3 or
+  more human lines that use another form than both readers give, at the
+  same cues, send the pair to the judge. The judge then follows the human
+  file where three quarters of its lines for the pair use one form. A seeded line keeps its
   form; the fixer and the reviewers change it only when the English line
   itself shows the other one, and write why on an `#address:` line under
   the cue in their fix file. `check` lists every line whose form differs

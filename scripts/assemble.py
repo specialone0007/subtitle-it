@@ -147,7 +147,9 @@ def load_translation(work: Path) -> tuple[dict[int, list[str]], list[str]]:
 def address_changes(work: Path, texts: dict[int, list[str]]) -> list[dict]:
     """In a polish run, every cue whose sen or siz now differs from the
     human file's line it was seeded with, with the fix file that changed it
-    last and the reason that file gave (`#address:` lines), or None."""
+    last and the latest reason any fix file gave for that cue (`#address:`
+    lines), or None. A later file that keeps the new form, such as the soft
+    pass, writes no reason and must not hide the one given before."""
     out = work / "out"
     seed_file = out / "tr_00.txt"
     if not (work / "polish_placement.json").exists() or not seed_file.exists():
@@ -158,7 +160,7 @@ def address_changes(work: Path, texts: dict[int, list[str]]) -> list[dict]:
         blocks, _ = srt.read_blocks(f)
         reasons = srt.read_reasons(f)
         for n in blocks:
-            by[n] = (f.name, reasons.get(n))
+            by[n] = (f.name, reasons.get(n) or (by[n][1] if n in by else None))
     found = []
     for n in sorted(texts):
         if n not in seed or n not in by:
