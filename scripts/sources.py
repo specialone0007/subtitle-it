@@ -17,7 +17,9 @@ drive root or the home folder.
 `local` probes the video with ffprobe, extracts every text subtitle track
 into W/sources/, lists subtitle files next to the video, and validates each
 candidate. It also reads subtitle files in a Subs or Subtitles folder beside
-the video, up to two levels down. Image tracks (PGS, VobSub, DVB) are listed
+the video, up to two levels down. `forced_only` is true for a candidate
+flagged forced that holds too few cues to be the full dialogue; one flagged
+forced that holds the full dialogue is a source like any other. Image tracks (PGS, VobSub, DVB) are listed
 but not extracted.
 Needs ffmpeg and ffprobe on PATH.
 """
@@ -314,6 +316,27 @@ def to_srt(src: Path, dest: Path) -> Path:
 
 EARLIER_DELIVERY = "this plugin's earlier delivery, not a source"
 
+# A forced track holds only the lines the audience cannot follow (signs, a
+# foreign language), a few per film. Some releases flag the full dialogue
+# forced too: one anime film's only English track was flagged forced and
+# titled "forced", yet held 1210 cues, about 11 a minute. So a forced flag
+# skips a candidate only when it also holds few lines: under
+# FORCED_FULL_PER_MIN cues a minute of video, or, with no video length,
+# under FORCED_FULL_MIN_CUES cues.
+FORCED_FULL_PER_MIN = 4
+FORCED_FULL_MIN_CUES = 300
+
+
+def forced_only(candidate: dict, duration_ms: int | None) -> bool:
+    """Flagged forced (by the track or the file name) and holding too few
+    cues to be the film's full dialogue."""
+    if not candidate.get("forced"):
+        return False
+    cues = (candidate.get("check") or {}).get("cues", 0)
+    if duration_ms:
+        return cues < FORCED_FULL_PER_MIN * duration_ms / 60_000
+    return cues < FORCED_FULL_MIN_CUES
+
 
 def delivered_here(work: Path) -> set[str]:
     """Every file this plugin delivered, as a `_key`: today's name
@@ -403,6 +426,7 @@ def local(video: Path, work: Path) -> dict:
     for c in candidates:
         if "check" in c:
             c["hearing_impaired"] = bool(c.get("hearing_impaired")) or c["check"]["hearing_impaired"]
+            c["forced_only"] = forced_only(c, info["duration_ms"])
     return {"video": str(video), "duration_ms": info["duration_ms"], "candidates": candidates}
 
 

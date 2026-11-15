@@ -170,11 +170,50 @@ def test_sync_offset_recentres_an_off_grid_shift(seed):
 
 
 def test_sync_offset_result_keys_are_the_same_on_every_path():
-    keys = {"matched_cues", "speech_starts", "runner_up_matched", "median_offset_ms", "verdict"}
+    keys = {"matched_cues", "speech_starts", "runner_up_matched", "chance_matched", "median_offset_ms", "verdict"}
     speech = dialogue()
     assert set(speakers.sync_offset([], speech)) == keys
     assert set(speakers.sync_offset(cues_at([1000, 3000]), [1000, 3000])) == keys
     assert set(speakers.sync_offset(cues_at(speech), speech)) == keys
+
+
+def fast_talk(seed):
+    """Cue starts 0.4 to 2 s apart, as in fast, overlapping talk, and speech
+    starts for about two thirds of them, 10.5 s earlier, plus as many
+    starts with no cue (breaths, crosstalk). So many cue starts lie near
+    some speech start whatever the offset that a wrong offset also scores
+    well."""
+    rng = random.Random(seed)
+    t, cue_starts = 60_000, []
+    for _ in range(900):
+        t += rng.randint(400, 2000)
+        cue_starts.append(t)
+    speech = [c - 10_500 + rng.randint(-250, 250) for c in cue_starts if rng.random() < 0.15]
+    speech += [rng.randint(50_000, t) for _ in range(len(speech) * 3)]
+    return cue_starts, sorted(speech)
+
+
+@pytest.mark.parametrize("seed", [1, 2, 3])
+def test_sync_offset_finds_an_offset_in_fast_overlapping_talk(seed):
+    # The true offset beats the best other one by less than 1.5 times, the
+    # old rule's margin, but stands far above chance.
+    cue_starts, speech = fast_talk(seed)
+    r = speakers.sync_offset(cues_at(cue_starts), speech)
+    assert r["matched_cues"] < 1.5 * r["runner_up_matched"]
+    assert r["chance_matched"] > 0
+    assert abs(r["median_offset_ms"] - 10_500) <= 300
+    assert r["verdict"].startswith("subtitles are") and r["verdict"].endswith("late")
+
+
+def test_sync_offset_will_not_call_a_peak_that_stands_no_higher_than_chance():
+    # Dense cue starts and speech starts with nothing to do with them: every
+    # offset matches about as many, so the best one is no clear offset.
+    rng = random.Random(4)
+    cue_starts = sorted(rng.randint(60_000, 1_200_000) for _ in range(900))
+    speech = sorted(rng.randint(60_000, 1_200_000) for _ in range(600))
+    r = speakers.sync_offset(cues_at(cue_starts), speech)
+    assert r["median_offset_ms"] is None
+    assert r["verdict"].startswith("no clear offset")
 
 
 def test_sync_offset_leaves_an_in_sync_file_alone():
