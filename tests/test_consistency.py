@@ -9,6 +9,7 @@ import pytest
 
 import assemble
 import bible
+import polish
 import prepare
 import srt
 import turkish
@@ -354,6 +355,37 @@ def test_check_warns_when_a_term_lacks_the_bible_rendering_and_on_drift(tmp_path
     assert warned(w, "term drift") == {4: "'ağabey' here, 'abi' in 2 other cues: use one form for the whole film"}
 
 
+# --- a line said again ----------------------------------------------------
+
+
+def test_check_warns_when_a_repeated_line_is_said_another_way(tmp_path: Path):
+    english = ["Call the ship's doctor.", "Hello there.", "<i>Call the ship's doctor.</i>"]
+    tr = ["Gemi tabibini çağırın.", "Merhaba.", "<i>Gemi doktorunu çağırın.</i>"]
+    w = make_work(tmp_path, english, tr)
+    got = warned(w, "repeat drift")
+    assert sorted(got) == [1, 3]
+    # The other cue's Turkish comes first: the note is cut for the reviewer.
+    assert got[1].startswith('"<i>Gemi doktorunu çağırın.</i>" at cue 3')
+    assert got[3].startswith('"Gemi tabibini çağırın." at cue 1')
+
+
+def test_repeat_drift_is_quiet_on_the_same_words_and_one_word_lines(tmp_path: Path):
+    english = ["No, no, no.", "Before the tide.", "No!", "Wait.", "<i>Before the tide.</i>", "No more! No more!", "No more."]
+    tr = ["Hayır, hayır.", "Gelgitten önce.", "Hayır!", "Dur.", "<i>gelgitten önce...</i>", "Yeter! Yeter!", "Yeter."]
+    w = make_work(tmp_path, english, tr)
+    # One word said again ("No"), and the same words with other case,
+    # punctuation, italics or a word said twice, are not drift.
+    assert warned(w, "repeat drift") == {}
+
+
+def test_repeat_drift_keeps_apart_a_line_that_runs_on(tmp_path: Path):
+    # "Past the lighthouse" that goes on into the next cue is another sentence.
+    english = ["Past the lighthouse.", "Hold the course.", "Past the lighthouse", "you reach the pier."]
+    tr = ["Feneri geç.", "Rotayı koru.", "Feneri geçince", "iskeleye varırsın."]
+    w = make_work(tmp_path, english, tr)
+    assert warned(w, "repeat drift") == {}
+
+
 # --- split sentences -------------------------------------------------------
 
 
@@ -552,3 +584,16 @@ def test_a_guessed_listener_lets_siz_through_as_plural(tmp_path: Path):
     reading = bible.address_readings(w, texts, rows)[0]
     assert reading["listener"] == "Sophie" and reading["guessed"] and reading["expected"] == "sen"
     assert bible.address_warnings(w, texts, rows) == []
+
+
+# --- an English "And" opening a line ---------------------------------------
+
+
+def test_ve_opening_warns_on_a_spoken_line_only(tmp_path: Path):
+    english = ["And we left.", "- And you?\n- Me too.", "Goodbye.", "♪ And the sea ♪", "And then?"]
+    turkish = ["Ve gittik.", "- Ve sen?\n- Ben de.", "Veda ediyorum.", "♪ Ve deniz ♪", "Sonra?"]
+    w = make_work(tmp_path, english, turkish)
+    warned = sorted(x["cue"] for x in assemble.run_checks(w)["warnings"] if x["check"] == "ve opening")
+    assert warned == [1, 2]
+    # Polish runs leave it to the reviewers, as they do reading speed.
+    assert "ve opening" in polish.REVIEWER_ONLY

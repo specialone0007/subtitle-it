@@ -35,15 +35,25 @@ Read each file once. These files are all you need: open no other.
 Go through your part cue by cue. For each one, read the source (and `en`)
 and the Turkish side by side and ask these questions. Most cues pass them
 all: leave those exactly as they are, even where you would have worded
-them differently. Look at every cue, but spend your thinking on the ones
-that need a change: a cue that passes needs no discussion.
+them differently. A line a Turkish speaker would not say (question 6) does
+not pass, however correct its words. Look at every cue, but spend your
+thinking on the ones that need a change: a cue that passes needs no
+discussion.
 
-1. **Is everything said there?** Each clause, each question, a "not", a name, a number, a time, who does what to whom, the point of a joke or a threat. When a sentence runs over several cues, look at those cues together. Anything missing, added or changed is a mistranslation: rewrite the line so it says all of it. Dropped filler ("you know", "well", a word said twice, a hesitation) is not a loss. A word that sets the speaker's stance is never filler: want, can, must, try, maybe, really, still, never. "Do you want to go?" and "Will you go?" ask different things.
+1. **Is everything said there?** Each clause, each question, a "not", a name, a number, a time, who does what to whom, the point of a joke or a threat. When a sentence runs over several cues, look at those cues together. Anything missing, added or changed is a mistranslation: rewrite the line so it says all of it. Dropped filler ("you know", "well", a word said twice, a hesitation) is not a loss. A word that sets the speaker's stance is never filler: want, can, must, try, let, make (someone do something), at least, maybe, really, still, never. "Do you want to go?" and "Will you go?" ask different things.
 2. **Is it on the right cue?** The Turkish says what this cue's source says: not the end of the previous cue, not the start of the next, not on-screen text or a song line that belongs elsewhere. Move text to the cue it belongs to, and write both cues.
 3. **Is the grammar right?** Read each name and noun with its ending: the case the verb needs (`-ı/-i` for a definite object, `-a/-e` towards, `-da/-de` at, `-dan/-den` from), the buffer letter (`Lund'a`, `Ruth'u`, `Hartley'ye`), possessive and case together (`bakanlığın raporunu`), the apostrophe only on proper names. Then the verb: person and number agree with the subject, tense matches the source, a command stays a command. A wrong or missing ending is a fix even when the meaning comes through.
 4. **sen or siz?** Work out who speaks to whom: the speaker hint, a name the line says, the people in the scene. The bible gives each pair's form, its switches and its scene shifts; the scene decides where the bible's form sounds wrong for the moment (siz in teasing or a tender moment between people already at ease, sen in a cold formal exchange). Never turn a natural sen into siz, or the reverse, only because the bible says so. List every cue where you depart from the bible under "Bible overridden". In a polish run, item 14 decides instead. An `address form` note is a cue where the check read the other form: it knows the speaker, and the listener when the line names one or one other person speaks next to it, so judge it from the scene. The context cues before and after your part are not yours and can be wrong too: never pick a form to match them where the bible says otherwise.
-5. **Names, titles and terms** as the bible gives them. Slang follows the bible's "Slang and idioms" meaning, never the literal word. Notes: `term rendering` (the source says a bible term and the Turkish has none of its rendering; leave it when the cue means another sense), `term drift` (a second form of a word), `spelling`, `name suffix` and `accent` (write what the note gives, "hâlâ" or "âşık" unless the scene means an aunt or a knucklebone).
-6. **Does it read at a glance?** A line that copies the English sentence shape, a passive or a noun made from a verb where a plain verb would do, a nested clause, a repeat or a hesitation the pack drops: rewrite it, keeping everything said.
+5. **Names, titles and terms** as the bible gives them. Slang follows the bible's "Slang and idioms" meaning, never the literal word. Notes: `term rendering` (the source says a bible term and the Turkish has none of its rendering; leave it when the cue means another sense), `term drift` (a second form of a word), `repeat drift` (the same source line is written another way elsewhere in the film; the note quotes that other Turkish: say both the same way unless the scene makes them mean different things, and when the other one is the worse, keep yours and say so under "check by hand"), `spelling`, `name suffix` and `accent` (write what the note gives, "hâlâ" or "âşık" unless the scene means an aunt or a knucklebone).
+6. **Would a Turkish person say it this way?** Say the line out loud as this character, in this scene, as the pack's "How Turkish people say it" asks. Rewrite it, keeping everything said, when a Turkish viewer would notice it was translated:
+   - the English sentence shape, a passive or a noun made from a verb where a plain verb would do, a nested clause;
+   - a dictionary word where people use another ("sunu" for an offering to a god: "adak");
+   - an English "a", "my" or "you" copied in where the Turkish ending already says it ("bir babamı kaybettim": "babamı kaybettim");
+   - a word whose everyday meaning differs from the dictionary one ("O benim partnerim" is heard as a lover: "O benim ortağım" for work);
+   - a word whose tone belongs to another religion, period or culture than the film's world in the bible ("hacı" for pilgrims of another faith);
+   - the attitude of the English line went flat: a jab, a plea or a boast that reads as a plain statement;
+   - a line that does not fit the speaker's `speaks` note in the bible;
+   - a repeat or a hesitation the pack drops.
 7. **Too fast because of the Turkish?** A `reading speed` note ending "only the Turkish is fast" means the source reads at 17 characters a second or less over the time the cue is shown and the Turkish does not. Settle it in this order. First, everything said, in wording a Turkish speaker would use: question 1 and question 6 pass in full. Then 17 a second, reached only by a shorter natural wording or by dropping filler, never by a stiffer shape: "Senin burada ne işin var?" never becomes "Nasıl buradasın?". Keep what the line does: a reply that accepts an offer still accepts it, a request is still a request, a question still a question. If no such wording exists, leave the line as it is, faster than 17: the check still warns, and you list it as kept on purpose. A fast line whose source is fast too has no note: shorten it only by dropping filler.
 
 Then, across the cues:
@@ -99,7 +109,7 @@ per speaker. Never add a speaker label (`NAME:`, `[Name]`) or a sound
 description (`[kapı çarpar]`). Write it with UTF-8 encoding.
 
 The notes file, at most 15 lines: how many cues you changed by kind
-(meaning, placement, grammar, sen/siz, names and terms, readability,
+(meaning, placement, grammar, sen/siz, names and terms, natural Turkish,
 shortened, warnings, songs, toned down), with cue numbers; a "Bible
 overridden" list (cue, form used, why); how many `only the Turkish is
 fast` lines you left on purpose; anything a person should check by hand.

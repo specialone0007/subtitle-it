@@ -54,7 +54,7 @@ PLACEMENT_FILE = "polish_placement.json"
 SOFT_FILE = "polish_soft.txt"
 SOFT_FIX_FILE = "fix_soft.txt"
 # Warnings the fixer leaves to the reviewer, as a full run does.
-REVIEWER_ONLY = {"reading speed"}
+REVIEWER_ONLY = {"reading speed", "ve opening"}
 # Text for a sound-only cue is never delivered: nothing for the fixer to do.
 # The human file's sen and siz are the evidence in a polish run: a seeded
 # line keeps its form unless the English itself shows the other one, which

@@ -88,3 +88,16 @@ def test_learn_reads_the_shared_files_from_the_translate_skill():
 def test_translate_points_to_the_learn_command_by_its_full_name():
     assert "`/subtitle-it:learn <film>`" in SKILL.read_text(encoding="utf-8")
     assert "learn" not in frontmatter(SKILL)["argument-hint"]
+
+
+def test_the_pack_stays_within_its_size_before_the_natural_lines_rules():
+    # The natural-lines rules fold into three principles instead of adding
+    # one line per case: the pack is no longer than it was before them.
+    assert len((ROOT / "skills" / "translate" / "pack-tr.md").read_text(encoding="utf-8")) <= 14_486
+
+
+def test_the_reviewer_puts_natural_turkish_before_reading_speed():
+    text = (ROOT / "agents" / "reviewer.md").read_text(encoding="utf-8")
+    q7 = text.split("7. **Too fast because of the Turkish?**")[1].split("\n")[0]
+    assert q7.index("everything said, in wording a Turkish speaker would use") < q7.index("Then 17 a second")
+    assert "never by a stiffer shape" in q7 and "kept on purpose" in q7
