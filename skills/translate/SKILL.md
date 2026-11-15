@@ -75,7 +75,9 @@ A subagent's completion notice ends with its usage: its tokens
 (`subagent_tokens` or `total_tokens`) and `duration_ms`. Keep them for
 each agent, and pass them with the next mark as one
 `--agent <kind>:<tokens>:<ms>` per agent, where kind is the agent type
-without `subtitle-it:` (`--agent translator:61234:182000`). Write
+without `subtitle-it:` (`--agent translator:61234:182000`); the
+reviewer of step 11's meaning check is `listen-check`, so the report
+shows what listening costs apart from the review. Write
 `-` for a number the notice did not give. Never guess one.
 
 The notice can come many minutes after the agent wrote its last file, so

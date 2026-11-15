@@ -121,6 +121,19 @@ def test_the_skill_marks_every_step_group():
     assert "usage.py summary" in skill
 
 
+def test_the_meaning_check_is_counted_apart_from_the_reviewers(tmp_path: Path):
+    skill = (Path(__file__).resolve().parents[1] / "skills" / "translate" / "SKILL.md").read_text(encoding="utf-8")
+    assert "meaning check is `listen-check`" in skill
+    marks(
+        tmp_path,
+        ("2026-11-12T20:00:00+01:00", "listen", ["reviewer:40000:80000"]),
+        ("2026-11-12T20:04:00+01:00", "deliver", ["listener:90000:120000", "listen-check:70000:30000"]),
+        ("2026-11-12T20:05:00+01:00", "done", []),
+    )
+    s = usage.summary(tmp_path)["usage"]
+    assert s["agents"]["reviewer"]["agents"] == 1 and s["agents"]["listen-check"]["tokens"] == 70000
+
+
 def test_a_time_some_agents_did_not_give_is_named_in_the_cell(tmp_path: Path):
     marks(
         tmp_path,
