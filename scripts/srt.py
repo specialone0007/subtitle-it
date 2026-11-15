@@ -846,6 +846,59 @@ def is_lyric(lines: list[str]) -> bool:
     return bool(said) and all("♪" in ln or "♫" in ln or LYRIC_HASH_RE.search(ln) for ln in said)
 
 
+# Many files mark a song only with italics, the same italics they use for a
+# voice-over or a phone voice. What tells them apart is the line ends: a
+# lyric line rarely ends a sentence, speech mostly does. So a song is a run
+# of at least ITALIC_SONG_MIN_RUN whole-italic cues none of which ends with
+# . ! ? or …, no two more than ITALIC_SONG_MAX_GAP_MS apart. A single cue
+# ending with ? between two such cues stays in the run (a sung question);
+# a spoken line inside a song ("Wait...", "for someone!") breaks it. On one
+# anime film this found the opening and closing songs and the two songs in
+# between, and left the narration in italics before and inside them alone.
+ITALIC_SONG_MIN_RUN = 4
+ITALIC_SONG_MAX_GAP_MS = 15_000
+SENTENCE_END_RE = re.compile(r"[.!?…]$")
+
+
+def whole_italic(lines: list[str]) -> bool:
+    """Every word of the text sits inside <i>...</i>."""
+    t = "\n".join(lines)
+    return "<i>" in t and not re.search(r"\w", strip_tags(re.sub(r"<i>.*?</i>", "", t, flags=re.S)))
+
+
+def italic_songs(cues: list[Cue]) -> set[int]:
+    """The cue numbers that look like song lyrics marked only with italics.
+    Empty when the file marks any lyric with ♪, ♫ or #: such a file marks
+    its songs, so its italics are speech."""
+    if any(is_lyric([ln]) for c in cues for ln in c.lines):
+        return set()
+    kinds: list[str | None] = []
+    for c in cues:
+        if not whole_italic(c.lines) or not re.search(r"\w", c.plain):
+            kinds.append(None)
+            continue
+        end = strip_tags(c.lines[-1]).strip().rstrip("\"'”’)»").strip()
+        kinds.append("open" if not SENTENCE_END_RE.search(end) else "question" if end.endswith("?") else "end")
+    for i in range(1, len(kinds) - 1):
+        if kinds[i] == "question" and kinds[i - 1] == "open" and kinds[i + 1] == "open":
+            kinds[i] = "open"
+    out: set[int] = set()
+    run: list[Cue] = []
+
+    def close() -> None:
+        if len(run) >= ITALIC_SONG_MIN_RUN:
+            out.update(c.n for c in run)
+        run.clear()
+
+    for c, kind in zip(cues, kinds):
+        if kind != "open" or (run and c.start - run[-1].end > ITALIC_SONG_MAX_GAP_MS):
+            close()
+        if kind == "open":
+            run.append(c)
+    close()
+    return out
+
+
 # Sounds the audience understands from the audio, which the Netflix
 # Turkish style guide (I.22) leaves unsubtitled when they stand alone.
 # Each pattern takes stretched spellings: "Ohh", "Hmmm", "Uhh".

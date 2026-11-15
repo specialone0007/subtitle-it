@@ -132,6 +132,10 @@ def build(
         source, _ = srt.parse(source_path, repairs["source"])
         src_pairs = srt.pair(timing, source)
         hearing_impaired["source"] = srt.hearing_impaired(source)["hearing_impaired"]
+    # Songs marked only with italics, found in the file the source text
+    # comes from (srt.italic_songs).
+    italic_timing = srt.italic_songs(timing)
+    italic_source = srt.italic_songs(source) if src_pairs is not None else set()
     en_pairs = None
     if en_path and en_path.resolve() != timing_path.resolve():
         repairs["en"] = []
@@ -192,7 +196,12 @@ def build(
         if sound_only:
             row["sound_only"] = True
             dropped += 1
-        elif srt.is_lyric(said):
+        elif srt.is_lyric(said) or (
+            srt.whole_italic(said)
+            and (
+                all(o.n in italic_source for o in src_pairs[c.n]) if src_pairs is not None and src_lines else c.n in italic_timing
+            )
+        ):
             # The source text decides, and the timing text only when the
             # source has none here: speech in the source stays speech even
             # where the timing file shows a lyric. Which songs are
