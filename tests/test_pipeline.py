@@ -114,18 +114,113 @@ def test_glossary_variant_warning(work: Path):
     assert [x["check"] for x in r["warnings"]] == ["term variant"]
 
 
-def test_sidebyside(work: Path):
-    (work / "out" / "tr_01.txt").write_text(GOOD, encoding="utf-8")
-    p = assemble.sidebyside(work)
-    lines = p.read_text(encoding="utf-8").splitlines()
-    assert lines[1] == "1\tMara\tViens.\tGel."
+def test_review_parts_hold_each_cue_once_with_its_notes(work: Path):
+    (work / "out" / "tr_01.txt").write_text(
+        GOOD.replace("Tamam.", "Tamam, tamam, olur, peki, anladım, söz veriyorum."), encoding="utf-8"
+    )
+    (work / "out" / "flags_01.txt").write_text("3: unsure who asks\n", encoding="utf-8")
+    assemble.run_checks(work)
+    res = work / "assemble-reviewparts.json"
+    assemble.main(["--result", str(res), "reviewparts", "--work", str(work)])
+    got = json.loads(res.read_text(encoding="utf-8"))
+    assert [(p["part"], p["first"], p["last"], p["cues"]) for p in got["parts"]] == [("01", 1, 4, 4)]
+    assert got["parts"][0]["write_to"] == str(work / "out" / "fix_review_01.txt")
+    lines = Path(got["parts"][0]["file"]).read_text(encoding="utf-8").splitlines()
+    assert lines[:3] == [
+        "n\tspeaker\tsource\ten\tturkish\tnotes",
+        "# --- your part: cues 1-4 ---",
+        "1\tMara\tViens.\tCome.\tGel.\t",
+    ]
+    assert lines[4].endswith("\ttranslator: unsure who asks")
+    # Cue 4: the English reads at 2.5 characters a second, the Turkish at 24.5.
+    assert "only the Turkish is fast" in lines[5] and got["turkish_only_fast"] == 1
 
 
-def test_sidebyside_result_names_the_file(work: Path):
-    (work / "out" / "tr_01.txt").write_text(GOOD, encoding="utf-8")
-    res = work / "assemble-sidebyside.json"
-    assemble.main(["--result", str(res), "sidebyside", "--work", str(work)])
-    assert json.loads(res.read_text(encoding="utf-8")) == {"sidebyside": str(work / "sidebyside.tsv")}
+def _film(tmp_path: Path, cues: int, pause_after: int) -> Path:
+    """A film of `cues` one-second cues, half a second apart, with a long
+    pause after cue `pause_after`."""
+    blocks, t = [], 0
+    for n in range(1, cues + 1):
+        blocks.append(f"{n}\n{srt.fmt_ms(t)} --> {srt.fmt_ms(t + 1000)}\nLine {n}.\n")
+        t += 1500 + (20_000 if n == pause_after else 0)
+    src = tmp_path / "long.en.srt"
+    src.write_text("\n".join(blocks), encoding="utf-8")
+    w = tmp_path / "long"
+    prepare.build(w, src, None, None)
+    (w / "out").mkdir(exist_ok=True)
+    (w / "out" / "tr_01.txt").write_text("".join(f"{n}\nSatır {n}.\n\n" for n in range(1, cues + 1)), encoding="utf-8")
+    return w
+
+
+def test_review_parts_cut_at_the_longest_pause_near_an_even_cut(tmp_path: Path):
+    w = _film(tmp_path, 520, pause_after=180)
+    parts = assemble.review_parts(w, size=250)["parts"]
+    # 520 cues make three parts; the first cut moves from cue 173 to the pause.
+    assert [(p["first"], p["last"]) for p in parts] == [(1, 180), (181, 347), (348, 520)]
+    text = Path(parts[1]["file"]).read_text(encoding="utf-8").splitlines()
+    assert text[1] == "# --- context before your part: read it, never change it ---"
+    assert assemble.PART_CONTEXT == 20
+    assert text[2].startswith("161\t") and text[22] == "# --- your part: cues 181-347 ---"
+    assert text[-21] == "# --- context after your part: read it, never change it ---" and text[-1].startswith("367\t")
+
+
+def test_review_parts_never_leave_a_part_empty_when_cut_windows_overlap(tmp_path: Path):
+    # 101 cues in parts of 50 make three parts with even cuts 34 cues apart,
+    # so the windows around them overlap; both reach the one long pause.
+    w = _film(tmp_path, 101, pause_after=50)
+    parts = assemble.review_parts(w, size=50)["parts"]
+    spans = [(p["first"], p["last"]) for p in parts]
+    assert len(spans) == 3 and all(p["cues"] > 0 for p in parts)
+    assert spans[0][0] == 1 and spans[-1][1] == 101
+    assert all(b[0] == a[1] + 1 for a, b in zip(spans, spans[1:]))
+    assert spans[0][1] == 50
+
+
+def test_review_parts_mark_a_chunk_join_on_a_part_s_first_cue(tmp_path: Path):
+    w = _film(tmp_path, 520, pause_after=180)
+    # The translators' second chunk starts on cue 181, where part 2 starts.
+    (w / "chunks.json").write_text(json.dumps([{"first": 1}, {"first": 181}]), encoding="utf-8")
+    parts = assemble.review_parts(w, size=250)["parts"]
+    assert parts[1]["first"] == 181
+    for p, before in ((parts[0], "# --- context after your part"), (parts[1], "# --- your part: cues 181-347 ---")):
+        text = Path(p["file"]).read_text(encoding="utf-8").splitlines()
+        i = text.index("# --- chunk join before cue 181 ---")
+        assert text[i - 1].startswith(before) and text[i + 1].startswith("181\t")
+
+
+def test_review_parts_keep_only_the_notes_a_reviewer_acts_on(tmp_path: Path):
+    w = _film(tmp_path, 10, pause_after=5)
+    warn = [
+        {"check": "reading speed", "cue": 2, "detail": "21.0 chars/s, source 9.0; only the Turkish is fast"},
+        {"check": "reading speed", "cue": 3, "detail": "21.0 chars/s, source 20.0"},
+        {"check": "term drift", "cue": 4, "detail": "x" * 300},
+        {"check": "spelling", "cue": 5, "detail": "same"},
+        {"check": "spelling", "cue": 5, "detail": "same"},
+    ]
+    (w / "checks.json").write_text(json.dumps({"hard": [], "warnings": warn}), encoding="utf-8")
+    rows = {
+        ln.split("\t")[0]: ln.split("\t")[5]
+        for ln in Path(assemble.review_parts(w)["parts"][0]["file"]).read_text(encoding="utf-8").splitlines()[2:]
+    }
+    # Only the Turkish is fast on cue 2: the reviewer can shorten it. On cue
+    # 3 the source is fast too, so there is nothing new to do.
+    assert "only the Turkish is fast" in rows["2"] and rows["3"] == ""
+    assert len(rows["4"]) == assemble.NOTE_CHARS and rows["4"].endswith("…")
+    assert rows["5"] == "spelling: same"
+
+
+def test_reviews_join_the_parts_notes_and_name_the_missing(tmp_path: Path):
+    w = _film(tmp_path, 300, pause_after=150)
+    parts = assemble.review_parts(w, size=250)["parts"]
+    Path(parts[0]["notes_to"]).write_text("Changed 3 cues: meaning 12, 40.\n", encoding="utf-8")
+    Path(parts[0]["write_to"]).write_text("12\nSatır on iki.\n", encoding="utf-8")
+    got = assemble.join_reviews(w)
+    assert got["notes_missing"] == ["02"] and got["fix_files"] == ["fix_review_01.txt"]
+    assert "## Part 01\n\nChanged 3 cues: meaning 12, 40." in (w / "review.md").read_text(encoding="utf-8")
+    assert assemble.load_translation(w)[0][12] == ["Satır on iki."]
+    # A new cut starts afresh: the parts' old fixes and notes are gone.
+    assemble.review_parts(w, size=250)
+    assert not list((w / "out").glob("fix_review_*.txt")) and not Path(parts[0]["notes_to"]).exists()
 
 
 def test_deliver_backs_up_and_learn_finds_swaps(work: Path, tmp_path: Path):
@@ -299,6 +394,10 @@ def test_review_wins_over_the_polish_fix_and_loses_to_later_rounds(work: Path, r
     _touch(out / "fix_review.txt", t + (20 if review_last else 10))
     _touch(out / "fix_soft.txt", t + 30)
     assert [p.name for p in assemble.fix_order(out)] == ["fix_polish.txt", "fix_review.txt", "fix_soft.txt"]
+    # The review's parts count as the review.
+    (out / "fix_review.txt").rename(out / "fix_review_02.txt")
+    assert [p.name for p in assemble.fix_order(out)] == ["fix_polish.txt", "fix_review_02.txt", "fix_soft.txt"]
+    (out / "fix_review_02.txt").rename(out / "fix_review.txt")
     # Without a review, the order is the writing order.
     (out / "fix_review.txt").unlink()
     assert [p.name for p in assemble.fix_order(out)] == ["fix_polish.txt", "fix_soft.txt"]

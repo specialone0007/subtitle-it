@@ -41,6 +41,7 @@ CONJUNCTIONS = {"ve", "ama", "fakat", "ancak", "çünkü", "yoksa", "veya", "ya"
 
 WORD_RE = re.compile(r"[\wçğıöşüÇĞİÖŞÜâîûÂÎÛ]+")
 TAG_RE = re.compile(r"<[^>]*>|\{[^}]*\}")
+POSSESSIVE_ENDINGS = ("sı", "si", "su", "sü")
 
 
 def lower(word: str) -> str:
@@ -260,5 +261,8 @@ def has_rendering(text: str, answer: str) -> bool:
     three letters or more. An answer with no such word ("S ve D") cannot
     be checked and always passes."""
     stems = [stem(w) for w in WORD_RE.findall(answer) if len(w) >= 3]
+    # The last word of a compound name carries a possessive ending that
+    # another ending replaces: "Fener Mahallesi", "Mahallelerinden".
+    stems += [stem(w[:-2]) for w in WORD_RE.findall(answer) if len(w) >= 7 and lower(w).endswith(POSSESSIVE_ENDINGS)]
     words = [lower(w) for w in WORD_RE.findall(TAG_RE.sub("", text))]
     return not stems or any(w.startswith(s) for s in stems for w in words)

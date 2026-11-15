@@ -246,12 +246,20 @@ SYNC_SEARCH_MS = 20_000
 SYNC_STEP_MS = 100
 SYNC_TOLERANCE_MS = 300
 SYNC_MAX_IN_SYNC_MS = 300
-# The best offset must match at least this many speech starts, and this many
-# times as many as the best offset more than SYNC_PEAK_GAP_MS away from it.
-# On a 2-hour test film the true offset matched 98 of 160 starts and the best other
-# one 44, whatever the shift.
+# The best offset must match at least SYNC_MIN_MATCHED speech starts, and
+# stand out from chance. Chance is the median count over every offset tried:
+# with dense, overlapping talk many starts land near some cue start whatever
+# the offset. The best offset's count above chance must be SYNC_MIN_LEAD times
+# that of the best offset more than SYNC_PEAK_GAP_MS away, and SYNC_MIN_Z
+# standard deviations of all counts above chance. On four test films the true
+# offset stood 5.3 to 7.5 deviations above chance and its lead was 2.0 to 3.8;
+# the best other offset stood 1.9 to 2.9 deviations above. A fast-talking film
+# 10.5 s off matched 107 starts at the true offset, 82 at the best other one
+# and 60 by chance: by the old rule (best at least 1.5 times the runner-up)
+# that read as no clear offset.
 SYNC_MIN_MATCHED = 20
-SYNC_MIN_LEAD = 1.5
+SYNC_MIN_LEAD = 1.6
+SYNC_MIN_Z = 4.0
 SYNC_PEAK_GAP_MS = 1000
 
 
@@ -283,23 +291,34 @@ def sync_offset(cues: list[srt.Cue], speech_starts: list[int]) -> dict:
     reported offset is the median gap over the starts matched at that offset.
 
     `matched_cues` counts speech starts that landed on a cue start (two
-    starts can land on one cue), `speech_starts` all of them, and
+    starts can land on one cue), `speech_starts` all of them,
     `runner_up_matched` the best count of an offset more than
-    SYNC_PEAK_GAP_MS from the chosen one."""
+    SYNC_PEAK_GAP_MS from the chosen one, and `chance_matched` the median
+    count over all offsets tried."""
     speech = sorted(speech_starts)
     cue_starts = sorted(c.start for c in cues)
-    base = {"matched_cues": 0, "speech_starts": len(speech), "runner_up_matched": 0, "median_offset_ms": None}
+    base = {
+        "matched_cues": 0,
+        "speech_starts": len(speech),
+        "runner_up_matched": 0,
+        "chance_matched": 0,
+        "median_offset_ms": None,
+    }
     if not speech or not cue_starts:
         return {**base, "verdict": "no speech matched the cues"}
     scores = {d: len(_offset_pairs(cue_starts, speech, d)) for d in range(-SYNC_SEARCH_MS, SYNC_SEARCH_MS + 1, SYNC_STEP_MS)}
     best = max(scores, key=lambda d: (scores[d], -abs(d)))
     runner_up = max((n for d, n in scores.items() if abs(d - best) > SYNC_PEAK_GAP_MS), default=0)
+    chance = statistics.median(scores.values())
+    spread = statistics.pstdev(scores.values())
     diffs = _offset_pairs(cue_starts, speech, best)
-    base |= {"matched_cues": len(diffs), "runner_up_matched": runner_up}
+    base |= {"matched_cues": len(diffs), "runner_up_matched": runner_up, "chance_matched": round(chance, 1)}
     if len(diffs) < SYNC_MIN_MATCHED:
         return {**base, "verdict": f"too little speech to judge: {len(diffs)} starts matched a cue (needs {SYNC_MIN_MATCHED})"}
-    if len(diffs) < SYNC_MIN_LEAD * runner_up:
-        return {**base, "verdict": f"no clear offset: best {best} ms matched {len(diffs)} starts, another {runner_up}"}
+    lead = len(diffs) - chance
+    if lead < SYNC_MIN_LEAD * max(runner_up - chance, 0) or lead < SYNC_MIN_Z * spread:
+        verdict = f"no clear offset: best {best} ms matched {len(diffs)} starts, another {runner_up}, chance {round(chance)}"
+        return {**base, "verdict": verdict}
     # The 100 ms grid leaves the matched window off-centre; centre it on the
     # median once and measure again.
     diffs = _offset_pairs(cue_starts, speech, int(statistics.median(diffs))) or diffs
@@ -467,6 +486,7 @@ def run(video: Path, work: Path, config: Path | None, sync_check: bool) -> dict:
                     "matched_cues": 0,
                     "speech_starts": 0,
                     "runner_up_matched": 0,
+                    "chance_matched": 0,
                     "median_offset_ms": None,
                     "verdict": f"sync check failed: {type(e).__name__}: {e}",
                 }

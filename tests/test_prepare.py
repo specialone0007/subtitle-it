@@ -62,5 +62,5 @@ def test_chunks_and_review_file_show_label_and_voice(tmp_path: Path):
     chunk = (w / "chunks" / "chunk_01.txt").read_text(encoding="utf-8")
     assert "#1 00:00:01 [? / Ivy · V2]" in chunk and "#2 00:00:04 [V1]" in chunk
     (w / "out" / "tr_01.txt").write_text("1\n- Kim o?\n- Benim.\n\n2\nGir.\n", encoding="utf-8")
-    lines = assemble.sidebyside(w).read_text(encoding="utf-8").splitlines()
-    assert lines[1].split("\t")[1] == "? / Ivy · V2" and lines[2].split("\t")[1] == "V1"
+    lines = Path(assemble.review_parts(w)["parts"][0]["file"]).read_text(encoding="utf-8").splitlines()[2:]
+    assert lines[0].split("\t")[1] == "? / Ivy · V2" and lines[1].split("\t")[1] == "V1"

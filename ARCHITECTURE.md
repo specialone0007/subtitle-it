@@ -26,7 +26,7 @@ and anything that needs a feel for language is an agent.
   subtitles from speech.
 - **Subagents** do the language work: the film bible, the second reader,
   the judge, the voice mapper, one translator per chunk (or one polish
-  fixer) and one reviewer. Each runs as its own agent type from `agents/`:
+  fixer) and one reviewer per part of the film. Each runs as its own agent type from `agents/`:
   the file holds its instructions and the few tools it may use, and leaves
   out the general Claude Code instructions and your CLAUDE.md files, which
   it does not need. The skill passes only the paths. Each one writes its
@@ -101,6 +101,11 @@ Then it settles the timings:
   it. A yes or no said as a sound ("Uh-huh.") right after a question stays,
   and the translator writes it as a word. A cue whose words are all song
   lyrics is marked `song`; step 6–7 decides which songs are translated.
+  Lyrics are lines marked with `♪`, `♫` or `#`. A file that marks none
+  that way may mark its songs with italics alone: there a run of at least
+  four whole-italic cues that end no sentence counts as a song, while
+  italic narration and phone voices, which end their sentences, stay
+  speech.
 
 The step also looks for a human-made Turkish subtitle. It tries at most two
 files, a hash match first, and stops at the first one that passes
@@ -114,6 +119,11 @@ steps 6–7).
 subtitles are in sync with it, from five 3-minute stretches spread over the
 film.
 
+- The check tries every offset up to 20 seconds either way and keeps the
+  one where most speech starts land on a cue start. That offset must
+  stand well above chance (the median count over all offsets) and above
+  the best other offset, so fast, overlapping talk, where many starts
+  land near some cue whatever the offset, still gives a clear answer.
 - Subtitles more than 300 ms off are shifted with `srt.py shift`, and the
   voices are matched again.
 - A voice can gather several characters. When a voice has at least six
@@ -190,11 +200,24 @@ model of `sonnet` also runs at low effort; that is untested.
   as missing, and the polish fixer translates them.
 - `polish.py flags` lists the cues to fix: check fails, lines left in
   English, crude lines the Turkish tones down, and lines that may sit on
-  the wrong cue.
+  the wrong cue. sen and siz are not among them: the human file is the
+  evidence for them (below).
 - One polish fixer subagent changes only those.
-- The step 10 reviewer starts in the same message and reads the film while
-  the fixer works. Where both change a flagged cue, the reviewer's
-  version wins, and it fixes that cue's flags too.
+- The step 10 reviewers start in the same message and read the film while
+  the fixer works. Where the fixer and a reviewer change the same cue, the
+  reviewer's version wins, and it fixes that cue's flags too.
+- The human file is the evidence for sen and siz. `polish.py seed` also
+  runs before the bible check, so `bible.py compare` can count the human
+  file's sen and siz lines per pair: the judge gets the counts, and 3 or
+  more human lines that use another form than both readers give, at the
+  same cues, send the pair to the judge. The judge then follows the human
+  file where three quarters of its lines for the pair use one form. A seeded line keeps its
+  form; the fixer and the reviewers change it only when the English line
+  itself shows the other one, and write why on an `#address:` line under
+  the cue in their fix file. `check` lists every line whose form differs
+  from the human file's (`address_changes` in `checks.json`) and warns on
+  each one with no reason. A line written from scratch takes the human
+  file's form for the same pair in the nearest scene.
 
 ### 8–9. Assemble and check
 
@@ -216,7 +239,9 @@ model of `sonnet` also runs at low effort; that is untested.
 - **Warnings** are reading speed above 17 characters a second (every
   such cue, even when the source is as fast), glossary variants, sen or
   siz against the bible, a plain "hala" or "aşık" that probably lacks its
-  circumflex, and a few Turkish style checks. They go to the reviewer.
+  circumflex, and a few Turkish style checks. They go to the reviewers.
+  A reading speed warning says `only the Turkish is fast` when the
+  source reads at 17 characters a second or less.
   Some keep the film consistent: a cue whose source says a term the bible
   decided but whose Turkish has none of the bible's rendering (`term
   rendering`), a second form of a word the rest of the film writes one way
@@ -231,8 +256,11 @@ model of `sonnet` also runs at low effort; that is untested.
   side of the pair uses back while the audio gave the cue next to it the
   same voice and that other person is in the scene: there the speaker or
   the listener may be the wrong one. A speaker's own slip into the other
-  side's form on two cues in a row is silent then too; the reviewer
-  still reads every cue's sen or siz. A term's senses count together
+  side's form on two cues in a row is silent then too; the reviewers
+  still read every cue's sen or siz. When the speaker uses different
+  forms to different people and the line names nobody, the one other
+  character speaking right before or after, in the same scene, is taken
+  as the listener. A term's senses count together
   ("watch" and "the watch"), and a family word ("brother") takes every word
   the bible's family-word decisions give it ("abi" for one pair, "kardeş"
   for another), so a pair's decision is never flagged against a generic
@@ -257,16 +285,33 @@ rest of the work folder keeps the timing file's numbers.
 
 ### 10. Review
 
-One subagent reads the whole film side by side with the source and fixes
-what the chunk translators could not see. The bible is its default for
-sen/siz, but the scene decides: it never turns a natural sen into siz only
-to match the bible, and lists each cue where it departs from the bible.
-Meaning comes before reading speed: it shortens a fast line only by
-rephrasing or dropping filler, never by dropping a clause, a question, a
-name or a second sentence, and a fast line that keeps the meaning stays.
-It takes the cues of a `split sentence` warning as one unit, and fixes
-family words ("amca" or "dayı"), slang, terms and circumflexes that differ
-from the bible or the pack.
+`assemble.py reviewparts` cuts the film into parts of about 250 cues,
+each ending at the longest pause near an even cut. Each part file holds
+its cues side by side with the source, 20 cues of context on each
+side, and each cue's notes, cut short: the check's warnings, the polish
+fixer's flags and the translators' flags. A reading speed note shows only
+where the Turkish alone is fast. The part file, the pack, the bible and
+the preferences are all a reviewer reads, so a part costs little more
+than its own cues. The reviewers run at medium reasoning effort
+(`effort: medium` in `agents/reviewer.md`), whatever effort the session
+uses: that is the effort the split review was tested and passed at, about
+50,000 tokens per part. One reviewer per part, all at the same
+time, compares every Turkish line with its source and asks of each:
+is everything said there (each clause, question, name and number), is it
+on the right cue, are the case endings and verb forms right, is sen or
+siz right for who speaks to whom, are names and terms the bible's, does
+it read at a glance, and, where only the Turkish is too fast, can it be
+shorter without losing anything. A line that passes stays word for word.
+In a polish run the reviewers rewrite a human line that leaves out part
+of what is said, keeping its wording where it is right.
+
+The bible is the reviewers' default for sen/siz, but the scene decides:
+they never turn a natural sen into siz only to match the bible, and list
+each cue where they depart from it. Meaning comes before reading speed: a
+fast line is shortened only by rephrasing or dropping filler, never by
+dropping a clause, a question, a name or a second sentence. Each reviewer
+writes its own fix file (`out/fix_review_<NN>.txt`) and notes;
+`assemble.py reviews` joins the notes into `review.md`.
 
 In a polish run, `polish.py soft` then lists the lines that are still
 softer than the English swearing. The polish fixer restores them once, and
