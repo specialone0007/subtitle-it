@@ -185,14 +185,21 @@ def lay_out(
     """The cues as delivered, numbered from 1, and the map from each
     delivered number to the timing file's cue. A cue the layout split
     becomes several delivered cues, each with its part number; a cue left
-    whole keeps its timestamp line exactly as written."""
+    whole keeps its timestamp line exactly as written, unless it stays on
+    screen longer (`layout.available_end`): then its start stays as written
+    and its end is the new one."""
     shown: list[srt.Cue] = []
     where: dict[str, dict] = {}
     for c in kept:
         pieces = parts.get(c.n) or [layout.Part(c.start, c.end, texts[c.n])]
         for k, p in enumerate(pieces, 1):
             n = len(shown) + 1
-            ts = c.ts if len(pieces) == 1 else f"{srt.fmt_ms(p.start)} --> {srt.fmt_ms(p.end)}"
+            if len(pieces) > 1:
+                ts = f"{srt.fmt_ms(p.start)} --> {srt.fmt_ms(p.end)}"
+            elif p.end != c.end:
+                ts = f"{c.ts.split('-->')[0].strip()} --> {srt.fmt_ms(p.end)}"
+            else:
+                ts = c.ts
             shown.append(srt.Cue(n=n, start=p.start, end=p.end, ts=ts, lines=p.lines))
             where[str(n)] = {"cue": c.n} if len(pieces) == 1 else {"cue": c.n, "part": k, "of": len(pieces)}
     # `sound_only` lists every cue left out, whatever the reason; `why`
@@ -421,7 +428,10 @@ def run_checks(work: Path) -> dict:
         h(n, "cue count", "missing")
 
     gap = layout.usual_gap(kept)
+    by_start = sorted(kept, key=lambda c: (c.start, c.n))
+    next_start = {a.n: b.start for a, b in zip(by_start, by_start[1:])}
     parts: dict[int, list[layout.Part]] = {}
+    extended = 0
     for c in kept:
         tr = texts.get(c.n)
         if tr is None:
@@ -446,14 +456,19 @@ def run_checks(work: Path) -> dict:
         if remove_hi:
             for check, detail in hi_problems(tr, bool(rows[c.n].get("tags_removed"))):
                 h(c.n, check, detail)
-        parts[c.n], why = layout.plan(c.start, c.end, tr, gap)
+        tr_plain = srt.strip_tags(" ".join(tr)).strip()
+        ref_plain = srt.strip_tags(" ".join(ref)).strip()
+        # A fast cue stays on screen into the silence after it; its speed,
+        # and the source's, are measured over the time it is shown.
+        end = layout.available_end(c.start, c.end, next_start.get(c.n), gap, len(tr_plain))
+        extended += end > c.end
+        parts[c.n], why = layout.plan(c.start, c.end, tr, gap, end)
         if why:
             long = [ln for ln in tr if len(srt.strip_tags(ln)) > MAX_LINE]
             check = "lines per cue" if len(tr) > layout.MAX_LINES or not long else "line length"
             h(c.n, check, f"{len(tr)} lines, longest {max(len(srt.strip_tags(ln)) for ln in tr)} chars; {why}")
-        tr_plain = srt.strip_tags(" ".join(tr)).strip()
-        ref_plain = srt.strip_tags(" ".join(ref)).strip()
-        tr_cps, ref_cps = _cps(tr_plain, c.duration), _cps(ref_plain, c.duration)
+        shown_ms = max(end - c.start, 1)
+        tr_cps, ref_cps = _cps(tr_plain, shown_ms), _cps(ref_plain, shown_ms)
         # Netflix Turkish style guide I.17: 17 characters a second at most,
         # whatever the source does. The viewer reads Turkish.
         if tr_cps > MAX_CPS:
@@ -574,6 +589,7 @@ def run_checks(work: Path) -> dict:
         "songs_left_out": sum(1 for v in left_why.values() if v == "song"),
         "delivered_cues": len(shown),
         "split_cues": sum(1 for p in parts.values() if len(p) > 1),
+        "extended_cues": extended,
         "translated": len(set(texts) & valid),
         "hard_fail_count": len(hard),
         "warning_count": len(warn),
@@ -966,6 +982,7 @@ def _summary(result: dict) -> dict:
         "songs_left_out": result["songs_left_out"],
         "delivered_cues": result["delivered_cues"],
         "split_cues": result["split_cues"],
+        "extended_cues": result["extended_cues"],
         "translated": result["translated"],
         "hard_fails": result["hard_fail_count"],
         "warnings": result["warning_count"],
