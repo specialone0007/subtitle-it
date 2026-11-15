@@ -56,7 +56,7 @@ GROUPS = {
     "translate": "6–7 · translation",
     "polish": "6–7 · polish: seed and fix",
     "check": "8–9 · assemble and check",
-    "review": "10 · whole-film review",
+    "review": "10 · review in parts",
     "deliver": "11 · delivery and report",
 }
 END = "done"
