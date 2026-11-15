@@ -61,6 +61,7 @@ import json
 import re
 import shutil
 import sys
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
@@ -454,8 +455,12 @@ def _wording(lines: list[str]) -> tuple[str, ...]:
 
 def repeat_drift(texts: dict[int, list[str]], rows: dict[int, dict], order: list[int]) -> list[tuple[int, int]]:
     """Cues whose source line comes back elsewhere in the film in the same
-    words while the Turkish says it another way: (cue, a cue with another
-    wording). Songs are left out: a chorus is translated as the song needs."""
+    words while the Turkish says it another way: (cue, the cue to match).
+    Each line has one wording to match, the one most of its cues use (the
+    earliest on a tie), and only the cues that say it otherwise are named:
+    two reviewers told to match each other could each copy the other and
+    still differ. Songs are left out: a chorus is translated as the song
+    needs."""
     seen: dict[tuple, list[int]] = {}
     for n in order:
         row = rows.get(n, {})
@@ -467,8 +472,9 @@ def repeat_drift(texts: dict[int, list[str]], rows: dict[int, dict], order: list
         forms = {n: _wording(texts[n]) for n in cues}
         if len(set(forms.values())) < 2:
             continue
-        for n in cues:
-            out.append((n, next(m for m in cues if forms[m] != forms[n])))
+        counts = Counter(forms.values())
+        ref = max(cues, key=lambda m: (counts[forms[m]], -cues.index(m)))
+        out.extend((n, ref) for n in cues if forms[n] != forms[ref])
     return sorted(out)
 
 
@@ -631,10 +637,10 @@ def run_checks(work: Path, texts: dict[int, list[str]] | None = None, write: boo
         w(n, "term drift", f"'{used}' here, '{usual}' in {count} other cues: use one form for the whole film")
 
     # A line the film says again (a chant, a saying, a callback) is said
-    # the same way each time. The note quotes the other Turkish first: the
-    # reviewer of this cue may not have that part.
-    for n, other in repeat_drift(drafted, rows, order):
-        w(n, "repeat drift", f'"{" / ".join(drafted[other])}" at cue {other}: same source line, say both the same way')
+    # the same way each time. The note quotes the wording to match first:
+    # the reviewer of this cue may not have that part.
+    for n, ref in repeat_drift(drafted, rows, order):
+        w(n, "repeat drift", f'"{" / ".join(drafted[ref])}" at cue {ref}: same source line, say it this way here too')
 
     # A sentence spread over several cues: each part must appear exactly once.
     for group in sentence_groups(kept, rows):

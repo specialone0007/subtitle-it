@@ -365,10 +365,19 @@ def test_check_warns_when_a_repeated_line_is_said_another_way(tmp_path: Path):
     tr = ["Sunularına saygı gösterin.", "Merhaba.", "<i>Adaklarına saygı gösterin.</i>"]
     w = make_work(tmp_path, english, tr)
     got = warned(w, "repeat drift")
-    assert sorted(got) == [1, 3]
-    # The other cue's Turkish comes first: the note is cut for the reviewer.
-    assert got[1].startswith('"<i>Adaklarına saygı gösterin.</i>" at cue 3')
-    assert got[3].startswith('"Sunularına saygı gösterin." at cue 1')
+    # One wording to match, the earliest on a tie, and only the other cue
+    # is named: two reviewers told to match each other could swap.
+    # The Turkish to match comes first: the note is cut for the reviewer.
+    assert list(got) == [3]
+    assert got[3].startswith('"Sunularına saygı gösterin." at cue 1: same source line, say it this way here too')
+
+
+def test_repeat_drift_names_the_cues_off_the_wording_most_cues_use(tmp_path: Path):
+    english = ["Chasing the setting sun.", "Row.", "Chasing the setting sun.", "Pull.", "Chasing the setting sun."]
+    tr = ["Batan güneşi kovalayarak.", "Kürek.", "Batan güneşin peşinde.", "Çekin.", "Batan güneşin peşinde."]
+    w = make_work(tmp_path, english, tr)
+    got = warned(w, "repeat drift")
+    assert list(got) == [1] and got[1].startswith('"Batan güneşin peşinde." at cue 3')
 
 
 def test_repeat_drift_is_quiet_on_the_same_words_and_one_word_lines(tmp_path: Path):
