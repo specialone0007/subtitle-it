@@ -85,7 +85,10 @@ cues of its sentence or its repeated line.
 For each edit, one question: does the `after` line say everything the
 source says, in its tense, with its stance (question 1)? A freer wording
 is fine; a lost clause, a changed tense, a lost "not", a softer or
-harder stance, a wrong speaker or listener is not. Keep the edit, or
+harder stance, a wrong speaker or listener is not, and neither is one
+plural made singular, a word narrowed ("people" to "men") or a thing
+the source does not say. Read who tells whom: "Tell him you agree" said
+as "I agree" has lost its speaker. Keep the edit, or
 write `before` back, word for word; never a third version, which no
 check would see. When you write one cue back, write back every cue
 under its `with` too.
