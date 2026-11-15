@@ -75,7 +75,7 @@ grows as they are added.
 
 ## How a run goes
 
-![How a run goes: find the film, get subtitles, audio hints, film bible, translate, check, review, deliver](docs/assets/run-strip.svg)
+![How a run goes: find the film, get subtitles, audio hints, film bible, translate, check, review, listen, deliver](docs/assets/run-strip.svg)
 
 The strip above is the short version. This is the whole run, in four acts.
 A dashed gold frame means the boxes inside it run at the same time.
@@ -89,7 +89,7 @@ translations. It tries up to two files, a match for this exact video
 first, and uses the first one that fits the video's timings and covers at
 least 80% of the spoken lines. Lines that file lacks are translated.
 
-![The cast: the scripts are plain Python, the local models listen to the audio on your machine, and Claude does the language work as seven kinds of agent](docs/assets/cast.svg)
+![The cast: the scripts are plain Python, the local models listen to the audio on your machine, and Claude does the language work as eight kinds of agent](docs/assets/cast.svg)
 
 [How a run works](ARCHITECTURE.md) explains every step in plain words: what it reads, what it
 writes, and why it is there.
@@ -171,7 +171,7 @@ the film or more.
 - [Claude Code](https://code.claude.com/docs). A feature film takes about
   one million new tokens plus about eight million cheaper cached reads. The
   parallel translators use the largest share, about a quarter (they run at
-  low reasoning effort), so a plan with room for that helps. Polishing an
+  medium reasoning effort), so a plan with room for that helps. Polishing an
   existing Turkish file uses less.
 - uv and ffmpeg (Quick start above). OpenSubtitles and audio hints are optional.
 - Subtitles in a text format (SRT, ASS, WebVTT, or a text track inside the
@@ -262,21 +262,21 @@ installed. See [CONTRIBUTING.md](CONTRIBUTING.md) to send a change, and
 ```
 .claude-plugin/plugin.json      plugin manifest
 .claude-plugin/marketplace.json marketplace that lists the plugin
-skills/translate/SKILL.md       /subtitle-it:translate, the run (steps 0-11)
+skills/translate/SKILL.md       /subtitle-it:translate, the run (steps 0-12)
 skills/translate/setup.md       one-time setup, read only when a step needs it
 skills/translate/pack-tr.md     Turkish language rules, shared with learn
 skills/translate/preferences-template.md
                                 the first preferences file, shared with learn
 skills/learn/SKILL.md           /subtitle-it:learn, rules from your fixes
 agents/                         subagent types: bible writer, second reader, judge, voice mapper,
-                                translator, polish fixer, reviewer (instructions and allowed tools)
+                                translator, polish fixer, reviewer, listener (instructions and allowed tools)
 scripts/srt.py                  parse, encodings, pairing by time, chunking
 scripts/sources.py              find films, extract tracks, validate sources
 scripts/opensubtitles.py        OpenSubtitles login, search, download
 scripts/prepare.py              build the work folder and chunks
 scripts/bible.py                questions, blind comparison and judging for the film bible; adds the voices
 scripts/polish.py               start from an existing Turkish subtitle: seed it, list cues to fix
-scripts/assemble.py             assemble, checks, review parts, delivery
+scripts/assemble.py             assemble, checks, review and listen parts, delivery
 scripts/learn.py                find user edits for learn mode
 scripts/compare.py              blind side-by-side comparison of two or three delivered files
 scripts/speakers.py             voices per cue from the audio, sync check

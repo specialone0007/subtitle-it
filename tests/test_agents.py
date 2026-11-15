@@ -34,12 +34,12 @@ def test_agents_keep_a_short_tool_list_and_skip_claude_md():
         assert tools <= ALLOWED_TOOLS, f"{path.name}: {tools - ALLOWED_TOOLS}"
 
 
-def test_only_the_translator_and_reviewer_set_their_own_effort():
+def test_only_the_translator_reviewer_and_listener_set_their_own_effort():
     # The translators (and the fix rounds, which use the same agent) run at
-    # low effort, the part reviewers at medium, the effort they were tested
-    # at; every other agent takes the session's effort.
+    # medium effort, and so do the part reviewers and the listeners; every
+    # other agent takes the session's effort.
     efforts = {p.stem: fm["effort"] for p in AGENTS.glob("*.md") if "effort" in (fm := frontmatter(p))}
-    assert efforts == {"translator": "low", "reviewer": "medium"}
+    assert efforts == {"translator": "medium", "reviewer": "medium", "listener": "medium"}
 
 
 def test_only_the_judge_runs_commands():

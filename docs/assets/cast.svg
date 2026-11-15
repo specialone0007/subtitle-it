@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 420" width="1280" height="420" role="img" aria-labelledby="t d">
-<title id="t">The cast</title><desc id="d">Three groups do the work. The scripts are plain Python and do everything with one right answer. The local models listen to the audio on your machine. Claude does the language work as seven kinds of agent.</desc>
+<title id="t">The cast</title><desc id="d">Three groups do the work. The scripts are plain Python and do everything with one right answer. The local models listen to the audio on your machine. Claude does the language work as eight kinds of agent.</desc>
 <rect width="1280" height="420" fill="#0b0b0d"/>
 <rect x="24" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
 <rect x="72" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
@@ -83,11 +83,11 @@
 <text x="892" y="152" text-anchor="start" font-family="Georgia, 'Times New Roman', Times, serif" font-size="30" fill="#f4efe1">Claude</text>
 <text x="892" y="180" text-anchor="start" font-family="Georgia, 'Times New Roman', Times, serif" font-size="16" font-style="italic" fill="#d9534f">as the writers' room</text>
 <line x1="892" y1="200" x2="1212" y2="200" stroke="#2a2a31"/>
-<text x="892" y="232" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#cfc8b4">Seven kinds of agent.</text>
+<text x="892" y="232" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#cfc8b4">Eight kinds of agent.</text>
 <circle cx="897" cy="263" r="2.5" fill="#d9534f"/>
 <text x="910" y="268" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#8a8578">Bible writer, second reader and judge.</text>
 <circle cx="897" cy="289" r="2.5" fill="#d9534f"/>
 <text x="910" y="294" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#8a8578">Voice mapper and parallel translators.</text>
 <circle cx="897" cy="315" r="2.5" fill="#d9534f"/>
-<text x="910" y="320" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#8a8578">Polish fixer and part reviewers.</text>
+<text x="910" y="320" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#8a8578">Polish fixer, reviewers, listeners.</text>
 </svg>

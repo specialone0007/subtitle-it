@@ -1,6 +1,6 @@
 # How a run works
 
-![How a run goes: find the film, get subtitles, audio hints, film bible, translate, check, review, deliver](docs/assets/run-strip.svg)
+![How a run goes: find the film, get subtitles, audio hints, film bible, translate, check, review, listen, deliver](docs/assets/run-strip.svg)
 
 One command starts a run, and about a quarter of an hour later a Turkish
 subtitle file sits next to the video. This page walks through what happens
@@ -13,7 +13,7 @@ today writes Turkish: the language rules sit in a Turkish language pack,
 
 ## Who does what
 
-![The cast: the scripts are plain Python, the local models listen to the audio on your machine, and Claude does the language work as seven kinds of agent](docs/assets/cast.svg)
+![The cast: the scripts are plain Python, the local models listen to the audio on your machine, and Claude does the language work as eight kinds of agent](docs/assets/cast.svg)
 
 The work is split by one rule: anything with one right answer is a script,
 and anything that needs a feel for language is an agent.
@@ -26,7 +26,8 @@ and anything that needs a feel for language is an agent.
   subtitles from speech.
 - **Subagents** do the language work: the film bible, the second reader,
   the judge, the voice mapper, one translator per chunk (or one polish
-  fixer) and one reviewer per part of the film. Each runs as its own agent type from `agents/`:
+  fixer), one reviewer per part of the film and one listener per larger
+  part. Each runs as its own agent type from `agents/`:
   the file holds its instructions and the few tools it may use, and leaves
   out the general Claude Code instructions and your CLAUDE.md files, which
   it does not need. The skill passes only the paths. Each one writes its
@@ -188,13 +189,14 @@ One subagent per chunk, all started at once. Each gets the Turkish language
 pack (`pack-tr.md`), the bible, your preferences and its neighbours' chunks
 for context.
 
-The translators run at low reasoning effort (`effort: low` in
+The translators run at medium reasoning effort (`effort: medium` in
 `agents/translator.md`), whatever effort the session uses. The fix rounds
-of step 9 use the same agent, so they do too. On one 2-hour film (1,838
-cues) this cost about 17% less per film than medium effort and finished
-steps 6 to 10 1.4 minutes sooner, with no measurable loss in a blind test
-of 100 cues (medium preferred on 20, low on 15, 65 equal). A Translator
-model of `sonnet` also runs at low effort; that is untested.
+of step 9 use the same agent, so they do too. Low effort cost about 17%
+less per film and tied medium in a blind test of 100 cues, but that test
+judged meaning, not how natural the Turkish sounds: on one test film a
+second review found one line in five that a Turkish speaker would not say,
+so the translators went back to medium. A Translator model of `sonnet`
+also runs at medium effort.
 
 **In a polish run** there are no translators:
 
@@ -333,7 +335,41 @@ In a polish run, `polish.py soft` then lists the lines that are still
 softer than the English swearing. The polish fixer restores them once, and
 any line still soft goes to "Check after watching".
 
-### 11. Deliver
+### 11. Listen
+
+The reviewers compare each line with its source, so they catch what is
+missing but not always what sounds translated. The listeners read the
+other way round: the finished Turkish alone, in order, as a viewer reads
+it, with the bible's `speaks` notes (how each character talks) and the
+pairs' tone beside them. A line that does not sound like this person
+saying this to this listener gets a fix; only then do they read the
+English, to keep everything said. Not in a polish run: its Turkish is a
+human's.
+
+`assemble.py listenparts` saves the Turkish as it is (`out/listen_before.json`,
+with the fix files it came from) and cuts the spoken cues into parts of
+about 480. Each cue gets a budget, the most characters it may hold: 17 a
+second over the most time it can be shown, its length now, or the first
+draft's length, whichever is largest, so a line the review cut short can
+always go back. It also names the cues that hold one source sentence and
+the cues that say the same line elsewhere in the film.
+
+`assemble.py listengate` is the safety net, as code. It runs the checks
+on the text before and after the edits, without writing anything, and
+compares problems by cue and kind. It drops an edit that goes over its
+budget, or whose cue, sentence or repeated line gains a hard fail or a new
+warning about a repeated line, a split sentence, sen or siz, or a term;
+then it checks again and drops whatever still causes a new problem. One
+reviewer then reads each kept edit beside the line before it
+(`listencheck`, the `Listener check` in `agents/reviewer.md`) and keeps
+it, or writes the line before it back: never a third version, which no
+check would see. The listener's files apply after every fix file that
+existed when it started, and the meaning check's after them; a fix file
+written later still wins. If the last `check` finds a hard fail on a cue
+the listener changed, `listendrop` drops that edit. `review.md` ends with
+the counts: kept, dropped by the gate (by reason), written back.
+
+### 12. Deliver
 
 `assemble.py deliver` writes `<film>.srt` next to the video, with exactly
 the video's name so TVs pick it up, as UTF-8 with a BOM. Any file already

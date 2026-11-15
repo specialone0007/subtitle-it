@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 1090" width="1280" height="1090" role="img" aria-labelledby="t d">
-<title id="t">The whole run on one page</title><desc id="d">A map of a run in four acts. Act one, find: start, find the film, get subtitles. Act two, understand: audio hints run beside the bible writer and the second reader; when the audio is done the voice mapper and a second reader for voices run side by side; a script compares the answers and a judge settles any difference. Act three, translate: one translator per chunk at the same time, then a script checks every cue and broken cues go back for up to three fix rounds. Act four, finish: one reviewer per part of about 250 cues reads every line, then the file is delivered next to the video. Blue is a script, green a local model, red is Claude.</desc>
+<title id="t">The whole run on one page</title><desc id="d">A map of a run in four acts. Act one, find: start, find the film, get subtitles. Act two, understand: audio hints run beside the bible writer and the second reader; when the audio is done the voice mapper and a second reader for voices run side by side; a script compares the answers and a judge settles any difference. Act three, translate: one translator per chunk at the same time, then a script checks every cue and broken cues go back for up to three fix rounds. Act four, finish: one reviewer per part of about 250 cues reads every line, one listener per part of about 480 cues reads the Turkish alone as a viewer would, then the file is delivered next to the video. Blue is a script, green a local model, red is Claude.</desc>
 <rect width="1280" height="1090" fill="#0b0b0d"/>
 <rect x="24" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
 <rect x="72" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
@@ -162,17 +162,23 @@
 <line x1="40" y1="886" x2="1240" y2="886" stroke="#2a2a31"/>
 <text x="40" y="932" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" letter-spacing="4" fill="#c9a227">ACT FOUR</text>
 <text x="40" y="964" text-anchor="start" font-family="Georgia, 'Times New Roman', Times, serif" font-size="26" fill="#f4efe1">Finish</text>
-<rect x="220" y="910" width="480" height="70" rx="6" fill="#141418" stroke="#2a2a31"/>
+<rect x="220" y="910" width="300" height="70" rx="6" fill="#141418" stroke="#2a2a31"/>
 <rect x="220" y="910" width="5" height="70" rx="2" fill="#d9534f"/>
 <text x="242" y="939" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="13" fill="#c9a227">10</text>
 <text x="270" y="940" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#f4efe1">Reviewer</text>
 <text x="242" y="963" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#8a8578">Reads every line next to the source</text>
-<rect x="760" y="910" width="480" height="70" rx="6" fill="#141418" stroke="#2a2a31"/>
-<rect x="760" y="910" width="5" height="70" rx="2" fill="#4a90d9"/>
-<text x="782" y="939" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="13" fill="#c9a227">11</text>
-<text x="810" y="940" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#f4efe1">Deliver</text>
-<text x="782" y="963" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#8a8578">Saves the .srt by the video, writes the report</text>
-<line x1="706" y1="945.0" x2="754" y2="945.0" stroke="#c9a227" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="580" y="910" width="300" height="70" rx="6" fill="#141418" stroke="#2a2a31"/>
+<rect x="580" y="910" width="5" height="70" rx="2" fill="#d9534f"/>
+<text x="602" y="939" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="13" fill="#c9a227">11</text>
+<text x="630" y="940" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#f4efe1">Listener</text>
+<text x="602" y="963" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#8a8578">Reads the Turkish alone, as a viewer</text>
+<rect x="940" y="910" width="300" height="70" rx="6" fill="#141418" stroke="#2a2a31"/>
+<rect x="940" y="910" width="5" height="70" rx="2" fill="#4a90d9"/>
+<text x="962" y="939" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="13" fill="#c9a227">12</text>
+<text x="990" y="940" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#f4efe1">Deliver</text>
+<text x="962" y="963" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#8a8578">Saves the .srt, writes the report</text>
+<line x1="526" y1="945.0" x2="574" y2="945.0" stroke="#c9a227" stroke-width="1.5" marker-end="url(#arrow)"/>
+<line x1="886" y1="945.0" x2="934" y2="945.0" stroke="#c9a227" stroke-width="1.5" marker-end="url(#arrow)"/>
 <rect x="220" y="1011" width="14" height="14" rx="3" fill="#4a90d9"/>
 <text x="242" y="1023" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#cfc8b4">A script, no model</text>
 <rect x="420" y="1011" width="14" height="14" rx="3" fill="#3fb27f"/>
