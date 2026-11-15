@@ -173,11 +173,10 @@ def test_match_form_drops_dashes_the_source_does_not_have():
     assert polish.match_form(["<i>Go on.</i>"], ["<i>- Devam et.</i>"]) == (["<i>Devam et.</i>"], True)
 
 
-def test_sidebyside_works_without_chunks(work: Path, tmp_path: Path):
+def test_review_parts_work_without_chunks(work: Path, tmp_path: Path):
     polish.seed(work, tmp_path / "tr.srt")
     (work / "chunks.json").unlink(missing_ok=True)
-    assemble.sidebyside(work)
-    text = (work / "sidebyside.tsv").read_text(encoding="utf-8")
+    text = "\n".join(Path(assemble.review_parts(work)["parts"][0]["file"]).read_text(encoding="utf-8").splitlines()[2:])
     assert "Hava soğuk" in text and "chunk join" not in text
 
 
@@ -225,11 +224,30 @@ def test_flags_lists_toned_down_and_misplaced_cues(tmp_path: Path):
     assert "landed on no cue: ŞEHİR MERKEZİ" in text
 
 
-def test_sidebyside_marks_no_joins_in_a_seeded_run(work: Path, tmp_path: Path):
+def test_review_parts_mark_no_joins_in_a_seeded_run(work: Path, tmp_path: Path):
     prepare.chunks(work, 2)
     polish.seed(work, tmp_path / "tr.srt")
-    assemble.sidebyside(work)
-    assert "chunk join" not in (work / "sidebyside.tsv").read_text(encoding="utf-8")
+    assert "chunk join" not in "\n".join(
+        Path(assemble.review_parts(work)["parts"][0]["file"]).read_text(encoding="utf-8").splitlines()[2:]
+    )
+
+
+def test_review_parts_show_the_fixers_flags(work: Path, tmp_path: Path):
+    polish.seed(work, tmp_path / "tr.srt")
+    polish.flags(work)
+    flagged = {
+        int(ln[1:].split()[0]) for ln in (work / polish.FLAG_FILE).read_text(encoding="utf-8").splitlines() if ln[1:2].isdigit()
+    }
+    rows = {
+        ln.split("\t")[0]: ln.split("\t")[4:6]
+        for ln in Path(assemble.review_parts(work)["parts"][0]["file"]).read_text(encoding="utf-8").splitlines()[2:]
+    }
+    shown = [rows[str(n)] for n in flagged if str(n) in rows]
+    assert shown and all("fixer: " in note for tr, note in shown if tr != "<MISSING>")
+    # A cue with no Turkish says so in its Turkish field: the fixer's
+    # "cue count: missing" flag would only repeat it (the check's hard fail stays).
+    assert any(tr == "<MISSING>" for tr, _ in shown)
+    assert not any("fixer: cue count: missing" in note for _, note in shown)
 
 
 def test_flags_skip_a_fixed_cue_the_timing_file_does_not_have(work: Path, tmp_path: Path):
@@ -265,48 +283,7 @@ def test_soft_lists_what_the_fixes_left_soft(tmp_path: Path):
     assert "#2 " in text and 'the English says "shit"' in text and "#1 " not in text
 
 
-def _row(n: int, start_s: float, end_s: float) -> dict:
-    return {"n": n, "start": int(start_s * 1000), "end": int(end_s * 1000)}
-
-
-def _reading(cue: int, got: str, expected: str | None = None, listener: str | None = "Ann") -> dict:
-    return {"cue": cue, "speaker": "Bob" if expected else None, "listener": listener, "expected": expected, "got": got}
-
-
-def test_scenes_split_at_a_long_pause():
-    rows = {1: _row(1, 0, 2), 2: _row(2, 7, 9), 3: _row(3, 16, 17), 4: _row(4, 17.5, 18)}
-    # 2 starts 5 s after 1 ends: same scene; 3 starts 7 s after 2: a new one.
-    assert polish.scenes(rows) == {1: 0, 2: 0, 3: 1, 4: 1}
-
-
-def test_scenes_measure_the_pause_from_the_latest_end():
-    rows = {1: _row(1, 0, 20), 2: _row(2, 1, 2), 3: _row(3, 24, 25)}
-    assert polish.scenes(rows) == {1: 0, 2: 0, 3: 0}
-
-
-def test_scene_address_spreads_a_wrong_form_to_its_scene():
-    rows = {n: _row(n, n * 2, n * 2 + 1) for n in range(1, 7)}
-    rows[6] = _row(6, 60, 61)  # a later scene
-    readings = [
-        _reading(1, "sen", expected="siz"),  # the address check flags this one
-        _reading(2, "sen"),  # same scene, same form, nobody known: listed
-        _reading(3, "siz"),  # the other form: not listed
-        _reading(4, "sen", expected="sen"),  # matches the bible: not listed
-        _reading(5, "sen", expected="siz", listener=None),  # flagged by the check itself
-        _reading(6, "sen"),  # another scene: not listed
-    ]
-    out = polish.scene_address(readings, rows)
-    assert sorted(out) == [2]
-    assert out[2] == "address form, same scene: cue 1 (Bob → Ann) uses sen where the bible says siz; check who is spoken to here"
-
-
-def test_scene_address_ignores_plural_siz_the_check_lets_through():
-    rows = {n: _row(n, n * 2, n * 2 + 1) for n in range(1, 3)}
-    readings = [_reading(1, "siz", expected="sen", listener=None), _reading(2, "siz")]
-    assert polish.scene_address(readings, rows) == {}
-
-
-def test_flags_list_the_scene_of_a_wrong_address_form(tmp_path: Path):
+def test_flags_leave_sen_and_siz_to_the_reviewers(tmp_path: Path):
     en = (
         "1\n00:00:01,000 --> 00:00:03,000\nNora, sit down.\n\n"
         "2\n00:00:04,000 --> 00:00:06,000\nAre you comfortable?\n\n"
@@ -340,11 +317,12 @@ def test_flags_list_the_scene_of_a_wrong_address_form(tmp_path: Path):
     (w / "speakers.json").write_text(json.dumps({"1": {"label": "Sam"}}), encoding="utf-8")
     polish.seed(w, tmp_path / "tr.srt")
     out = polish.flags(w)
-    assert out["by_check"]["address form"] == 1
-    assert out["by_check"]["address form, same scene"] == 1  # cue 2; cue 3 is a later scene
+    # The check still sees cue 1's sen against the bible's siz, but the
+    # human file's form is the evidence: nothing goes to the fixer.
+    assert any(x["check"] == "address form" for x in assemble.run_checks(w)["warnings"])
+    assert not any(k.startswith("address form") for k in out["by_check"])
     text = (w / polish.FLAG_FILE).read_text(encoding="utf-8")
-    assert "#2 " in text and "#3 " not in text
-    assert "cue 1 (Sam → Nora) uses sen where the bible says siz" in text
+    assert "#1 " not in text and "#2 " not in text
 
 
 SPLIT_EN = """1

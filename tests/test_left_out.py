@@ -230,3 +230,96 @@ def test_a_separate_source_decides_sounds_and_songs(tmp_path: Path):
     # Speech in the source stays speech, whatever the timing file shows.
     assert "song" not in r[4] and "left_out" not in r[4]
     assert out["song_cues"] == 0 and out["bare_sound_cues_dropped"] == 1
+
+
+@pytest.mark.parametrize(
+    ("lines", "italic"),
+    [
+        (["<i>Down by the water</i>"], True),
+        (["<i>Down by the water", "where the boats go</i>"], True),
+        (["<i>Down by the water</i>", "<i>where the boats go</i>"], True),
+        (["<i>Down by</i> the water"], False),
+        (["Down by the water"], False),
+        (["<i>...</i>"], True),
+    ],
+)
+def test_whole_italic(lines, italic):
+    assert srt.whole_italic(lines) is italic
+
+
+def italic_film(texts: list[str], gap_ms: int = 3000) -> list[srt.Cue]:
+    """One cue per text, every `gap_ms`, two seconds long."""
+    out = []
+    for i, t in enumerate(texts, 1):
+        start, end = i * gap_ms, i * gap_ms + 2000
+        out.append(srt.Cue(i, start, end, f"{srt.fmt_ms(start)} --> {srt.fmt_ms(end)}", [t]))
+    return out
+
+
+def test_italic_songs_finds_a_run_of_italic_lines_that_end_no_sentence():
+    cues = italic_film(
+        [
+            "<i>The town was quiet that year.</i>",  # narration: a sentence
+            "<i>Down by the water</i>",
+            "<i>where the boats go</i>",
+            "<i>will you wait for me?</i>",  # a sung question inside the song
+            "<i>under the morning light</i>",
+            "<i>over the nets and out to sea</i>",
+            "Who's singing?",
+            "<i>I keep thinking of her.</i>",  # a voice-over afterwards
+        ]
+    )
+    assert srt.italic_songs(cues) == {2, 3, 4, 5, 6}
+
+
+def test_italic_songs_needs_a_long_enough_run():
+    cues = italic_film(["<i>Down by the water</i>", "<i>where the boats go</i>", "<i>and the gulls</i>", "Stop."])
+    assert srt.italic_songs(cues) == set()
+
+
+def test_a_spoken_line_or_a_long_pause_breaks_an_italic_song():
+    texts = [
+        "<i>Down by the water</i>",
+        "<i>where the boats go</i>",
+        "<i>Wait...</i>",
+        "<i>under the light</i>",
+        "<i>far away</i>",
+    ]
+    assert srt.italic_songs(italic_film(texts)) == set()
+    # Four open lines, but the last comes 20 s after the third.
+    cues = italic_film(["<i>one line</i>", "<i>two lines</i>", "<i>three lines</i>", "<i>four lines</i>"])
+    cues[3].start, cues[3].end = cues[2].end + 20_000, cues[2].end + 22_000
+    assert srt.italic_songs(cues) == set()
+
+
+def test_a_file_that_marks_its_songs_has_no_italic_songs():
+    texts = ["<i>Down by the water</i>", "<i>where the boats go</i>", "<i>under the light</i>", "<i>far away</i>", "♪ La la ♪"]
+    assert srt.italic_songs(italic_film(texts)) == set()
+
+
+def test_build_marks_italic_songs_and_leaves_italic_speech_alone(tmp_path: Path):
+    texts = [
+        "<i>The town was quiet that year.</i>",
+        "<i>Down by the water</i>",
+        "<i>where the boats go</i>",
+        "<i>under the morning light</i>",
+        "<i>over the nets and out to sea</i>",
+        "Who's singing?",
+    ]
+    src = tmp_path / "film.en.srt"
+    srt.write(src, italic_film(texts))
+    w = tmp_path / "work"
+    out = prepare.build(w, src, None, None)
+    r = rows(w)
+    assert out["song_cues"] == 4
+    assert [n for n in r if r[n].get("song")] == [2, 3, 4, 5]
+
+
+def test_a_separate_source_without_italics_keeps_italic_timing_lines_as_speech(tmp_path: Path):
+    texts = ["<i>Down by the water</i>", "<i>where the boats go</i>", "<i>under the morning light</i>", "<i>far away</i>"]
+    timing = tmp_path / "film.en.srt"
+    srt.write(timing, italic_film(texts))
+    source = tmp_path / "film.de.srt"
+    srt.write(source, italic_film(["Unten am Wasser", "wo die Boote fahren", "im Morgenlicht", "weit weg"]))
+    w = tmp_path / "work"
+    assert prepare.build(w, timing, source, timing)["song_cues"] == 0

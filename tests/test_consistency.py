@@ -95,6 +95,10 @@ def test_family_drift_is_quiet_with_one_form():
         ("Celpname geldi.", "celp", True),
         ("Kâğıdı aldın mı?", "celp", False),
         ("Her şey yolunda.", "S ve D", True),  # no word to look for
+        # The last word of a compound name loses its possessive ending to another one.
+        ("Fener Mahallesi'nde oturuyor.", "Mahallesi", True),
+        ("Bu mahallelerin hepsi boş.", "Mahallesi", True),
+        ("Kasaba boş.", "Mahallesi", False),
     ],
 )
 def test_has_rendering(text, answer, found):
@@ -139,6 +143,112 @@ def test_term_renderings_join_the_senses_of_one_word_with_or_without_an_article(
         # Only the quoted form is looked for: "hold on" is not the ship's hold.
         "the hold": {"ambar"},
     }
+
+
+@pytest.mark.parametrize(
+    ("answer", "rendering", "exceptions"),
+    [
+        ("celp", "celp", set()),
+        ("muhbir; 1290 keeps the pun", "muhbir", {1290}),
+        ("Kaptan (the boat's name at cue 8 stays Skipper)", "Kaptan", {8}),
+        # A ";" inside parentheses belongs to the note.
+        ('ağ (güvertedeki ağ; "deck net": güverte ağı)', "ağ", set()),
+        ("fener (lighthouse keeper: fener bekçisi)", "fener", set()),
+    ],
+)
+def test_rendering_and_exceptions_read_the_notes_apart(answer, rendering, exceptions):
+    assert bible._rendering_and_exceptions(answer) == (rendering, exceptions)
+
+
+def scoped(id: str, question: str, answer: str, evidence: list[int], **extra) -> dict:
+    return {**term(id, question, answer), "evidence": evidence, **extra}
+
+
+def rules_by_term(tmp_path: Path, *decisions: dict) -> dict[str, dict]:
+    (tmp_path / "decisions.json").write_text(json.dumps(term_decisions(*decisions)), encoding="utf-8")
+    return {r["term"]: r for r in bible.term_rules(tmp_path)}
+
+
+def test_term_rules_take_the_cues_a_decision_applies_to(tmp_path: Path):
+    got = rules_by_term(
+        tmp_path,
+        scoped("term:minutes", 'Turkish for "minutes"?', "tutanak", [5], applies_to=[5, "40-42"]),
+        scoped("term:subpoena", 'Turkish for "subpoena" (the court paper)?', "celp", [3], applies_to="film"),
+    )
+    assert got["minutes"]["cues"] == {5, 40, 41, 42}
+    # "film" wins over a question that names a sense.
+    assert got["subpoena"]["cues"] is None
+
+
+def test_term_rules_without_applies_to_keep_one_sense_to_its_evidence(tmp_path: Path):
+    got = rules_by_term(
+        tmp_path,
+        scoped("term:minutes", 'Turkish for "minutes" (of the meeting)?', "tutanak", [506, 508]),
+        scoped("term:rat", 'Turkish for "rat" when it is slang for an informer?', "muhbir; 1290 keeps the pun", [221, 1290]),
+        scoped("term:rattled", 'Turkish for "rattled" in "You were completely rattled!"?', "allak bullak", [73]),
+        scoped("term:watch", 'Turkish for "the watch"?', "nöbet", [30]),
+        scoped("term:board", 'Turkish for "Harbour Safety Board" (the meetings)?', "Liman Güvenlik Kurulu", [9]),
+    )
+    assert got["minutes"]["cues"] == {506, 508}
+    assert (got["rat"]["cues"], got["rat"]["except"]) == ({221, 1290}, {1290})
+    # A quoted example line is no name: the decision still covers one sense.
+    assert got["rattled"]["cues"] == {73}
+    assert got["the watch"]["cues"] is None
+    # A name holds for the whole film, whatever the question adds.
+    assert got["harbour safety board"]["cues"] is None
+
+
+def test_term_rules_keep_a_pair_decision_to_its_evidence(tmp_path: Path):
+    got = rules_by_term(
+        tmp_path,
+        scoped(
+            "term:sisters",
+            'Ann and Bea: who is older, and what does Bea call her "big sister" (and "Ann")?',
+            "abla; Ann is older",
+            [36, 45],
+        ),
+        scoped("term:brothers", 'Turkish for "brother"?', "kardeş", [7]),
+    )
+    assert got["ann"]["cues"] == got["big sister"]["cues"] == {36, 45}
+    assert got["ann"]["renderings"] == {"abla"}
+    # A decision on the bare family word still holds for the whole film.
+    assert got["brother"]["cues"] is None
+
+
+@pytest.mark.parametrize("value", ["scene", [], ["10-5"], ["a-b"], [0], [True], {"from": 1}])
+def test_a_bad_applies_to_is_refused(value):
+    d = {**term("term:x", 'Turkish for "x"?', "y"), "applies_to": value}
+    assert any("applies_to" in p for p in bible.check_decision(d, "decisions.json term:x"))
+
+
+@pytest.mark.parametrize("value", ["film", [3], ["3-9", 12]])
+def test_a_good_applies_to_passes(value):
+    d = {**term("term:x", 'Turkish for "x"?', "y"), "applies_to": value}
+    assert not any("applies_to" in p for p in bible.check_decision(d, "decisions.json term:x"))
+
+
+def test_check_follows_the_cues_each_sense_covers(tmp_path: Path):
+    english = ["Read me the minutes.", "Give me five minutes.", "He's a rat.", "Feed the rat.", "A rat for a rat!"]
+    tr = ["Bana süreyi oku.", "Bana beş dakika ver.", "O bir ispiyoncu.", "Hayvanı besle.", "Sıçana sıçan!"]
+    w = make_work(tmp_path, english, tr)
+    data = term_decisions(
+        scoped("term:minutes", 'Turkish for "minutes" (of the meeting)?', "tutanak", [1]),
+        scoped("term:rat-animal", 'Turkish for "rat" when it means the animal?', "sıçan", [4]),
+        scoped("term:rat-informer", 'Turkish for "rat" when it means an informer?', "muhbir; 5 keeps the pun", [3, 5]),
+    )
+    (w / "decisions.json").write_text(json.dumps(data), encoding="utf-8")
+    # Cue 2's "minutes" is time, outside the meeting sense; cue 5 is exempt.
+    assert sorted(warned(w, "term rendering")) == [1, 3, 4]
+
+
+def test_check_finds_a_term_in_the_next_cue_of_a_sentence_that_runs_on(tmp_path: Path):
+    # Turkish puts the verb last, so the term may move to the next cue.
+    english = ["They will serve you a subpoena", "before the ferry leaves.", "Another subpoena."]
+    tr = ["Vapur kalkmadan önce", "sana celp tebliğ edecekler.", "Bir kâğıt daha."]
+    w = make_work(tmp_path, english, tr)
+    data = term_decisions(term("term:subpoena", 'Turkish for "subpoena"?', "celp"))
+    (w / "decisions.json").write_text(json.dumps(data), encoding="utf-8")
+    assert sorted(warned(w, "term rendering")) == [3]
 
 
 def family_bible() -> dict:
@@ -384,3 +494,61 @@ def test_a_two_speaker_cue_has_no_speaker(tmp_path: Path):
     w, rows = address_work(tmp_path, ["- Sophie, sit down. - You sit down."], {"1": {"voice": "V9"}})
     rows[1]["timing_lines"] = rows[1]["source"] = ["- Sophie, sit down.", "- You sit down."]
     assert bible.address_readings(w, {1: ["- Sophie, sen otur.", "- Sen otur."]}, rows)[0]["speaker"] is None
+
+
+def scene_work(tmp_path: Path, lines: list[str], speakers: dict, gap_ms: int = 1000) -> tuple[Path, dict]:
+    """Benny says sen to Sophie and siz to Captain Lund; nobody is named in
+    the lines, so only the scene can tell whom he speaks to."""
+    w, rows = address_work(tmp_path, lines, speakers)
+    for i, r in enumerate(sorted(rows.values(), key=lambda r: r["n"])):
+        r["start"] = i * (2000 + gap_ms)
+        r["end"] = r["start"] + 2000
+    (w / "cues.json").write_text(json.dumps(list(rows.values())), encoding="utf-8")
+    data = json.loads((w / "decisions.json").read_text(encoding="utf-8"))
+    data["characters"].append({"name": "Captain Lund", "aliases": ["LUND"]})
+    data["decisions"] = [d for d in data["decisions"] if d["id"] != "address:Benny>Sophie"] + [
+        {"id": "address:Benny>Sophie", "kind": "address", "speaker": "Benny", "listener": "Sophie", "question": "?",
+         "answer": [{"from_cue": 1, "form": "sen"}], "evidence": [1], "confidence": "sure"},
+        {"id": "address:Benny>Captain Lund", "kind": "address", "speaker": "Benny", "listener": "Captain Lund",
+         "question": "?", "answer": [{"from_cue": 1, "form": "siz"}], "evidence": [1], "confidence": "sure"},
+        {"id": "voice:V4", "kind": "voice", "question": "?", "answer": "Captain Lund", "evidence": [1], "confidence": "likely"},
+    ]  # fmt: skip
+    (w / "decisions.json").write_text(json.dumps(data), encoding="utf-8")
+    return w, rows
+
+
+def test_the_only_other_speaker_in_the_scene_is_the_listener(tmp_path: Path):
+    lines = ["Will you come down to the pier tonight?", "I will think about it.", "You have to tell them."]
+    w, rows = scene_work(tmp_path, lines, {"1": {"voice": "V4"}, "2": {"voice": "V9"}, "3": {"voice": "V4"}})
+    texts = {2: ["Düşüneceğim, sen merak etme."]}
+    assert [(x["cue"], x["detail"]) for x in bible.address_warnings(w, texts, rows)] == [
+        (2, "Benny → Captain Lund (the only other speaker in the scene): bible says siz, Turkish uses sen")
+    ]
+
+
+def test_no_listener_guess_with_two_others_or_across_a_pause(tmp_path: Path):
+    lines = ["Will you come down?", "I will think about it.", "Come on, Benny."]
+    texts = {2: ["Düşüneceğim, sen merak etme."]}
+    # Sophie and Captain Lund both speak here: the listener stays unknown.
+    speakers = {"1": {"voice": "V4"}, "2": {"voice": "V9"}, "3": {"label": "Sophie"}}
+    w, rows = scene_work(tmp_path, lines, speakers)
+    assert bible.address_warnings(w, texts, rows) == []
+    assert bible.address_readings(w, texts, rows)[0]["listener"] is None
+    # Captain Lund speaks in the scene but not right before or after.
+    lines4 = ["Will you come down?", "Then what?", "I will think about it.", "Fine."]
+    speakers = {"1": {"voice": "V4"}, "3": {"voice": "V9"}}
+    w, rows = scene_work(tmp_path, lines4, speakers)
+    assert bible.address_warnings(w, {3: ["Düşüneceğim, sen merak etme."]}, rows) == []
+    # Captain Lund alone, but after a pause of 12 seconds: another scene.
+    w, rows = scene_work(tmp_path, lines, {"1": {"voice": "V4"}, "2": {"voice": "V9"}}, gap_ms=12_000)
+    assert bible.address_warnings(w, texts, rows) == []
+
+
+def test_a_guessed_listener_lets_siz_through_as_plural(tmp_path: Path):
+    # Benny says sen to Sophie; siz to her may be to the whole group.
+    lines = ["Are you coming?", "I will come, you go ahead.", "All right."]
+    w, rows = scene_work(tmp_path, lines, {"1": {"label": "Sophie"}, "2": {"voice": "V9"}, "3": {"label": "Sophie"}})
+    texts = {2: ["Gelirim, siz önden gidin."]}
+    reading = bible.address_readings(w, texts, rows)[0]
+    assert reading["listener"] == "Sophie" and reading["guessed"] and reading["expected"] == "sen"
+    assert bible.address_warnings(w, texts, rows) == []

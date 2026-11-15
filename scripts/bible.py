@@ -49,6 +49,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import result  # noqa: E402
+import srt  # noqa: E402
 
 KINDS = {"address", "voice", "name", "term"}
 FORMS = {"sen", "siz"}
@@ -58,6 +59,12 @@ STORED_CONFIDENCE = CONFIDENCE | {"tie"}
 # Two readers rarely put a sen-to-siz switch on the same cue. Switches this
 # many cues apart or fewer are taken as the same scene.
 ADDRESS_TOLERANCE = 40
+# In a polish run the human Turkish file is the evidence for sen and siz:
+# a pair goes to the judge when at least HUMAN_MIN of its lines there use
+# another form than both readers give at that cue.
+HUMAN_MIN = 3
+# A judge reads up to this many of the human file's cues per form.
+HUMAN_CUES = 8
 
 
 # --- reading and checking the files --------------------------------------
@@ -114,6 +121,8 @@ def check_decision(d: dict, where: str, full: bool = True, allowed: set[str] = C
             problems.append(f"{where}: question must be a string")
         if d.get("kind") == "address" and not (isinstance(d.get("speaker"), str) and isinstance(d.get("listener"), str)):
             problems.append(f"{where}: an address decision names its speaker and listener")
+        if "applies_to" in d and parse_applies_to(d["applies_to"]) is False:
+            problems.append(f'{where}: applies_to is "film" or a list of cue numbers and ranges ("120-135")')
     if not isinstance(d.get("evidence"), list) or not all(isinstance(n, int) for n in d.get("evidence", [None])):
         problems.append(f"{where}: evidence is a list of cue numbers")
     if d.get("confidence") not in allowed:
@@ -319,16 +328,33 @@ def compare(work: Path) -> dict:
         answers, extra = answers + more, extra + more_extra
 
     second_by_id = {a["id"]: a for a in answers}
+    human = human_forms(work)
+    book = AddressBook(data) if human else None
     agreed, to_judge = [], []
     for d in data["decisions"]:
         s = second_by_id.get(d["id"])
-        if s is not None and agree(d["kind"], d["answer"], s.get("answer"), data["characters"]):
+        counts = None
+        if book is not None and d["kind"] == "address":
+            pair = (book.name(d["speaker"]) or d["speaker"].strip(), book.name(d["listener"]) or d["listener"].strip())
+            counts = human.get(pair)
+        both = s is not None and agree(d["kind"], d["answer"], s.get("answer"), data["characters"])
+        # The human file uses another form than both readers give, at the
+        # same cues, on HUMAN_MIN lines or more: the judge weighs it.
+        off = human_against(counts, d["answer"]) if both and counts else []
+        against = len(off) >= HUMAN_MIN
+        if both and not against:
             agreed.append(d["id"])
             continue
         item = {k: d[k] for k in QUESTION_FIELDS if k in d}
         item["writer"] = _side(d)
         item["second"] = _side(s) if s is not None and s.get("answer") is not None else None
-        item["why"] = "the readers disagree" if item["second"] else "the second reader gave no answer"
+        if against:
+            total = len(counts["sen"]) + len(counts["siz"])
+            item["why"] = f"the human Turkish file uses another form than both readers give on {len(off)} of its {total} lines"
+        else:
+            item["why"] = "the readers disagree" if item["second"] else "the second reader gave no answer"
+        if counts:
+            item["human_file"] = {f: {"lines": len(counts[f]), "cues": counts[f][:HUMAN_CUES]} for f in ("sen", "siz")}
         to_judge.append(item)
     # A voice the second reader answered and the voice mapper did not.
     for a in answers:
@@ -376,6 +402,10 @@ def cues(work: Path, numbers: list[int], context: int) -> list[dict]:
     speakers = _load(speakers_file) if speakers_file.exists() else {}
     by_n = {r["n"]: r for r in rows}
     wanted = sorted({m for n in numbers for m in range(n - context, n + context + 1) if m in by_n})
+    # In a polish run, the human file's Turkish line for each cue: the
+    # evidence for sen and siz.
+    seed_file = work / "out" / "tr_00.txt"
+    human = srt.read_blocks(seed_file)[0] if seed_file.exists() else {}
     out = []
     for m in wanted:
         r = by_n[m]
@@ -384,6 +414,8 @@ def cues(work: Path, numbers: list[int], context: int) -> list[dict]:
         row = {"n": m, "at": r["ts"][:8], "speaker": who, "src": " / ".join(r["source"] or r["timing_lines"])}
         if r.get("en") is not None and r["en"] != r["source"]:
             row["en"] = " / ".join(r["en"])
+        if m in human:
+            row["human_tr"] = " / ".join(human[m])
         out.append(row)
     return out
 
@@ -635,8 +667,10 @@ class AddressBook:
         return {other for (other, to), steps in self.address.items() if to == speaker and form_at(steps, n) == form}
 
 
-# A cue's scene for the address check: this many cues on each side.
+# A cue's scene for the address check: this many cues on each side, and
+# no further than a pause this long between two cues.
 SCENE_CUES = 5
+SCENE_GAP_MS = 10_000
 
 
 def _said(row: dict) -> str:
@@ -664,6 +698,46 @@ def _other_turn(n: int, sp: str, got: str, book: AddressBook, rows: dict[int, di
         if book.speaker(speakers.get(str(m)) or {}) in others or book.listener(sp, _said(rows[m])) in others:
             return True
     return False
+
+
+def _scene(n: int, rows: dict[int, dict]) -> list[int]:
+    """The cues around n in the same scene: up to SCENE_CUES on each side,
+    stopping at a pause longer than SCENE_GAP_MS."""
+    order = sorted(rows)
+    i = order.index(n)
+    out = []
+    for step in (-1, 1):
+        j = i
+        for _ in range(SCENE_CUES):
+            k = j + step
+            if not 0 <= k < len(order):
+                break
+            a, b = (order[j], order[k]) if step == 1 else (order[k], order[j])
+            gap = (rows[b].get("start") or 0) - (rows[a].get("end") or 0)
+            if gap > SCENE_GAP_MS:
+                break
+            out.append(order[k])
+            j = k
+    return out
+
+
+def _scene_listener(n: int, sp: str, book: AddressBook, rows: dict[int, dict], speakers: dict) -> str | None:
+    """The listener when the line names none: the one other character who
+    speaks in the scene, when they also speak the cue right before or right
+    after this one (a turn in the same exchange) and the bible has a form
+    for the speaker to them. None when nobody else or more than one person
+    speaks there."""
+    scene = _scene(n, rows)
+    others = {book.speaker(speakers.get(str(m)) or {}) for m in scene} - {None, sp}
+    if len(others) != 1:
+        return None
+    other = others.pop()
+    order = sorted(rows)
+    i = order.index(n)
+    beside = {order[j] for j in (i - 1, i + 1) if 0 <= j < len(order)} & set(scene)
+    if not any(book.speaker(speakers.get(str(m)) or {}) == other for m in beside):
+        return None
+    return other if (sp, other) in book.address else None
 
 
 def address_readings(work: Path, texts: dict[int, list[str]], rows: dict[int, dict]) -> list[dict]:
@@ -694,24 +768,84 @@ def address_readings(work: Path, texts: dict[int, list[str]], rows: dict[int, di
         # may be the other person's: the speaker is not known there.
         sp = None if n in unsure or _two_speakers(row) else book.speaker(speakers.get(str(n), {}))
         li = exp = None
+        guessed = False
         if sp is not None:
             li = book.listener(sp, _said(row))
             exp = book.expected(sp, li, n)
+            # The speaker uses different forms to different people and the
+            # line names nobody: the listener is most likely the one other
+            # person speaking in the scene.
+            if exp is None and li is None:
+                li = _scene_listener(n, sp, book, rows, speakers)
+                guessed = li is not None
+                exp = book.expected(sp, li, n) if guessed else None
             # The speaker's form is off, and it is the one the other side of
             # the pair uses: most likely the other person's turn.
-            if exp is not None and exp != got and li is None and _other_turn(n, sp, got, book, rows, speakers):
+            named = li is not None and not guessed
+            if exp is not None and exp != got and not named and _other_turn(n, sp, got, book, rows, speakers):
                 sp = exp = None
-        out.append({"cue": n, "speaker": sp, "listener": li, "expected": exp, "got": got})
+                li, guessed = None, False
+        out.append({"cue": n, "speaker": sp, "listener": li, "guessed": guessed, "expected": exp, "got": got})
     return out
+
+
+def human_forms(work: Path) -> dict[tuple[str, str], dict[str, list[int]]]:
+    """In a polish run (W/out/tr_00.txt, the human Turkish file placed on
+    the timing file's cues), the cues where each pair the bible asks about
+    uses sen and siz: {(speaker, listener): {"sen": [...], "siz": [...]}}.
+    A cue counts when its speaker is known and its listener is named in the
+    line, or is the one other person speaking in the scene. Empty in a full
+    run or when the bible has no address decisions."""
+    seed_file = work / "out" / "tr_00.txt"
+    if not seed_file.exists() or not (work / "decisions.json").exists():
+        return {}
+    try:
+        book = AddressBook(load_decisions(work))
+    except SystemExit:
+        return {}
+    if not book.address:
+        return {}
+    rows = {r["n"]: r for r in json.loads((work / "cues.json").read_text(encoding="utf-8"))}
+    speakers_file = work / "speakers.json"
+    speakers = json.loads(speakers_file.read_text(encoding="utf-8")) if speakers_file.exists() else {}
+    unsure = unsure_turns(rows, speakers)
+    texts, _ = srt.read_blocks(seed_file)
+    out: dict[tuple[str, str], dict[str, list[int]]] = {}
+    for n, tr in sorted(texts.items()):
+        row = rows.get(n)
+        got = detect_form(" ".join(tr))
+        if row is None or got is None or n in unsure or _two_speakers(row):
+            continue
+        sp = book.speaker(speakers.get(str(n), {}))
+        if sp is None:
+            continue
+        li = book.listener(sp, _said(row)) or _scene_listener(n, sp, book, rows, speakers)
+        if li is None:
+            continue
+        out.setdefault((sp, li), {"sen": [], "siz": []})[got].append(n)
+    return out
+
+
+def human_against(counts: dict[str, list[int]], answer: list[dict]) -> list[int]:
+    """The human file's cues for a pair whose form is not the one the
+    answer gives at that cue."""
+    return sorted(n for form in ("sen", "siz") for n in counts[form] if form_at(answer, n) != form)
 
 
 def address_off(r: dict) -> bool:
     """The reading uses the other form than the bible gives. With no
     listener named in the line, only sen where the bible says siz counts,
-    since siz is also the plural you."""
+    since siz is also the plural you. A listener guessed from the scene
+    counts as no listener named here."""
     if r["expected"] is None or r["expected"] == r["got"]:
         return False
-    return not (r["listener"] is None and r["got"] == "siz")
+    return not ((r["listener"] is None or r.get("guessed")) and r["got"] == "siz")
+
+
+def listener_text(r: dict) -> str:
+    if r["listener"] is None:
+        return "anyone here"
+    return f"{r['listener']} (the only other speaker in the scene)" if r.get("guessed") else r["listener"]
 
 
 def address_warnings(work: Path, texts: dict[int, list[str]], rows: dict[int, dict]) -> list[dict]:
@@ -721,7 +855,7 @@ def address_warnings(work: Path, texts: dict[int, list[str]], rows: dict[int, di
         {
             "cue": r["cue"],
             "check": "address form",
-            "detail": f"{r['speaker']} → {r['listener'] or 'anyone here'}: bible says {r['expected']}, Turkish uses {r['got']}",
+            "detail": f"{r['speaker']} → {listener_text(r)}: bible says {r['expected']}, Turkish uses {r['got']}",
         }
         for r in address_readings(work, texts, rows)
         if address_off(r)
@@ -859,48 +993,148 @@ def glossary_conflicts(work: Path, data: dict) -> list[dict]:
     return out
 
 
-def term_renderings(work: Path) -> dict[str, set[str]]:
-    """The Turkish the bible gives for each quoted source term of its term
-    decisions: {"roll call": {"giriş kaydı"}}. Name decisions are left out:
-    "father" may be "Peder" in one cue and "baba" in another. A question that
-    quotes several terms ("rooster" / "crow") pairs them with an answer
-    split the same way ("horoz / ötmek"). Answers that depend on the
-    scene (with a ";" or "for", as in "X for the birds; Y for the job") are
-    left out: no single word can be checked. Two decisions on one term (a
-    word with two senses, each its own decision) give it two renderings,
-    and either one will do, also when one quotes it with an article ("the
-    watch") and the other without ("watch"). A family word ("brother") also
-    takes every Turkish word the bible's family-word decisions give it
-    ("abi" for one pair, "kardeş" for another): the check cannot tell whose
-    brother a cue means, and the pair's decision must never be flagged.
-    Empty when there is no usable decisions.json."""
+APPLIES_RANGE_RE = re.compile(r"^\s*(\d+)\s*-\s*(\d+)\s*$")
+# Words in a term question that limit the decision to one sense of the
+# word: "when it means the animal", "as in ...", "in "my brothers of the
+# crew"", or a sense in parentheses ("minutes" (of the meeting)).
+SENSE_RE = re.compile(r"\bwhen\b|\bmean(?:s|ing)?\b|\bas in\b|\bin Q\b|\bsense\b|\(", re.I)
+NUMBER_RE = re.compile(r"\b\d{1,5}\b")
+
+
+def parse_applies_to(value) -> set[int] | None | bool:
+    """A term decision's `applies_to`: "film" gives None (every cue), a list
+    of cue numbers and "a-b" ranges gives those cues, anything else False."""
+    if value == "film":
+        return None
+    if not isinstance(value, list) or not value:
+        return False
+    out: set[int] = set()
+    for item in value:
+        if isinstance(item, int) and not isinstance(item, bool) and item > 0:
+            out.add(item)
+        elif isinstance(item, str) and (m := APPLIES_RANGE_RE.match(item)) and int(m.group(1)) <= int(m.group(2)):
+            out.update(range(int(m.group(1)), int(m.group(2)) + 1))
+        else:
+            return False
+    return out
+
+
+def _rendering_and_exceptions(answer: str) -> tuple[str, set[int]]:
+    """The rendering an answer gives, and the cues its notes exempt. Notes
+    are what sits in parentheses and what follows the first ";" outside
+    them; the rendering is the rest. Cue numbers in the notes are
+    exceptions: "Kaptan (the boat's name at cue 8 stays Skipper)", "muhbir; 1290
+    keeps the pun". A ";" inside parentheses is part of the note: "ağ
+    (güvertedeki ağ; güverte ağı)" renders "ağ"."""
+    depth, main, notes = 0, [], []
+    rest = ""
+    for i, ch in enumerate(answer):
+        if ch == ";" and depth == 0:
+            rest = answer[i + 1 :]
+            break
+        if ch == "(":
+            depth += 1
+        (notes if depth else main).append(ch)
+        if ch == ")" and depth:
+            depth -= 1
+    notes_text = "".join(notes) + " " + rest
+    return " ".join("".join(main).split()), {int(x) for x in NUMBER_RE.findall(notes_text)}
+
+
+def _is_name(term: str) -> bool:
+    """Every word of the term starts with a capital: "PM", "Harbour Safety
+    Board". A quoted example line ("You were completely rattled!") is
+    not a name."""
+    words = re.findall(r"[^\W\d_][\w'-]*", term)
+    return bool(words) and all(w[:1].isupper() for w in words)
+
+
+def _pair_decision(d: dict) -> bool:
+    """A family-word decision about one person or pair (see
+    `family_words`): its rendering holds where that pair speaks, not on
+    every cue that says the quoted words."""
+    return bool(KIN_NAMED_RE.search(d.get("question", "").casefold())) and not _bare_kin(d)
+
+
+def _evidence_scoped(d: dict, terms: list[str]) -> bool:
+    """A decision written without `applies_to` that covers only some cues:
+    a family-word decision about one pair, or one sense of a common word
+    (the question qualifies the sense and the term is not a name). Such a
+    decision is checked only on its evidence cues."""
+    if _pair_decision(d):
+        return True
+    question = QUOTED_RE.sub("Q", d.get("question", ""))
+    return bool(SENSE_RE.search(question)) and not any(_is_name(t) for t in terms)
+
+
+def term_rules(work: Path) -> list[dict]:
+    """One rule per source term of each term decision: {"term", "key",
+    "renderings", "cues", "except", "evidence"}. `cues` is None when the
+    decision holds for the whole film, else the cues it covers: its
+    `applies_to`, or, for a decision without one that covers only some cues
+    (`_evidence_scoped`), its evidence. `except` lists cues the
+    answer's notes exempt. Name decisions are left out: "father" may be
+    "Peder" in one cue and "baba" in another. A question that quotes
+    several terms ("rooster" / "crow") pairs them with an answer split the
+    same way ("horoz / ötmek"). An answer that names several renderings
+    by scene ("X for the ship, Y for the cards") is left out: no single word
+    can be checked. Empty when there is no usable decisions.json."""
     if not (work / "decisions.json").exists():
-        return {}
+        return []
     try:
         data = load_decisions(work)
     except SystemExit:
-        return {}
-    out: dict[str, set[str]] = {}
+        return []
+    rules = []
     for d in _term_decisions(data):
-        answer = _answer_text(d)
-        if not answer or ";" in answer or re.search(r"\bfor\b", answer):
+        answer, exceptions = _rendering_and_exceptions(d["answer"])
+        if not answer or re.search(r"\bfor\b", answer):
             continue
         terms = _quoted_terms(d)
         parts = [p.strip() for p in answer.split(" / ")]
         if len(parts) == len(terms):
-            pairs = zip(terms, parts)
+            pairs = list(zip(terms, parts))
         elif len(parts) == 1:
-            pairs = ((t, answer) for t in terms)
+            pairs = [(t, answer) for t in terms]
         else:
             continue
+        evidence = {n for n in d.get("evidence", []) if isinstance(n, int)}
+        scope = parse_applies_to(d["applies_to"]) if "applies_to" in d else False
+        if scope is False:
+            scope = evidence if _evidence_scoped(d, terms) else None
         for term, rendering in pairs:
             if rendering.casefold() != term.casefold():
-                out.setdefault(term.casefold(), set()).add(rendering)
-    by_key: dict[str, set[str]] = {}
-    for term, answers in out.items():
-        by_key.setdefault(term_key(term), set()).update(answers)
+                rules.append(
+                    {
+                        "id": d["id"],
+                        "term": term.casefold(),
+                        "key": term_key(term),
+                        "renderings": {rendering},
+                        "cues": scope,
+                        "except": exceptions,
+                        "evidence": evidence,
+                    }
+                )
     family = family_words(data)
-    return {term: by_key[term_key(term)] | family.get(term_key(term), set()) for term in out}
+    for r in rules:
+        r["renderings"] = r["renderings"] | family.get(r["key"], set())
+    return rules
+
+
+def term_renderings(work: Path) -> dict[str, set[str]]:
+    """Every Turkish rendering the bible gives each quoted source term, over
+    all its decisions and senses: {"check-in": {"giriş kaydı"}}. Two
+    decisions on one term give it two renderings, also when one quotes it
+    with an article ("the bridge") and the other without ("bridge"). A family
+    word ("brother") also takes every Turkish word the bible's family-word
+    decisions give it ("abi" for one pair, "kardeş" for another). The
+    `term rendering` check uses `term_rules`, which also knows which cues
+    each decision covers."""
+    rules = term_rules(work)
+    by_key: dict[str, set[str]] = {}
+    for r in rules:
+        by_key.setdefault(r["key"], set()).update(r["renderings"])
+    return {r["term"]: by_key[r["key"]] for r in rules}
 
 
 def main(argv: list[str] | None = None) -> None:

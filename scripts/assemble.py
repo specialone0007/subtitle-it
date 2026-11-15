@@ -2,11 +2,12 @@
 # requires-python = ">=3.11"
 # dependencies = ["charset-normalizer>=3.3"]
 # ///
-"""Assemble the Turkish file, run the checks, build the reviewer's file and
+"""Assemble the Turkish file, run the checks, build the reviewers' files and
 deliver the result next to the video.
 
     uv run assemble.py check       --work W
-    uv run assemble.py sidebyside  --work W
+    uv run assemble.py reviewparts --work W [--size 250]
+    uv run assemble.py reviews     --work W
     uv run assemble.py deliver     --work W --dest FILM.srt --backups DIR [--force] [--video FILM.mkv]
     uv run assemble.py where       --work W --cues 12,340
     uv run assemble.py fixround    --work W --round r1
@@ -25,6 +26,15 @@ without the cues that hold only sounds, and numbered from 1. W/cue_map.json
 maps each draft number to the timing file's cue; `deliver` keeps it as
 W/delivered_map.json, and `where` answers from it which delivered cues and
 times a timing cue became.
+
+`reviewparts` cuts the film into parts of about 250 cues for the review,
+each in W/review/part_<NN>.tsv with a few cues of context on each side and
+each cue's automatic notes; `reviews` joins the parts' notes into
+W/review.md.
+
+In a polish run, `check` also lists every cue whose sen or siz differs
+from the human file's line, with the reason its fix file gave on an
+`#address:` line; a change with no reason is a warning.
 
 `fixround` writes, per chunk with a hard fail, W/fixes/<round>_<NN>.txt:
 each failing cue with its checks, its source and its current Turkish, so a
@@ -54,6 +64,7 @@ import turkish  # noqa: E402
 MAX_LINE = layout.MAX_LINE
 MAX_CPS = layout.MAX_CPS
 MAP_FILE = "cue_map.json"
+TURKISH_ONLY_FAST = "only the Turkish is fast"
 DELIVERED_MAP_FILE = "delivered_map.json"
 INFINITIVE_RE = re.compile(r"^[A-ZÇĞİÖŞÜ][a-zçğıöşü]+(mak|mek)[.!]$")
 CAPS_RE = re.compile(r"\b(TAMAM|HAYIR)\b")
@@ -84,22 +95,27 @@ def word_italics(lines: list[str]) -> bool:
     return bool(WORDISH_RE.search(srt.strip_tags(ITALIC_SPAN_RE.sub(" ", text))))
 
 
+REVIEW_FIX_RE = re.compile(r"^fix_review(?:_\d+)?\.txt$")
+
+
 def fix_order(out: Path) -> list[Path]:
     """W/out/fix_*.txt in the order they apply. Fix files apply in the order
     they were written, so a fix round after the review wins over
     fix_review.txt whatever the files are called. One exception: in a polish
     run the fixer and the reviewer work at the same time, and where both
-    write a cue the reviewer's version wins, since the reviewer reads the
-    whole film and fixes a flagged cue's flags too when it rewrites one. So
-    fix_review.txt applies right after fix_polish.txt even when it was
-    written first, as if it were the later file."""
+    write a cue the reviewer's version wins, since a part's reviewer reads
+    every line of its part and fixes a flagged cue's flags too when it
+    rewrites one. So fix_review.txt applies right after fix_polish.txt even
+    when it was written first, as if it were the later file. The review's parts
+    (fix_review_<NN>.txt) count as fix_review.txt; they hold different
+    cues."""
     files = list(out.glob("fix_*.txt"))
     polish = out / "fix_polish.txt"
     polish_at = polish.stat().st_mtime_ns if polish.exists() else -1
 
     def key(p: Path) -> tuple[int, int, str]:
         at = p.stat().st_mtime_ns
-        if p.name == "fix_review.txt":
+        if REVIEW_FIX_RE.match(p.name):
             return (max(at, polish_at), 1, p.name)
         return (at, 0, p.name)
 
@@ -107,6 +123,8 @@ def fix_order(out: Path) -> list[Path]:
 
 
 def load_translation(work: Path) -> tuple[dict[int, list[str]], list[str]]:
+    """The Turkish now: the chunk files (or the polish seed), then every fix
+    file in the order they apply."""
     out = work / "out"
     texts: dict[int, list[str]] = {}
     problems: list[str] = []
@@ -124,6 +142,31 @@ def load_translation(work: Path) -> tuple[dict[int, list[str]], list[str]]:
         problems += probs
         texts.update(blocks)
     return texts, problems
+
+
+def address_changes(work: Path, texts: dict[int, list[str]]) -> list[dict]:
+    """In a polish run, every cue whose sen or siz now differs from the
+    human file's line it was seeded with, with the fix file that changed it
+    last and the reason that file gave (`#address:` lines), or None."""
+    out = work / "out"
+    seed_file = out / "tr_00.txt"
+    if not (work / "polish_placement.json").exists() or not seed_file.exists():
+        return []
+    seed, _ = srt.read_blocks(seed_file)
+    by: dict[int, tuple[str, str | None]] = {}
+    for f in fix_order(out):
+        blocks, _ = srt.read_blocks(f)
+        reasons = srt.read_reasons(f)
+        for n in blocks:
+            by[n] = (f.name, reasons.get(n))
+    found = []
+    for n in sorted(texts):
+        if n not in seed or n not in by:
+            continue
+        was, now = bible.detect_form(" ".join(seed[n])), bible.detect_form(" ".join(texts[n]))
+        if was and now and was != now:
+            found.append({"cue": n, "human": was, "now": now, "file": by[n][0], "reason": by[n][1]})
+    return found
 
 
 def _cps(text: str, ms: int) -> float:
@@ -271,6 +314,11 @@ def _runs_on(lines: list[str]) -> bool:
     return any(ln and (ln.endswith(("...", "…")) or not SENTENCE_END_RE.search(ln)) for ln in ends)
 
 
+def _says_term(said: str, term: str) -> bool:
+    """The casefolded source text says the term, in any common English form."""
+    return bool(re.search(r"(?<!\w)" + re.escape(term) + r"(?:s|es|ed|ing|'s)?(?!\w)", said))
+
+
 def sentence_groups(kept: list[srt.Cue], rows: dict[int, dict]) -> list[list[int]]:
     """Runs of two or more cues that one source sentence spans, in timing
     order. Songs are left out: their lines rarely end in punctuation."""
@@ -407,7 +455,11 @@ def run_checks(work: Path) -> dict:
         # Netflix Turkish style guide I.17: 17 characters a second at most,
         # whatever the source does. The viewer reads Turkish.
         if tr_cps > MAX_CPS:
-            w(c.n, "reading speed", f"{tr_cps:.1f} chars/s, source {ref_cps:.1f}")
+            # The source reads at the limit or under it: only the Turkish
+            # is fast, so a shorter wording that keeps the meaning exists
+            # more often than not.
+            only = f"; {TURKISH_ONLY_FAST}" if ref_cps <= MAX_CPS else ""
+            w(c.n, "reading speed", f"{tr_cps:.1f} chars/s, source {ref_cps:.1f}{only}")
         if len(tr) == 1 and INFINITIVE_RE.match(srt.strip_tags(tr[0]).strip()):
             w(c.n, "infinitive command", tr[0])
         for ln in tr:
@@ -445,15 +497,31 @@ def run_checks(work: Path) -> dict:
     # source term it decided, and one spelling for words that have two.
     drafted = {c.n: texts[c.n] for c in kept if c.n in texts}
     renderings = bible.term_renderings(work)
-    for c in kept:
-        if c.n not in drafted:
+    rules = bible.term_rules(work)
+    order = [c.n for c in kept if c.n in drafted]
+    for i, n in enumerate(order):
+        said = " ".join(_source_lines(rows[n])).casefold()
+        heard = [r for r in rules if _says_term(said, r["term"])]
+        if not heard:
             continue
-        said = " ".join(_source_lines(rows[c.n])).casefold()
-        for term, answers in sorted(renderings.items()):
-            if re.search(r"(?<!\w)" + re.escape(term) + r"(?:s|es|ed|ing|'s)?(?!\w)", said) and not any(
-                turkish.has_rendering(" ".join(drafted[c.n]), a) for a in answers
-            ):
-                w(c.n, "term rendering", f"'{term}' is '{' or '.join(sorted(answers))}' in the bible; this cue has no form of it")
+        # Turkish puts the verb last, so a term said in one cue of a sentence
+        # that runs on may be written in the cue next to it.
+        near = [n]
+        if i > 0 and _runs_on(_source_lines(rows[order[i - 1]])):
+            near.append(order[i - 1])
+        if i + 1 < len(order) and _runs_on(_source_lines(rows[n])):
+            near.append(order[i + 1])
+        text = " ".join(" ".join(drafted[m]) for m in near)
+        # A decision that cites this cue for a term said here settles it:
+        # "Hold fast, brothers" has its own decision on that cue.
+        cited = set().union(*(r["renderings"] for r in heard if n in r["evidence"]))
+        for term in sorted({r["term"] for r in heard}):
+            applies = [r for r in heard if r["term"] == term and (r["cues"] is None or n in r["cues"]) and n not in r["except"]]
+            if not applies:
+                continue
+            answers = set().union(*(r["renderings"] for r in applies))
+            if not any(turkish.has_rendering(text, a) for a in answers | cited):
+                w(n, "term rendering", f"'{term}' is '{' or '.join(sorted(answers))}' in the bible; this cue has no form of it")
     bible_words = " ".join(a for answers in renderings.values() for a in answers)
     for n, used, usual, count in turkish.family_drift(drafted, bible_words):
         w(n, "term drift", f"'{used}' here, '{usual}' in {count} other cues: use one form for the whole film")
@@ -472,6 +540,12 @@ def run_checks(work: Path) -> dict:
                 w(n, "split sentence", detail)
 
     warn += bible.address_warnings(work, texts, rows)
+    # A polish run keeps the human file's sen or siz unless a fix gives its
+    # reason; a change with none is a warning.
+    changes = address_changes(work, texts)
+    for x in changes:
+        if not x["reason"]:
+            w(x["cue"], "address changed", f"the human file says {x['human']}, now {x['now']}, no reason given ({x['file']})")
 
     shown: list[srt.Cue] = []
     if not missing and not any(x["check"] == "file format" for x in hard):
@@ -503,40 +577,196 @@ def run_checks(work: Path) -> dict:
         "warning_count": len(warn),
         "hard": hard,
         "warnings": warn,
+        "address_changes": changes,
         "checked_at": datetime.now().isoformat(timespec="seconds"),
     }
     (work / "checks.json").write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
     return result
 
 
-def sidebyside(work: Path) -> Path:
-    """Compact file for the whole-film reviewer: number, speaker, source,
-    Turkish, one cue per line, tabs between fields."""
-    rows = json.loads((work / "cues.json").read_text(encoding="utf-8"))
+REVIEW_DIR = "review"
+# A review part: about this many cues, and this many cues of context on
+# each side that the part's reviewer reads but does not change.
+PART_CUES = 250
+PART_CONTEXT = 20
+# A part ends at the longest pause within this many cues of the even cut.
+PART_SLACK = 20
+# A note in a part file is cut to this many characters: the reviewer
+# needs the kind of problem and its key words, not the whole detail.
+NOTE_CHARS = 100
+FLAG_LINE_RE = re.compile(r"^(\d+)(?:\s*-\s*(\d+))?\s*:\s*(.+)$")
+
+
+def _part_cuts(rows: list[dict], size: int) -> list[int]:
+    """Indexes where each part after the first starts: near an even cut,
+    at the longest pause between two cues, so a part seldom splits a
+    scene or a sentence."""
+    k = max(1, -(-len(rows) // size))
+    cuts: list[int] = []
+    for i in range(1, k):
+        even = round(i * len(rows) / k)
+        # Start after the previous cut, so no part is empty or out of order.
+        lo = max(1, even - PART_SLACK, cuts[-1] + 1 if cuts else 1)
+        hi = min(len(rows) - 1, max(lo, even + PART_SLACK))
+        cuts.append(max(range(lo, hi + 1), key=lambda j: (rows[j]["start"] - rows[j - 1]["end"], -abs(j - even))))
+    return cuts
+
+
+def _translator_flags(work: Path) -> dict[int, list[str]]:
+    """Translator flags by cue, from W/out/flags_*.txt: `n: note` or
+    `first-last: note` lines."""
+    out: dict[int, list[str]] = {}
+    for f in sorted((work / "out").glob("flags_*.txt")):
+        for ln in f.read_text(encoding="utf-8", errors="replace").splitlines():
+            m = FLAG_LINE_RE.match(ln.strip())
+            if not m:
+                continue
+            a = int(m.group(1))
+            b = int(m.group(2) or a)
+            for n in range(a, min(b, a + 20) + 1):
+                out.setdefault(n, []).append(m.group(3).strip())
+    return out
+
+
+def _fixer_flags(work: Path) -> dict[int, list[str]]:
+    """The polish fixer's flags by cue, from W/polish_flags.txt."""
+    path = work / "polish_flags.txt"
+    out: dict[int, list[str]] = {}
+    if not path.exists():
+        return out
+    n = None
+    for ln in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if ln.startswith("#") and ln[1:2].isdigit():
+            n = int(ln[1:].split()[0])
+        elif n is not None and ln.startswith("flag: "):
+            out.setdefault(n, []).append(ln[6:].strip())
+    return out
+
+
+def _note(text: str) -> str:
+    text = " ".join(text.split())
+    return text if len(text) <= NOTE_CHARS else text[: NOTE_CHARS - 1] + "…"
+
+
+def review_parts(work: Path, size: int = PART_CUES) -> dict:
+    """Cut the film into review parts. Each part file lists its cues as
+    the side-by-side file does, plus the English when the source is another
+    language, and a `notes` field: the check's hard fails and warnings for
+    the cue, the polish fixer's flags (the fixer handles those) and the
+    translators' flags. PART_CONTEXT cues on each side come first and last,
+    marked as context.
+
+    The file is all the film its reviewer reads, so it stays small: a
+    reading speed note only where the Turkish alone is fast (the one kind
+    the reviewer can fix without losing meaning), no fixer note that a cue
+    has no Turkish yet (the Turkish field says `<MISSING>` until the fixer
+    writes it), each note once and cut to NOTE_CHARS."""
+    if size < 50:
+        raise SystemExit("--size takes 50 cues or more")
+    all_rows = json.loads((work / "cues.json").read_text(encoding="utf-8"))
     speakers = json.loads((work / "speakers.json").read_text(encoding="utf-8"))
     texts, _ = load_translation(work)
-    # A run seeded from an existing Turkish file (polish.py writes
-    # polish_placement.json) had no translators handing over, so no joins
-    # to mark, even when the bible writer's chunks.json exists.
-    chunks_file = work / "chunks.json"
+    by_n = {r["n"]: r for r in all_rows}
+    sound_only = sound_only_cues(work, by_n)
+    rows = sorted((r for r in all_rows if r["n"] not in sound_only), key=lambda r: (r["start"], r["n"]))
+    if not rows:
+        raise SystemExit("no spoken cues to review")
+    notes: dict[int, list[str]] = {}
     seeded = (work / "polish_placement.json").exists()
+    checks_file = work / "checks.json"
+    if checks_file.exists():
+        checks = json.loads(checks_file.read_text(encoding="utf-8"))
+        for hard, items in ((True, checks.get("hard", [])), (False, checks.get("warnings", []))):
+            for x in items:
+                if x.get("cue") is not None:
+                    if x["check"] == "reading speed" and TURKISH_ONLY_FAST not in (x.get("detail") or ""):
+                        continue
+                    # In a polish run the human file's sen or siz is the
+                    # evidence, not the bible: a note against the bible
+                    # would only push a reviewer to change it.
+                    if seeded and x["check"] == "address form":
+                        continue
+                    label = x["check"] + (f": {x['detail']}" if x.get("detail") else "")
+                    notes.setdefault(x["cue"], []).append(("HARD " if hard else "") + label)
+    for n, fl in _fixer_flags(work).items():
+        notes.setdefault(n, []).extend(f"fixer: {f}" for f in fl if not f.startswith("cue count: missing"))
+    for n, fl in _translator_flags(work).items():
+        notes.setdefault(n, []).extend(f"translator: {f}" for f in fl)
+    chunks_file = work / "chunks.json"
     chunks = json.loads(chunks_file.read_text(encoding="utf-8")) if chunks_file.exists() and not seeded else []
     joins = {c["first"] for c in chunks[1:]}
-    sound_only = sound_only_cues(work, {r["n"]: r for r in rows})
-    path = work / "sidebyside.tsv"
-    with open(path, "w", encoding="utf-8") as f:
-        f.write("n\tspeaker\tsource\tturkish\n")
-        for r in rows:
-            n = r["n"]
-            if n in sound_only:
-                continue
-            if n in joins:
-                f.write(f"# --- chunk join before cue {n} ---\n")
-            who = prepare.speaker_hint(speakers.get(str(n), {}))
-            src = " / ".join(r["source"] or r["timing_lines"])
-            tr = " / ".join(texts.get(n, ["<MISSING>"]))
-            f.write(f"{n}\t{who}\t{src}\t{tr}\n")
-    return path
+
+    def line(r: dict) -> str:
+        n = r["n"]
+        who = prepare.speaker_hint(speakers.get(str(n), {}))
+        src = prepare._one_line(r["source"] or r["timing_lines"])
+        en = prepare._one_line(r["en"]) if r.get("en") and r["en"] != r["source"] else ""
+        tr = " / ".join(texts.get(n, ["<MISSING>"]))
+        note = " | ".join(dict.fromkeys(_note(x) for x in notes.get(n, [])))
+        return f"{n}\t{who}\t{src}\t{en}\t{tr}\t{note}\n"
+
+    def join(r: dict) -> str:
+        # Every chunk join is marked, a part's first cue and the context
+        # included: parts and chunks both cut at long pauses, so they often
+        # start on the same cue.
+        return f"# --- chunk join before cue {r['n']} ---\n" if r["n"] in joins else ""
+
+    folder = work / REVIEW_DIR
+    folder.mkdir(exist_ok=True)
+    for old in folder.glob("part_*"):
+        old.unlink()
+    for old in (work / "out").glob("fix_review_*.txt"):
+        old.unlink()
+    bounds = [0, *_part_cuts(rows, size), len(rows)]
+    parts = []
+    for i, (a, b) in enumerate(zip(bounds, bounds[1:]), 1):
+        nn = f"{i:02d}"
+        path = folder / f"part_{nn}.tsv"
+        own = rows[a:b]
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("n\tspeaker\tsource\ten\tturkish\tnotes\n")
+            if a > 0:
+                f.write("# --- context before your part: read it, never change it ---\n")
+                for r in rows[max(0, a - PART_CONTEXT) : a]:
+                    f.write(join(r) + line(r))
+            f.write(f"# --- your part: cues {own[0]['n']}-{own[-1]['n']} ---\n")
+            for r in own:
+                f.write(join(r) + line(r))
+            if b < len(rows):
+                f.write("# --- context after your part: read it, never change it ---\n")
+                for r in rows[b : b + PART_CONTEXT]:
+                    f.write(join(r) + line(r))
+        parts.append(
+            {
+                "part": nn,
+                "first": own[0]["n"],
+                "last": own[-1]["n"],
+                "cues": len(own),
+                "file": str(path),
+                "write_to": str(work / "out" / f"fix_review_{nn}.txt"),
+                "notes_to": str(folder / f"part_{nn}.md"),
+            }
+        )
+    fast = sum(1 for v in notes.values() if any(x.startswith("reading speed") and TURKISH_ONLY_FAST in x for x in v))
+    return {"parts": parts, "cues": len(rows), "turkish_only_fast": fast}
+
+
+def join_reviews(work: Path) -> dict:
+    """Join the review parts' notes (W/review/part_<NN>.md) into
+    W/review.md, in part order, and say which parts wrote none."""
+    folder = work / REVIEW_DIR
+    tables = sorted(folder.glob("part_*.tsv"))
+    out, missing = ["# Review", ""], []
+    for t in tables:
+        md = t.with_suffix(".md")
+        nn = t.stem.split("_")[1]
+        if not md.exists():
+            missing.append(nn)
+            continue
+        out += [f"## Part {nn}", "", md.read_text(encoding="utf-8").strip(), ""]
+    (work / "review.md").write_text("\n".join(out), encoding="utf-8")
+    fixes = sorted(p.name for p in (work / "out").glob("fix_review_*.txt"))
+    return {"review": str(work / "review.md"), "parts": len(tables), "notes_missing": missing, "fix_files": fixes}
 
 
 FIX_DIR = "fixes"
@@ -748,9 +978,8 @@ def main(argv: list[str] | None = None) -> None:
     sys.stdout.reconfigure(encoding="utf-8")
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
-    for name in ("check", "sidebyside"):
-        s = sub.add_parser(name)
-        s.add_argument("--work", type=result.path, required=True)
+    ck = sub.add_parser("check")
+    ck.add_argument("--work", type=result.path, required=True)
     d = sub.add_parser("deliver")
     d.add_argument("--work", type=result.path, required=True)
     d.add_argument("--dest", type=result.path, required=True)
@@ -760,6 +989,11 @@ def main(argv: list[str] | None = None) -> None:
     wh = sub.add_parser("where")
     wh.add_argument("--work", type=result.path, required=True)
     wh.add_argument("--cues", required=True, help="comma-separated cue numbers of the timing file")
+    rp = sub.add_parser("reviewparts")
+    rp.add_argument("--work", type=result.path, required=True)
+    rp.add_argument("--size", type=int, default=PART_CUES, help="cues per part, about")
+    rv = sub.add_parser("reviews")
+    rv.add_argument("--work", type=result.path, required=True)
     fr = sub.add_parser("fixround")
     fr.add_argument("--work", type=result.path, required=True)
     fr.add_argument("--round", required=True, help="the round's label: r1, r2, r3, post")
@@ -767,8 +1001,10 @@ def main(argv: list[str] | None = None) -> None:
     a = result.parse(p, argv)
     if a.cmd == "check":
         result.emit(_summary(run_checks(a.work)), a.result)
-    elif a.cmd == "sidebyside":
-        result.emit({"sidebyside": str(sidebyside(a.work))}, a.result)
+    elif a.cmd == "reviewparts":
+        result.emit(review_parts(a.work, a.size), a.result)
+    elif a.cmd == "reviews":
+        result.emit(join_reviews(a.work), a.result)
     elif a.cmd == "where":
         try:
             numbers = [int(x) for x in a.cues.split(",") if x.strip()]
