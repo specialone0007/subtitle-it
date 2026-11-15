@@ -353,7 +353,11 @@ The check also lays out each cue as it will be shown: at most 2 lines of
 42 characters, and in a two-speaker cue one line per speaker. A
 two-speaker cue that does not fit is split into one cue per speaker when
 each part lasts at least a second and stays at 17 characters a second or
-less; its result counts them in `split_cues`. A cue that cannot be laid
+less; its result counts them in `split_cues`. A cue whose Turkish reads
+above 17 characters a second stays on screen into the silence after it:
+at most half a second longer, the file's usual gap before the next cue
+kept, 7 seconds on screen at most. Its reading speed is measured over
+that time; its result counts these cues in `extended_cues`. A cue that cannot be laid
 out is a `line length` or `lines per cue` hard fail with the reason, and
 goes to the fix round like any other. With `remove`, square brackets in
 the Turkish are a hard fail too, and so are a speaker label or a

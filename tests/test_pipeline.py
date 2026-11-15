@@ -79,6 +79,9 @@ def test_check_passes_and_writes_draft(work: Path):
     assert r["hard_fail_count"] == 0, r["hard"]
     assert r["warning_count"] == 0, r["warnings"]
     back, _ = srt.parse(work / "draft.tr.srt")
+    # No cue reads above 17 a second, so none is shown longer: every cue
+    # keeps its timestamp line exactly as the timing file writes it.
+    assert r["extended_cues"] == 0
     assert [c.ts for c in back] == [c.ts for c in srt.parse(work / "timing.srt")[0]]
 
 
@@ -132,7 +135,8 @@ def test_review_parts_hold_each_cue_once_with_its_notes(work: Path):
         "1\tMara\tViens.\tCome.\tGel.\t",
     ]
     assert lines[4].endswith("\ttranslator: unsure who asks")
-    # Cue 4: the English reads at 2.5 characters a second, the Turkish at 24.5.
+    # Cue 4, the last, is shown half a second longer: over 2.5 s the
+    # English reads at 2.0 characters a second, the Turkish at 19.6.
     assert "only the Turkish is fast" in lines[5] and got["turkish_only_fast"] == 1
 
 

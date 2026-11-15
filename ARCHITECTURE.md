@@ -241,7 +241,11 @@ model of `sonnet` also runs at low effort; that is untested.
   siz against the bible, a plain "hala" or "aşık" that probably lacks its
   circumflex, and a few Turkish style checks. They go to the reviewers.
   A reading speed warning says `only the Turkish is fast` when the
-  source reads at 17 characters a second or less.
+  source reads at 17 characters a second or less. Both speeds are
+  measured over the time the cue is shown, which for a fast cue may run
+  into the silence after it (see the layout below). Meaning and natural
+  Turkish come first: a reviewer reaches 17 only by a shorter natural
+  wording or by dropping filler, and otherwise keeps the line, fast.
   Some keep the film consistent: a cue whose source says a term the bible
   decided but whose Turkish has none of the bible's rendering (`term
   rendering`), a second form of a word the rest of the film writes one way
@@ -279,7 +283,12 @@ cue per speaker. Its time is shared in proportion to each part's length,
 and a part that would get under a second gets a second, taken from the
 others. The file's usual gap goes between the parts. The split is made
 only when every part lasts at least a second and reads at 17 characters a
-second or less. Anything else is a hard fail. The draft is numbered from 1 as delivered, and
+second or less. Anything else is a hard fail. A cue whose Turkish reads
+above 17 characters a second over its own time stays on screen into the
+silence before the next cue, until it reads at 17: at most half a second
+longer, never closer to the next cue than the file's usual gap, never
+past 7 seconds on screen (`layout.available_end`). A split cue gives that
+extra time to its last part. The draft is numbered from 1 as delivered, and
 `cue_map.json` leads each delivered cue back to the timing file's cue; the
 rest of the work folder keeps the timing file's numbers.
 
