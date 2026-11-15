@@ -10,7 +10,7 @@
     uv run usage.py wait    --file F [--file ...] [--settle-s 20] [--timeout-min 60]
 
 `step` marks the start of a group of steps (`find`, `hints_bible`,
-`translate`, `polish`, `check`, `review`, `deliver`), and `done` marks the
+`translate`, `polish`, `check`, `review`, `listen`, `deliver`), and `done` marks the
 end of the run. A group lasts until the next mark. Each mark is a line in
 W/usage.jsonl with the time it was made. `--new` starts the log afresh,
 for the first mark of a run, so a film translated again does not add to
@@ -57,7 +57,8 @@ GROUPS = {
     "polish": "6–7 · polish: seed and fix",
     "check": "8–9 · assemble and check",
     "review": "10 · review in parts",
-    "deliver": "11 · delivery and report",
+    "listen": "11 · listen",
+    "deliver": "12 · delivery and report",
 }
 END = "done"
 NAME_RE = re.compile(r"^[a-z][a-z0-9_-]{0,40}$")

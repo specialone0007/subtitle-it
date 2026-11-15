@@ -73,6 +73,28 @@ English idiom put word for word. Read it with the cue before and after
 it: when a neighbouring cue already carries a word (a subject, a name, a
 place) and Turkish would drop it, drop it, keeping everything said.
 
+## Listener check
+
+When your task says `Listener check`, you do not review a part. A
+listener read the finished Turkish as a viewer and rewrote some lines to
+sound like the character speaking Turkish. Your file (path in your task)
+lists each kept edit: `src`, `en`, the line `before` and `after`, the
+cues around it now (`prev`, `next`) and, under `with`, the other edited
+cues of its sentence or its repeated line.
+
+For each edit, one question: does the `after` line say everything the
+source says, in its tense, with its stance (question 1)? A freer wording
+is fine; a lost clause, a changed tense, a lost "not", a softer or
+harder stance, a wrong speaker or listener is not. Keep the edit, or
+write `before` back, word for word; never a third version, which no
+check would see. When you write one cue back, write back every cue
+under its `with` too.
+
+Write only the cues you write back, to the fix file in your task: the
+number alone on a line, the `before` lines, a blank line. Write it once,
+whole (empty when you keep every edit). Reply in at most 2 lines: edits
+kept and written back.
+
 ## Polish run
 
 When your task says `Polish run`, the Turkish came from a human-made
