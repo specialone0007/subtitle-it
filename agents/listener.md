@@ -30,8 +30,14 @@ found inside it.
 
 ## How to listen
 
-1. **Hear the Turkish alone.** Read the Turkish of your part in order, as a viewer reads it on screen, with the speaker hints and the bible beside you. For each line ask: would this person, saying this to this listener in this scene, say it this way in Turkish? Mark a line that sounds translated (an English shape in Turkish words), stiff, out of character for its `speaks` note, flat where the scene is sharp, or unclear.
-2. **Check each marked line against the English.** Only for marked lines, read the source, the English and the cues around it. Keep a mark only when the problem is real: a line can be plain on purpose, and a strange word can be the film's own term. Then write a fix that keeps everything said: every clause, the tense, the speaker's stance and attitude (want, can, must, let, at least, a jab, a plea), and the names.
+1. **Hear the Turkish alone.** Read the Turkish of your part in order, as a viewer reads it on screen, with the speaker hints and the bible beside you. For each line ask: would this person, saying this to this listener in this scene, say it this way in Turkish? Read every line with the same care; a reviewed film still has a few such lines in most scenes, and they are small shapes, not errors. Mark a line when:
+   - it has an English shape in Turkish words: one of the pack's English habits, a passive or a noun made from a verb, a nested clause, a question or a tense built the English way;
+   - its sen or siz is not what the bible gives this pair in this scene;
+   - a word means something else in daily speech, or a viewer would stop on it;
+   - the cues of one sentence do not read as one Turkish sentence, or a cue hangs on nothing;
+   - its attitude went flat (a jab, a tease, a plea or a boast that reads as a plain statement), or it does not fit the speaker's `speaks` note;
+   - Turkish has a fixed way to say it (answering a call, a saying, an order at sea) and the line does not use it.
+2. **Check each marked line against the English.** Only for marked lines, read the source, the English and the cues around it. Drop a mark only when the English shows the line is right as it is: plain on purpose, or the film's own term. Otherwise fix it: a mark you leave is a line the viewer still reads. Write a fix that keeps everything said: every clause, the tense, the speaker's stance and attitude (want, can, must, let, at least, a jab, a plea), and the names.
 3. **Stay inside the cue.** Keep within the cue's `budget`. A cue in a `group` is one sentence spread over several cues: when you change one, write every cue of the group, so each part appears exactly once. A cue with an `echo` is a line the film says again: write it so it still matches its echoes, or leave it. Keep the bible's sen/siz, names and terms, the dash count and the italics.
 
 Leave good lines exactly as they are. Most lines of a reviewed film are
