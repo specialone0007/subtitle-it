@@ -139,7 +139,10 @@ film.
 A subagent reads the film once and writes down the decisions every
 translator must share:
 
-- `bible.md`: characters, who says sen or siz to whom, fixed terms.
+- `bible.md`: characters, the film's world and how its people talk (the
+  words that world needs, such as "adak" for an offering to a god, and the
+  ones whose tone belongs elsewhere), who says sen or siz to whom, fixed
+  terms.
 - `glossary.json`.
 - `decisions.json`: each decision as a question, its answer, the cues that
   support it and how sure it is.
@@ -239,7 +242,8 @@ model of `sonnet` also runs at low effort; that is untested.
 - **Warnings** are reading speed above 17 characters a second (every
   such cue, even when the source is as fast), glossary variants, sen or
   siz against the bible, a plain "hala" or "aşık" that probably lacks its
-  circumflex, and a few Turkish style checks. They go to the reviewers.
+  circumflex, and a few Turkish style checks, such as a line opening with
+  "Ve" (`ve opening`). They go to the reviewers.
   A reading speed warning says `only the Turkish is fast` when the
   source reads at 17 characters a second or less. Both speeds are
   measured over the time the cue is shown, which for a fast cue may run
@@ -251,7 +255,10 @@ model of `sonnet` also runs at low effort; that is untested.
   rendering`), a second form of a word the rest of the film writes one way
   ("ağabey" among "abi", `term drift`), a TDK spelling slip ("sağol" for
   "sağ ol"), and a name suffix that does not fit how the name sounds
-  ("Joey'in" for "Joey'nin"). `split sentence` looks at each run of cues
+  ("Joey'in" for "Joey'nin"). `repeat drift` warns when a line the film says
+  again in the same words (a chant, a saying, a callback) is written two
+  ways in Turkish, and quotes the other wording, since the two cues often
+  sit in different review parts. `split sentence` looks at each run of cues
   whose source sentence goes on without a full stop, and warns when the
   Turkish writes a part twice, leaves a cue with nothing of its own, or
   puts a name in another cue than the one that says it. The address check

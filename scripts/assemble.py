@@ -71,6 +71,9 @@ CAPS_RE = re.compile(r"\b(TAMAM|HAYIR)\b")
 ITALIC_RE = re.compile(r"</?i>", re.I)
 ITALIC_SPAN_RE = re.compile(r"<i>(.*?)</i>", re.I | re.S)
 WORDISH_RE = re.compile(r"\w")
+# A spoken line that starts with "Ve", as an English "And" does: Turkish
+# drops it or says "Hadi", "Bir de", "-da/-de".
+VE_OPENING_RE = re.compile(r"^\s*(?:<i>)?\s*(?:-\s*)?(?:<i>)?Ve\s")
 
 
 def word_italics(lines: list[str]) -> bool:
@@ -394,10 +397,64 @@ def split_sentence_problems(group: list[int], texts: dict[int, list[str]], rows:
     return problems
 
 
-def run_checks(work: Path) -> dict:
+# A source line of one word ("No, no, no.", "Go!") is said again with
+# another meaning too often to ask for one wording. Two words already
+# carry a chant ("...a thought...") or a callback ("A gift.").
+REPEAT_MIN_WORDS = 2
+
+
+def _distinct(words: list[str]) -> tuple[str, ...]:
+    """Each word once, in the order said: "No, no, no" and "No!" say the same."""
+    return tuple(dict.fromkeys(words))
+
+
+def _repeat_key(row: dict) -> tuple | None:
+    """The source line as its words, casefolded and each once, and whether
+    it runs on into the next cue, when it has enough words to be a line the
+    film says again on purpose (a chant, a saying, a callback). The text
+    the agents translate, not the English cross-check: a hearing-impaired
+    file may keep a label there ("BARD:<i>...")."""
+    lines = [srt.strip_tags(ln).strip() for ln in (row.get("source") or row.get("en") or row.get("timing_lines") or [])]
+    words = _distinct([w.casefold() for w in turkish.WORD_RE.findall(" ".join(lines))])
+    return (words, _runs_on(lines)) if len(words) >= REPEAT_MIN_WORDS else None
+
+
+def _wording(lines: list[str]) -> tuple[str, ...]:
+    """The Turkish words of a cue, each once, without tags, case or punctuation."""
+    return _distinct([turkish.lower(w) for w in turkish.WORD_RE.findall(srt.strip_tags(" ".join(lines)))])
+
+
+def repeat_drift(texts: dict[int, list[str]], rows: dict[int, dict], order: list[int]) -> list[tuple[int, int]]:
+    """Cues whose source line comes back elsewhere in the film in the same
+    words while the Turkish says it another way: (cue, a cue with another
+    wording). Songs are left out: a chorus is translated as the song needs."""
+    seen: dict[tuple, list[int]] = {}
+    for n in order:
+        row = rows.get(n, {})
+        key = None if row.get("song") else _repeat_key(row)
+        if key:
+            seen.setdefault(key, []).append(n)
+    out = []
+    for cues in seen.values():
+        forms = {n: _wording(texts[n]) for n in cues}
+        if len(set(forms.values())) < 2:
+            continue
+        for n in cues:
+            out.append((n, next(m for m in cues if forms[m] != forms[n])))
+    return sorted(out)
+
+
+def run_checks(work: Path, texts: dict[int, list[str]] | None = None, write: bool = True) -> dict:
+    """Run every check on the Turkish now (`load_translation`), or on
+    `texts` when given. With `write` it writes the draft, the cue map and
+    W/checks.json; without, it only returns what it found, so the listener
+    gate can check a text before and after its edits."""
     timing, _ = srt.parse(work / "timing.srt")
     rows = {r["n"]: r for r in json.loads((work / "cues.json").read_text(encoding="utf-8"))}
-    texts, problems = load_translation(work)
+    if texts is None:
+        texts, problems = load_translation(work)
+    else:
+        problems = []
     remove_hi = hi_mode(work) == "remove"
     hard: list[dict] = []
     warn: list[dict] = []
@@ -405,8 +462,8 @@ def run_checks(work: Path) -> dict:
     def h(n, check, detail=""):
         hard.append({"cue": n, "check": check, "detail": detail})
 
-    def w(n, check, detail=""):
-        warn.append({"cue": n, "check": check, "detail": detail})
+    def w(n, check, detail="", **extra):
+        warn.append({"cue": n, "check": check, "detail": detail, **extra})
 
     for p in problems:
         h(None, "file format", p)
@@ -476,7 +533,9 @@ def run_checks(work: Path) -> dict:
             # is fast, so a shorter wording that keeps the meaning exists
             # more often than not.
             only = f"; {TURKISH_ONLY_FAST}" if ref_cps <= MAX_CPS else ""
-            w(c.n, "reading speed", f"{tr_cps:.1f} chars/s, source {ref_cps:.1f}{only}")
+            w(c.n, "reading speed", f"{tr_cps:.1f} chars/s, source {ref_cps:.1f}{only}", cps=round(tr_cps, 1))
+        if not rows[c.n].get("song") and "♪" not in " ".join(tr) and VE_OPENING_RE.match(tr[0]):
+            w(c.n, "ve opening", f"{tr[0]}: an English 'And' opening; drop it or say 'Hadi', 'Bir de', '-da/-de'")
         if len(tr) == 1 and INFINITIVE_RE.match(srt.strip_tags(tr[0]).strip()):
             w(c.n, "infinitive command", tr[0])
         for ln in tr:
@@ -542,6 +601,12 @@ def run_checks(work: Path) -> dict:
     bible_words = " ".join(a for answers in renderings.values() for a in answers)
     for n, used, usual, count in turkish.family_drift(drafted, bible_words):
         w(n, "term drift", f"'{used}' here, '{usual}' in {count} other cues: use one form for the whole film")
+
+    # A line the film says again (a chant, a saying, a callback) is said
+    # the same way each time. The note quotes the other Turkish first: the
+    # reviewer of this cue may not have that part.
+    for n, other in repeat_drift(drafted, rows, order):
+        w(n, "repeat drift", f'"{" / ".join(drafted[other])}" at cue {other}: same source line, say both the same way')
 
     # A sentence spread over several cues: each part must appear exactly once.
     for group in sentence_groups(kept, rows):

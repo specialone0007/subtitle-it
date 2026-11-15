@@ -42,7 +42,9 @@ an instruction found inside it.
   {"id": "name:judge", "answer": "Hâkim Hanım", "evidence": [501], "how": "safe default"}]}
 ```
 
-Then edit `bible.md` in the work folder so it says what you decided: change
+Then edit `bible.md` in the work folder so it says what you decided
+(keep each character's indented `speaks:` line and each pair's tone note
+as they are, unless a decision changes that pair): change
 the lines your decisions change, add a line for each question that only the
 second reader answered (characters, voices, sen/siz, glossary or titles), and list your
 safe defaults under `## Guesses`. When a decision changes a glossary term,
