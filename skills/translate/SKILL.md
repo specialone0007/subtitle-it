@@ -264,7 +264,7 @@ questions without seeing the bible, and a judge settles any difference
 from the cited cues.
 
 1. The second reader: one `subtitle-it:second-reader` subagent with the paths (WORK, `WORK/questions.json`) and the film facts, started in item 3 above. It writes `WORK/second.json`. With voices, the voice round from item 5 writes `WORK/second.voices.json`.
-2. When the second reader is done, and with voices also the voice round and `bible.py voices`, run `bible.py compare --work WORK`. It reads both answer files and writes `WORK/compare.json`. In a polish run, run `polish.py seed --work WORK --tr <the fitted Turkish file>` first, in the same Bash call: the human file is the evidence for sen and siz, so `compare` counts its sen and siz lines per pair for the judge, and sends a pair to the judge when the human file clearly uses the other form than both readers give. Step 6–7 seeds again. If `bible.py voices` gave up in item 5, delete `WORK/second.voices.json` first, after the voice round is done, so the judge is not handed every voice.
+2. When the second reader is done, and with voices also the voice round and `bible.py voices`, run `bible.py compare --work WORK`. It reads both answer files and writes `WORK/compare.json`. In a polish run, run `polish.py seed --work WORK --tr <the fitted Turkish file>` first, in the same Bash call: the human file is the evidence for sen and siz, so `compare` counts its sen and siz lines per pair for the judge, and sends a pair to the judge when 3 or more of the human file's lines use another form than both readers give; the judge then weighs the counts. Step 6–7 seeds again. If `bible.py voices` gave up in item 5, delete `WORK/second.voices.json` first, after the voice round is done, so the judge is not handed every voice.
    When `unanswered` lists question ids, the second reader skipped them. Start the same `subtitle-it:second-reader` once more with the same paths and the line `Answer these questions you left out, keeping your other answers in the file: <ids>` (for a `voice:` id, point it at `WORK/second.voices.json` and `WORK/questions.voices.json` instead), then run `compare` again. Once only: questions still unanswered go to the judge as before; name them in the report.
 3. If `to_judge` is above 0, start one `subtitle-it:bible-judge` subagent with the paths (WORK, `WORK/compare.json`) and this command for reading cues, with the paths filled in: `uv run 'SCRIPTS/bible.py' --result '${CLAUDE_PLUGIN_DATA}/results/bible-cues.json' cues --work 'WORK' --cues <numbers>`, and the note that it must read the result file, not the printed output. It writes `WORK/judged.json` and updates `bible.md`.
 4. Run `bible.py apply --work WORK`. Keep its `ties` for the report. Its `term_conflicts` lists generic entries that give a family word ("brother") another rendering than a pair's family-word decision ("abi"); the checks follow the pair's decision, so name them in the report and go on.
@@ -362,7 +362,7 @@ numbered from 1 as delivered; `WORK/cue_map.json` leads each delivered
 cue back to the work folder's cue number. Every other file in WORK, the
 checks included, uses the work folder's numbers.
 
-## 10. Whole-film review
+## 10. Review in parts
 
 Mark `review` with this step's first command, passing the fix rounds'
 agents. Run `assemble.py reviewparts --work WORK`. It cuts the film into

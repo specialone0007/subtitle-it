@@ -3,6 +3,7 @@ the bible judge sees its counts per pair, and `check` lists every line
 whose form a fix changed, warning when no reason was given."""
 
 import json
+import os
 from pathlib import Path
 
 import assemble
@@ -140,3 +141,20 @@ def test_compare_weighs_a_switch_against_the_human_lines(tmp_path: Path):
     (w / "second.json").write_text(json.dumps({"answers": [answer], "extra": []}), encoding="utf-8")
     assert bible.compare(w)["judge_ids"] == ["address:Sam>Nora"]
     assert bible.human_against({"sen": [1, 2, 3, 4], "siz": []}, steps) == [1, 2, 3]
+
+
+def test_a_later_fix_file_without_a_reason_keeps_the_reviewers_reason(tmp_path: Path):
+    # The soft pass writes after the review and keeps the reviewer's siz on
+    # cue 1 without a reason line: the reviewer's reason must still count.
+    w = polish_work(tmp_path)
+    out = w / "out"
+    (out / "fix_review_01.txt").write_text("1\nNora, siz oturun.\n#address: the English says ma'am\n", encoding="utf-8")
+    (out / "fix_soft.txt").write_text("1\nNora, siz oturun lütfen.\n", encoding="utf-8")
+    # Fix files apply in the order they were written.
+    review = (out / "fix_review_01.txt").stat().st_mtime
+    os.utime(out / "fix_soft.txt", (review + 10, review + 10))
+    checks = assemble.run_checks(w)
+    assert checks["address_changes"] == [
+        {"cue": 1, "human": "sen", "now": "siz", "file": "fix_soft.txt", "reason": "the English says ma'am"},
+    ]
+    assert not any(x["check"] == "address changed" for x in checks["warnings"])
