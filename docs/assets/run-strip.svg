@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1358 300" width="1358" height="300" role="img" aria-labelledby="t d">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1522 300" width="1522" height="300" role="img" aria-labelledby="t d">
 <title id="t">How a run goes</title>
-<desc id="d">A strip of film frames, one per stage of a run, numbered with the steps of the architecture doc: find the film, get subtitles, audio hints, film bible, translate, check, review, deliver. Blue stages are scripts, green runs a local model, red is Claude.</desc>
-<rect width="1358" height="300" fill="#0b0b0d"/>
+<desc id="d">A strip of film frames, one per stage of a run, numbered with the steps of the architecture doc: find the film, get subtitles, audio hints, film bible, translate, check, review, listen, deliver. Blue stages are scripts, green runs a local model, red is Claude.</desc>
+<rect width="1522" height="300" fill="#0b0b0d"/>
 <rect x="18" y="12" width="14" height="12" rx="3" fill="#1d1d22"/>
 <rect x="48" y="12" width="14" height="12" rx="3" fill="#1d1d22"/>
 <rect x="78" y="12" width="14" height="12" rx="3" fill="#1d1d22"/>
@@ -47,6 +47,11 @@
 <rect x="1278" y="12" width="14" height="12" rx="3" fill="#1d1d22"/>
 <rect x="1308" y="12" width="14" height="12" rx="3" fill="#1d1d22"/>
 <rect x="1338" y="12" width="14" height="12" rx="3" fill="#1d1d22"/>
+<rect x="1368" y="12" width="14" height="12" rx="3" fill="#1d1d22"/>
+<rect x="1398" y="12" width="14" height="12" rx="3" fill="#1d1d22"/>
+<rect x="1428" y="12" width="14" height="12" rx="3" fill="#1d1d22"/>
+<rect x="1458" y="12" width="14" height="12" rx="3" fill="#1d1d22"/>
+<rect x="1488" y="12" width="14" height="12" rx="3" fill="#1d1d22"/>
 <rect x="18" y="232" width="14" height="12" rx="3" fill="#1d1d22"/>
 <rect x="48" y="232" width="14" height="12" rx="3" fill="#1d1d22"/>
 <rect x="78" y="232" width="14" height="12" rx="3" fill="#1d1d22"/>
@@ -92,6 +97,11 @@
 <rect x="1278" y="232" width="14" height="12" rx="3" fill="#1d1d22"/>
 <rect x="1308" y="232" width="14" height="12" rx="3" fill="#1d1d22"/>
 <rect x="1338" y="232" width="14" height="12" rx="3" fill="#1d1d22"/>
+<rect x="1368" y="232" width="14" height="12" rx="3" fill="#1d1d22"/>
+<rect x="1398" y="232" width="14" height="12" rx="3" fill="#1d1d22"/>
+<rect x="1428" y="232" width="14" height="12" rx="3" fill="#1d1d22"/>
+<rect x="1458" y="232" width="14" height="12" rx="3" fill="#1d1d22"/>
+<rect x="1488" y="232" width="14" height="12" rx="3" fill="#1d1d22"/>
 <rect x="30" y="38" width="150" height="180" rx="6" fill="#141418" stroke="#c9a227" stroke-width="1.5"/>
 <rect x="30" y="38" width="150" height="6" rx="3" fill="#4a90d9"/>
 <text x="105.0" y="130" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="52" fill="#f4efe1" opacity="0.9">1</text>
@@ -128,10 +138,15 @@
 <text x="1089.0" y="174" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" letter-spacing="1.5" fill="#f4efe1">REVIEW</text>
 <text x="1089.0" y="198" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#d9534f">Claude</text>
 <rect x="1178" y="38" width="150" height="180" rx="6" fill="#141418" stroke="#c9a227" stroke-width="1.5"/>
-<rect x="1178" y="38" width="150" height="6" rx="3" fill="#4a90d9"/>
+<rect x="1178" y="38" width="150" height="6" rx="3" fill="#d9534f"/>
 <text x="1253.0" y="130" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="52" fill="#f4efe1" opacity="0.9">11</text>
-<text x="1253.0" y="174" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" letter-spacing="1.5" fill="#f4efe1">DELIVER</text>
-<text x="1253.0" y="198" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#4a90d9">script</text>
+<text x="1253.0" y="174" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" letter-spacing="1.5" fill="#f4efe1">LISTEN</text>
+<text x="1253.0" y="198" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#d9534f">Claude</text>
+<rect x="1342" y="38" width="150" height="180" rx="6" fill="#141418" stroke="#c9a227" stroke-width="1.5"/>
+<rect x="1342" y="38" width="150" height="6" rx="3" fill="#4a90d9"/>
+<text x="1417.0" y="130" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="52" fill="#f4efe1" opacity="0.9">12</text>
+<text x="1417.0" y="174" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" letter-spacing="1.5" fill="#f4efe1">DELIVER</text>
+<text x="1417.0" y="198" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#4a90d9">script</text>
 <rect x="30" y="265" width="12" height="12" rx="2" fill="#4a90d9"/><text x="48" y="275" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#cfc8b4">script</text>
 <rect x="160" y="265" width="12" height="12" rx="2" fill="#3fb27f"/><text x="178" y="275" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#cfc8b4">local model</text>
 <rect x="290" y="265" width="12" height="12" rx="2" fill="#d9534f"/><text x="308" y="275" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#cfc8b4">Claude</text>
