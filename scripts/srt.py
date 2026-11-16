@@ -416,8 +416,11 @@ _LEAD_RE = re.compile(r"^(?P<tags>(?:\s*(?:<[^>]+>|\{\\[^}]*\}))*)\s*(?P<dash>-\
 # A speaker label with a colon: "MARA:", "[MARA]:", "(MARA):",
 # "MARA (whispering):" or "[Mara]:". Without brackets the name must be in
 # capitals, so "Rule one: never lie" stays dialogue. Capitals before a colon
-# are a label only when they look like a name: see _is_name.
-_CAPS_LABEL_RE = re.compile(r"[\[(]?(?P<name>[A-ZÀ-ÝĞİŞ][A-ZÀ-ÝĞİŞ0-9 .'\-]{1,30}?)[\])]?(?:\s*\([^)]*\))?\s*:(?:\s+|$)")
+# are a label only when they look like a name: see _is_name. A tag may follow
+# the colon with no space: "HARTLEY:<i>Wait for me.</i>".
+_CAPS_LABEL_RE = re.compile(
+    r"[\[(]?(?P<name>[A-ZÀ-ÝĞİŞ][A-ZÀ-ÝĞİŞ0-9 .'\-]{1,30}?)[\])]?(?:\s*\([^)]*\))?\s*:(?:\s+|$|(?=<|\{\\))"
+)
 _NAME = r"[A-ZÀ-ÝĞİŞ][\w'.\-]*(?:\s+[A-ZÀ-ÝĞİŞ][\w'.\-]*){0,2}"
 # A bracketed name in front of speech, with or without a colon: "[Mara] Hi.",
 # "[1. Man] Hi.", "[Mara]: Hi.". Each word starts with a capital; a bracket

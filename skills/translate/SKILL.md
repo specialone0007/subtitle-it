@@ -66,7 +66,7 @@ Never read, print or edit `CONFIG/credentials.json`; only
 Each run records how long its steps took and what its subagents used,
 for the report. `usage.py step --work 'WORK' --name <group>` marks the
 start of a step group; the groups are `find`, `hints_bible`, `translate`
-or `polish`, `check`, `review` and `deliver`, and `done` ends the run.
+or `polish`, `check`, `review`, `listen` and `deliver`, and `done` ends the run.
 Each step below says when to mark it. Join the mark to that step's first
 script command with `&&`, so it costs no extra call. Never make a call
 only to mark a step.
@@ -75,7 +75,9 @@ A subagent's completion notice ends with its usage: its tokens
 (`subagent_tokens` or `total_tokens`) and `duration_ms`. Keep them for
 each agent, and pass them with the next mark as one
 `--agent <kind>:<tokens>:<ms>` per agent, where kind is the agent type
-without `subtitle-it:` (`--agent translator:61234:182000`). Write
+without `subtitle-it:` (`--agent translator:61234:182000`); the
+reviewer of step 11's meaning check is `listen-check`, so the report
+shows what listening costs apart from the review. Write
 `-` for a number the notice did not give. Never guess one.
 
 The notice can come many minutes after the agent wrote its last file, so
@@ -154,7 +156,7 @@ why in one line, from its `reason`.
 Then look for a human-made Turkish subtitle to polish instead of
 translating every line. Skip this when the timing file came from the
 audio. Take a Turkish text track or file that `sources.py local` found,
-except the destination file of step 11 and any file whose `confidence` is
+except the destination file of step 12 and any file whose `confidence` is
 "this plugin's earlier delivery, not a source", else run `opensubtitles.py search`
 as above with `--languages tr` (it leaves out machine and AI translations)
 and download the first result as `WORK/sources/os_tr.srt`. Run
@@ -406,7 +408,53 @@ hard fail gets one fix round as in step 9, with `--round post`, written to
 `WORK/out/fix_post_<NN>.txt`. Fix files apply in the order they were
 written, so that round's files win over the review's.
 
-## 11. Deliver
+## 11. Listen
+
+Skip this step in a polish run: its Turkish is a human's spoken Turkish.
+
+Mark `listen` with this step's first command, passing the reviewers'
+agents. Run `assemble.py listenparts --work WORK`. It saves the Turkish
+as it is now and cuts the spoken cues into parts of about 480. Each
+part's listener reads the finished Turkish alone, as a viewer would, and
+rewrites the lines that do not sound like this character saying this to
+this listener in Turkish. In ONE message, start one
+`subtitle-it:listener` subagent per part in its result's `parts`, each
+with this prompt:
+
+```
+Language pack: ${CLAUDE_SKILL_DIR}/pack-tr.md
+Bible: WORK/bible.md
+Preferences: CONFIG/preferences.md
+Your part: <file>   (cues <first>-<last>)
+English: <en_file>
+Write to: <write_to>
+```
+
+In the same message, start `usage.py wait` in the background with every
+part's `write_to`. Then run `assemble.py listengate --work WORK`: it
+drops each edit that breaks a check, goes over its cue's budget, or
+breaks its sentence or its repeated line, and rewrites the listeners'
+files with the edits it kept. When its `kept` is above 0, run
+`assemble.py listencheck --work WORK` and start one
+`subtitle-it:reviewer` subagent with this prompt:
+
+```
+Language pack: ${CLAUDE_SKILL_DIR}/pack-tr.md
+Bible: WORK/bible.md
+Listener check
+Your file: WORK/review/listencheck.txt
+Write fixes to: WORK/out/fix_listencheck.txt
+Preferences: CONFIG/preferences.md
+```
+
+It keeps each edit that says everything the source says, or writes the
+line before it back. When it is done, run `assemble.py reviews --work WORK`
+(it adds the listener's counts to `review.md`) and `check`. When `check`
+has a hard fail on a cue in `listengate`'s `kept_cues`, run
+`assemble.py listendrop --work WORK --cues <those cues>` and `check`
+again. A hard fail on any other cue is handled as in step 10.
+
+## 12. Deliver
 
 Destination: next to the video as `<video file name without extension>.srt`,
 exactly the video's name, since many TVs only load a subtitle named like
@@ -414,7 +462,7 @@ the video (for an `.srt` input: the same folder, with the language part of
 the name replaced by `tr`, so the input is not written over). Run
 `assemble.py deliver --work 'WORK' --dest '<destination>' --backups 'CONFIG/backups'`
 (add `--force` when hard fails are left after the fix rounds), joined
-after the `deliver` mark with the agents of step 10. When the destination
+after the `deliver` mark with the agents of steps 10–11. When the destination
 is this default one next to a video, add `--video '<video>'`; leave it out
 when the user named another destination or the input was an `.srt`.
 The file is saved as UTF-8 with a BOM. A file already at the destination
@@ -440,7 +488,8 @@ run the lines whose sen or siz differs from the human file
 (`address_changes` in `WORK/checks.json`, each with its reason, and those
 with none), cue count
 (work folder and delivered), cues split per speaker, hard fails and
-warnings left, the review's summary from `review.md`. The work folder numbers cues by
+warnings left, the review's summary from `review.md` (with the listener's
+edits kept, dropped and written back). The work folder numbers cues by
 the timing file; the delivered file is numbered on its own. Before
 writing any cue number into the report, convert it with
 `assemble.py where --work WORK --cues <numbers, comma separated>`: it gives

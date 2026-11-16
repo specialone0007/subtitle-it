@@ -34,12 +34,12 @@ def test_agents_keep_a_short_tool_list_and_skip_claude_md():
         assert tools <= ALLOWED_TOOLS, f"{path.name}: {tools - ALLOWED_TOOLS}"
 
 
-def test_only_the_translator_and_reviewer_set_their_own_effort():
+def test_only_the_translator_reviewer_and_listener_set_their_own_effort():
     # The translators (and the fix rounds, which use the same agent) run at
-    # low effort, the part reviewers at medium, the effort they were tested
-    # at; every other agent takes the session's effort.
+    # medium effort, and so do the part reviewers and the listeners; every
+    # other agent takes the session's effort.
     efforts = {p.stem: fm["effort"] for p in AGENTS.glob("*.md") if "effort" in (fm := frontmatter(p))}
-    assert efforts == {"translator": "low", "reviewer": "medium"}
+    assert efforts == {"translator": "medium", "reviewer": "medium", "listener": "medium"}
 
 
 def test_only_the_judge_runs_commands():
@@ -88,3 +88,16 @@ def test_learn_reads_the_shared_files_from_the_translate_skill():
 def test_translate_points_to_the_learn_command_by_its_full_name():
     assert "`/subtitle-it:learn <film>`" in SKILL.read_text(encoding="utf-8")
     assert "learn" not in frontmatter(SKILL)["argument-hint"]
+
+
+def test_the_pack_stays_within_its_size_before_the_natural_lines_rules():
+    # The natural-lines rules fold into three principles instead of adding
+    # one line per case: the pack is no longer than it was before them.
+    assert len((ROOT / "skills" / "translate" / "pack-tr.md").read_text(encoding="utf-8")) <= 14_486
+
+
+def test_the_reviewer_puts_natural_turkish_before_reading_speed():
+    text = (ROOT / "agents" / "reviewer.md").read_text(encoding="utf-8")
+    q7 = text.split("7. **Too fast because of the Turkish?**")[1].split("\n")[0]
+    assert q7.index("everything said, in wording a Turkish speaker would use") < q7.index("Then 17 a second")
+    assert "never by a stiffer shape" in q7 and "kept on purpose" in q7

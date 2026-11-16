@@ -25,11 +25,41 @@ Before → after:
 
 ## Meaning before words
 
-- Write natural spoken Turkish, the way people in the scene would talk. Never word for word: an English sentence shape in Turkish words is a calque, rewrite it.
+- Write natural spoken Turkish, the way people in the scene would talk. Never word for word: an English sentence shape in Turkish words is a calque, rewrite it. "How Turkish people say it" below gives the test.
 - A sentence that runs over 2, 3 or more cues is translated as one sentence first, then spread back over those same cues so each part appears exactly once: no part written twice, no cue left with nothing of its own, and a name in the cue where it is said. Turkish word order often moves the verb to the last cue; that is fine. The check warns about such a group as `split sentence`.
 - Slang and idioms are translated by their meaning, never word for word: the bible's "Slang and idioms" section gives what each one means in this film ("lemon" = a car that keeps breaking down, "a rain check" = another time).
 - When the source language and the English disagree, the source language wins. English is a cross-check for meaning and for who speaks.
 - Keep names as written in the source. Do not translate place names that have no common Turkish form.
+
+## How Turkish people say it
+
+A line can be right word by word and still sound like a translation. The
+test for every line: say it out loud as this character, in this scene, to
+these people. If a Turkish viewer would notice that someone translated it,
+rewrite it, keeping everything said. Three principles:
+
+1. **Say what the scene means, from where the speaker stands**: who is where, who moves towards whom, what is happening. "Shoot! I forgot the keys." → "Hay aksi! Anahtarları unuttum.", not "Ateş et!".
+2. **Keep what the speaker does with the line**: the stance, the attitude, who it is aimed at. "Nice of you to show up." (to someone late) → "Nihayet gelebildin.", not "Gelmen çok hoş."
+3. **Say a known thing the known way**: fixed word pairs, sayings, everyday names, how people answer a call. "Better late than never." → "Geç olsun, güç olmasın."
+
+- The word people use, not the first dictionary word: an offering to a god is an "adak", not a "sunu". A word most viewers would stop to think about is wrong, even when it is in the dictionary.
+- English grammar words do not carry over. "a/an" is "bir" only when it means one, some, any or a new one, never a possessive: "I've already lost a father" → "Babamı zaten kaybettim". Drop "my", "your", "I" and "you" where the ending already says them, unless stressed.
+- Hear the word as daily speech hears it: "O benim partnerim" is heard as a lover (for work: "O benim ortağım"). Small words carry a shade: "ancak" says barely enough.
+- Words fit the film's world (the bible's "World and register"): no word whose tone belongs to another religion, period or culture.
+- A line the film says again (a chant, a saying, a line thrown back) is said the same way each time (`repeat drift`).
+
+English habits that give a translation away, one per line:
+
+- "And" opening a line is not "Ve": drop it, or say "Hadi", "Bir de", "-da/-de" (the check warns: `ve opening`).
+- "I'm sorry" is "Üzgünüm" only for grief; an apology is "Kusura bakma", "Özür dilerim".
+- A passive or a noun made from a verb: say who does it ("Geride bıraktıklarımız için", not "Geride bırakılanlar için").
+- "so that", "he says that", "the one who": use a plain verb, "diye" or "-mış".
+- An idiom put word for word: find the Turkish one ("That ship has sailed" → "İş işten geçti").
+- "Yes" and "no" answer the meaning: "I don't know." "Yes, you do." → "Biliyorsun."
+- "as a" is often "gibi": "Live as a king" → "Kral gibi yaşa".
+- "they" or a plural for things: "They wake me up" (the ship horns) → "Beni uyandırıyor".
+- A tense copied from English: a proposal is "Ya gitsek?", not "Ya gitseydik?".
+- "Evet, efendim" for every "Yes, sir": take the title the bible gives the pair.
 
 ## Form of each cue
 
