@@ -1,5 +1,53 @@
 # Changelog
 
+## 0.9.0 (2026-11-16)
+
+Lines read the way Turkish people say them: a listener reads the finished
+Turkish as a viewer before delivery, and a fast line gets more time on
+screen instead of a stiffer wording. On a full rerun of one 2026 film the
+listen step changed about 1 line in 42 and the meaning check made fewer
+errors than the delivered file; the delivered file, after about nine fix
+rounds, still read slightly better.
+
+- New step 11, Listen: one `listener` per part of about 480 cues reads
+  the Turkish alone and rewrites lines that do not sound like the
+  character speaking Turkish (`agents/listener.md`). `assemble.py
+  listenparts` writes the parts with each cue's character budget, its
+  sentence group and its repeated lines; `listengate` drops an edit that
+  is over budget or gives its cue, sentence or repeated line a new
+  problem in the checks; one reviewer (the meaning check) keeps each edit
+  or writes the old line back; `listendrop` drops an edit the last check
+  fails. `review.md` ends with the listener's counts. Not in a polish run.
+- The meaning check writes back an edit that loses a clause, a tense, a
+  "not" or the stance, makes a plural singular, narrows a word, adds a
+  thing the source does not say, or loses who tells whom. The usage
+  report counts it as its own kind, `listen-check`.
+- The pack's "How Turkish people say it" gives three principles with one
+  example each, plus one line per English habit, in fewer characters than
+  before. The bible gets the film's world and register, a `speaks` note
+  for up to 8 main characters and a tone note for a pair whose form
+  misleads. Reviewer question 6 asks whether a Turkish person would say
+  the line this way.
+- New warnings: `repeat drift` (one source line written two ways in the
+  film; it names the wording most of its cues use, the earliest on a tie,
+  and warns only the cues off it) and `ve opening` (a spoken line opening
+  with "Ve"; left to the reviewers in a polish run).
+- A cue whose Turkish reads above 17 characters a second stays on screen
+  until it reads at 17: at most half a second longer, keeping the file's
+  usual gap before the next cue, 7 seconds on screen at most. Both
+  speeds are measured over that time.
+- Reviewer question 7 puts natural Turkish before reading speed: a line
+  reaches 17 a second only by a shorter natural wording or by dropping
+  filler, never by a stiffer shape, and is otherwise kept and listed as
+  kept on purpose. The shortening formula is gone.
+- The translators run at medium effort again: low effort tied medium on
+  meaning, but not on how natural the Turkish sounds.
+- A capitals speaker label followed directly by a tag
+  ("HARTLEY:<i>Wait for me.</i>") is stripped.
+- A sen/siz reason line survives a later fix file that keeps the form but
+  writes no reason, so `check` no longer warns on it. The usage report
+  names step 10 "review in parts".
+
 ## 0.8.0 (2026-11-15)
 
 Every line gets a careful look: the review runs in parts of about 250
