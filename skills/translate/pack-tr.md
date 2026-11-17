@@ -46,7 +46,7 @@ rewrite it, keeping everything said. Three principles:
 - English grammar words do not carry over. "a/an" is "bir" only when it means one, some, any or a new one, never a possessive: "I've already lost a father" → "Babamı zaten kaybettim". Drop "my", "your", "I" and "you" where the ending already says them, unless stressed.
 - Hear the word as daily speech hears it: "O benim partnerim" is heard as a lover (for work: "O benim ortağım"). Small words carry a shade: "ancak" says barely enough.
 - Words fit the film's world (the bible's "World and register"): no word whose tone belongs to another religion, period or culture.
-- A line the film says again (a chant, a saying, a line thrown back) is said the same way each time (`repeat drift`).
+- A line the film says again (a chant, a saying, a line thrown back) is said the same way each time (`repeat drift`). A stock phrase anyone says ("Come on!", "Thank you.") is not one: word it for its scene.
 
 English habits that give a translation away, one per line:
 

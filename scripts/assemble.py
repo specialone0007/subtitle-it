@@ -45,7 +45,9 @@ the final Turkish alone, as a viewer would, and fix lines that do not
 sound like the character speaking Turkish. `listengate` drops each edit
 that breaks a check or its cue's budget, `listencheck` lists the kept
 edits for a meaning check, and `listendrop` drops edits on cues the last
-check fails.
+check fails. In a polish run the listener reads the whole film but changes
+only the lines the run wrote: a cue that still says the human file's line
+is marked `human` and an edit to it is dropped.
 
 `fixround` writes, per chunk with a hard fail, W/fixes/<round>_<NN>.txt:
 each failing cue with its checks, its source and its current Turkish, so a
@@ -176,6 +178,15 @@ def load_translation(work: Path) -> tuple[dict[int, list[str]], list[str]]:
     return texts, problems
 
 
+def polish_seed(work: Path) -> dict[int, list[str]] | None:
+    """In a polish run, the human file's lines as they were placed on the
+    timing file (W/out/tr_00.txt); None in any other run."""
+    seed_file = work / "out" / "tr_00.txt"
+    if not (work / "polish_placement.json").exists() or not seed_file.exists():
+        return None
+    return srt.read_blocks(seed_file)[0]
+
+
 def address_changes(work: Path, texts: dict[int, list[str]]) -> list[dict]:
     """In a polish run, every cue whose sen or siz now differs from the
     human file's line it was seeded with, with the fix file that changed it
@@ -183,10 +194,9 @@ def address_changes(work: Path, texts: dict[int, list[str]]) -> list[dict]:
     lines), or None. A later file that keeps the new form, such as the soft
     pass, writes no reason and must not hide the one given before."""
     out = work / "out"
-    seed_file = out / "tr_00.txt"
-    if not (work / "polish_placement.json").exists() or not seed_file.exists():
+    seed = polish_seed(work)
+    if seed is None:
         return []
-    seed, _ = srt.read_blocks(seed_file)
     by: dict[int, tuple[str, str | None]] = {}
     for f in fix_order(out):
         blocks, _ = srt.read_blocks(f)
@@ -941,11 +951,32 @@ def _listen_frame(work: Path) -> dict:
     return {"rows": rows, "by_start": by_start, "room": room, "group": group, "echo": echo}
 
 
-def _listen_before(work: Path) -> dict[int, list[str]]:
+def _listen_saved(work: Path) -> dict:
     path = work / "out" / LISTEN_BEFORE
     if not path.exists():
         raise SystemExit("no listen_before.json: run listenparts first")
-    return {int(n): t for n, t in json.loads(path.read_text(encoding="utf-8"))["texts"].items()}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _listen_before(work: Path) -> dict[int, list[str]]:
+    return {int(n): t for n, t in _listen_saved(work)["texts"].items()}
+
+
+def _listen_human(work: Path) -> set[int]:
+    return set(_listen_saved(work).get("human", []))
+
+
+def _human_cues(work: Path, texts: dict[int, list[str]], frame: dict) -> set[int]:
+    """In a polish run, the cues that still say the human file's line word
+    for word, in a sentence group none of whose cues changed. The human
+    translator heard the scene, so the listener reads these lines for the
+    scene and leaves them; it listens to the lines the run wrote. Empty in
+    any other run."""
+    seed = polish_seed(work)
+    if seed is None:
+        return set()
+    same = {n for n, t in texts.items() if seed.get(n) == t}
+    return {n for n in same if all(m in same for m in frame["group"].get(n, [n]))}
 
 
 def _write_blocks(path: Path, blocks: dict[int, list[str]]) -> None:
@@ -958,7 +989,7 @@ def listen_parts(work: Path, size: int = LISTEN_PART_CUES) -> dict:
     W/out/listen_before.json, then saves the Turkish now and the fix files
     it came from as listen_before.json. Each part gets
     W/listen/listen_<NN>.txt (`n`, `time`, `speaker`, `budget`, `group`,
-    `echo`, `turkish`), the file the listener reads, and
+    `echo`, `human`, `turkish`), the file the listener reads, and
     listen_<NN>_en.txt (`n`, `source`, `en`), read only for lines that
     sound wrong.
 
@@ -967,7 +998,12 @@ def listen_parts(work: Path, size: int = LISTEN_PART_CUES) -> dict:
     length now, or the translator's first draft's length, whichever is
     largest, so a line a review shortened into stiff Turkish can always go
     back. `group` names the cues that hold one source sentence, `echo` the
-    cues that say the same source line elsewhere in the film."""
+    cues that say the same source line elsewhere in the film.
+
+    In a polish run, `human` is `yes` on a cue that still says the human
+    file's line (`_human_cues`): the listener leaves it, and `listengate`
+    drops an edit to it. A part with nothing else gets no listener; the
+    result counts those parts in `parts_all_human`."""
     if size < 50:
         raise SystemExit("--size takes 50 cues or more")
     out = work / "out"
@@ -976,15 +1012,20 @@ def listen_parts(work: Path, size: int = LISTEN_PART_CUES) -> dict:
     texts, problems = load_translation(work)
     if problems:
         raise SystemExit(f"the Turkish files are malformed ({problems[0]}): run check and fix them first")
+    frame = _listen_frame(work)
+    human = _human_cues(work, texts, frame)
     (out / LISTEN_BEFORE).write_text(
         json.dumps(
-            {"fix_files": [f.name for f in fix_order(out)], "texts": {str(n): t for n, t in sorted(texts.items())}},
+            {
+                "fix_files": [f.name for f in fix_order(out)],
+                "texts": {str(n): t for n, t in sorted(texts.items())},
+                "human": sorted(human),
+            },
             ensure_ascii=False,
             indent=1,
         ),
         encoding="utf-8",
     )
-    frame = _listen_frame(work)
     draft: dict[int, list[str]] = {}
     for f in sorted(out.glob("tr_*.txt")):
         draft.update(srt.read_blocks(f)[0])
@@ -1007,12 +1048,16 @@ def listen_parts(work: Path, size: int = LISTEN_PART_CUES) -> dict:
     }
     bounds = [0, *_part_cuts(spoken, size), len(spoken)]
     parts = []
+    all_human = 0
     for i, (a, b) in enumerate(zip(bounds, bounds[1:]), 1):
         nn = f"{i:02d}"
         own = spoken[a:b]
+        if human and all(r["n"] in human for r in own):
+            all_human += 1
+            continue
         path, en_path = folder / f"listen_{nn}.txt", folder / f"listen_{nn}_en.txt"
         with open(path, "w", encoding="utf-8") as f, open(en_path, "w", encoding="utf-8") as e:
-            f.write("n\ttime\tspeaker\tbudget\tgroup\techo\tturkish\n")
+            f.write("n\ttime\tspeaker\tbudget\tgroup\techo\thuman\tturkish\n")
             e.write("n\tsource\ten\n")
             for r in own:
                 n, row = r["n"], frame["rows"][r["n"]]
@@ -1020,8 +1065,9 @@ def listen_parts(work: Path, size: int = LISTEN_PART_CUES) -> dict:
                 group = f"{g[0]}-{g[-1]}" if g else ""
                 echo = ",".join(str(m) for m in frame["echo"].get(n, []))
                 who = prepare.speaker_hint(speakers.get(str(n), {}))
+                mark = "yes" if n in human else ""
                 tr = " / ".join(texts[n])
-                f.write(f"{n}\t{srt.fmt_ms(r['start'])[:8]}\t{who}\t{budgets[n]}\t{group}\t{echo}\t{tr}\n")
+                f.write(f"{n}\t{srt.fmt_ms(r['start'])[:8]}\t{who}\t{budgets[n]}\t{group}\t{echo}\t{mark}\t{tr}\n")
                 src = prepare._one_line(row.get("source") or row.get("timing_lines"))
                 en = prepare._one_line(row["en"]) if row.get("en") and row["en"] != row.get("source") else ""
                 e.write(f"{n}\t{src}\t{en}\n")
@@ -1037,7 +1083,12 @@ def listen_parts(work: Path, size: int = LISTEN_PART_CUES) -> dict:
             }
         )
     (folder / "budgets.json").write_text(json.dumps({str(n): v for n, v in budgets.items()}), encoding="utf-8")
-    return {"parts": parts, "cues": len(spoken)}
+    return {
+        "parts": parts,
+        "cues": len(spoken),
+        "human_cues": sum(1 for r in spoken if r["n"] in human),
+        "parts_all_human": all_human,
+    }
 
 
 def _issues(found: list[dict], kinds: set[str] | None) -> dict[tuple, dict]:
@@ -1084,7 +1135,8 @@ def _blame(x: dict, edits: dict[int, list[str]], before: dict[int, list[str]], f
 
 def listen_gate(work: Path) -> dict:
     """Hold the listeners' edits to the checks. An edit is dropped when it
-    is not on a cue of a listen part, when the cue goes over its budget,
+    is not on a cue of a listen part, when it changes a human line of a
+    polish run, when the cue goes over its budget,
     or when its cue, its sentence group or its repeat pair gains a hard
     fail or a new warning of a kind in GATE_WARNINGS. The checks then run
     again on what is left, and an edit still causing a new problem is
@@ -1092,6 +1144,7 @@ def listen_gate(work: Path) -> dict:
     W/listen/gate.json keeps the result for `reviews`."""
     out = work / "out"
     before = _listen_before(work)
+    human = _listen_human(work)
     budgets_file = work / LISTEN_DIR / "budgets.json"
     budgets = {int(n): v for n, v in json.loads(budgets_file.read_text(encoding="utf-8")).items()}
     frame = _listen_frame(work)
@@ -1109,6 +1162,8 @@ def listen_gate(work: Path) -> dict:
             edits[n], home[n] = lines, f
             if n not in budgets:
                 dropped[n] = "not a listen cue"
+            elif n in human:
+                dropped[n] = "human line"
             elif len(_plain(lines)) > budgets[n]:
                 dropped[n] = "over budget"
     base = run_checks(work, before, write=False)
@@ -1144,6 +1199,7 @@ def listen_gate(work: Path) -> dict:
         "kept": len(live),
         "kept_cues": sorted(live),
         "spoken_cues": len(budgets),
+        "human_cues": len(human & set(budgets)),
         "dropped": by_reason,
         "passes": passes,
         "left_unblamed": [{"cue": x["cue"], "check": x["check"]} for x in left],
@@ -1244,6 +1300,8 @@ def listen_summary(work: Path) -> list[str]:
 
     lines = ["## Listener", ""]
     lines.append(f"- Edits kept: {gate['kept']} of {gate['spoken_cues']} spoken cues ({cues(gate['kept_cues'])})")
+    if gate.get("human_cues"):
+        lines.append(f"- Human lines read for the scene and left as they are: {gate['human_cues']}")
     for why, ns in gate["dropped"].items():
         lines.append(f"- Dropped by the gate, {why}: {len(ns)} ({cues(ns)})")
     lines.append(f"- Written back by the meaning check: {len(written_back)} ({cues(written_back)})")
