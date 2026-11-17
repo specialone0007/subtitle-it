@@ -77,6 +77,8 @@ def test_listen_parts_cut_the_film_with_budget_group_and_echo(tmp_path: Path):
     # A repeated line names its echo in the other part.
     assert one[3]["echo"] == "80" and two[80]["echo"] == "3"
     assert one[20]["turkish"] == "Söyledim."
+    # Not a polish run: no line is the human translator's.
+    assert one[20]["human"] == "" and before["human"] == [] and got["human_cues"] == 0
     en = _rows(Path(got["parts"][0]["en_file"]))
     assert en[10]["source"] == "When the hearing starts tomorrow"
 
@@ -193,6 +195,65 @@ def test_listen_drop_and_reviews_count_the_listener(tmp_path: Path):
     assert "- Dropped by the gate, hard fail at the last check: 1 (7)" in listener
     assert "- Written back by the meaning check: 1 (8)" in listener
     assert assemble.load_translation(w)[0][8] == ["Tamam."]
+
+
+# --- a polish run: the listener leaves the human lines -----------------------
+
+
+def polish_film(tmp_path: Path, english: list[str], human: list[str], unplaced: set[int]) -> Path:
+    """A polish run's work folder: the human file's lines placed on the
+    timing file as the seed (out/tr_00.txt), but for the cues in
+    `unplaced`, which the human file had no line for."""
+    w = film(tmp_path, english, human)
+    out = w / "out"
+    seed = "".join(f"{i}\n{t}\n\n" for i, t in enumerate(human, 1) if i not in unplaced)
+    (out / "tr_00.txt").write_text(seed, encoding="utf-8")
+    (out / "tr_01.txt").unlink()
+    (w / "polish_placement.json").write_text("{}", encoding="utf-8")
+    return w
+
+
+def _polish_hundred(tmp_path: Path) -> Path:
+    english = [f"Line {i}." for i in range(1, 101)]
+    english[9], english[10] = "When the hearing starts tomorrow", "you will tell them everything."
+    human = [f"Satır {i}." for i in range(1, 101)]
+    human[9], human[10] = "Yarın duruşma başlayınca", "onlara her şeyi anlatacaksın."
+    w = polish_film(tmp_path, english, human, unplaced={5})
+    # The fixer wrote the cue the human file missed; a reviewer changed
+    # half of the sentence on cues 10-11, and cue 20.
+    (w / "out" / "fix_polish.txt").write_text("5\nBeş.\n\n", encoding="utf-8")
+    (w / "out" / "fix_review_01.txt").write_text("11\nher şeyi anlatacaksın.\n\n20\nYirmi.\n\n", encoding="utf-8")
+    return w
+
+
+def test_listen_parts_mark_the_human_lines_of_a_polish_run(tmp_path: Path):
+    w = _polish_hundred(tmp_path)
+
+    got = assemble.listen_parts(w, size=50)
+
+    # Cues 51-100 are all the human file's lines: that part gets no listener.
+    assert [(p["first"], p["last"]) for p in got["parts"]] == [(1, 50)]
+    assert got["parts_all_human"] == 1 and got["human_cues"] == 96
+    one = _rows(Path(got["parts"][0]["file"]))
+    assert one[1]["human"] == one[12]["human"] == "yes"
+    # Lines the run wrote, and the untouched half of a changed sentence.
+    assert one[5]["human"] == one[10]["human"] == one[11]["human"] == one[20]["human"] == ""
+    before = json.loads((w / "out" / "listen_before.json").read_text(encoding="utf-8"))
+    assert 5 not in before["human"] and 12 in before["human"] and 60 in before["human"]
+
+
+def test_listen_gate_drops_an_edit_to_a_human_line(tmp_path: Path):
+    w = _polish_hundred(tmp_path)
+    assemble.listen_parts(w, size=50)
+    _listen(w, "12\nOn ikinci satır.\n\n20\nYirmi işte.\n\n60\nAltmış.\n\n")
+
+    gate = assemble.listen_gate(w)
+
+    assert gate["dropped"] == {"human line": [12, 60]}
+    assert gate["kept_cues"] == [20] and gate["human_cues"] == 96
+    assert (w / "out" / "fix_listen_01.txt").read_text(encoding="utf-8") == "20\nYirmi işte.\n\n"
+    summary = assemble.listen_summary(w)
+    assert "- Human lines read for the scene and left as they are: 96" in summary
 
 
 # --- the order fix files apply in --------------------------------------------
