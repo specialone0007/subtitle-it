@@ -256,8 +256,10 @@ Mark `hints_bible` with this step's first command.
    If it refuses `voices.json`, start the voice mapper once more with the
    error, asking it to fix only that file, then run the command again.
    Once only: if it still fails, say so in one line and go on without
-   voice decisions. The voice round may still be running: wait for it,
-   then delete `WORK/second.voices.json` before step 5's `compare`.
+   voice decisions. The voice round may still be running: wait for it
+   before step 5's `compare`, which reads its answers from
+   `WORK/second.voices.json`. Keep that file, unless `bible.py voices`
+   gave up: then step 5 deletes it first.
 
 ### 5. Check the bible
 
