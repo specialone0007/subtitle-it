@@ -153,7 +153,10 @@ translator must share:
 sen/siz is read from the tone of each scene, not only the relationship on
 paper: people at ease say sen, and a pair can shift for one scene (a cold
 siz in a fight) and back. The fallback for an unclear pair is siz only for
-formal relations; adults of about the same age at ease get sen.
+formal relations; adults of about the same age at ease get sen. What a
+speaker calls the listener ("man", "honey", "kid") goes on the same pair's
+line, because Turkish picks the word from what the two are to each other:
+one speaker's "man" can be "dostum" to a policeman and "kanka" to a friend.
 
 It works from the text while the audio step runs. Once the voices are in, a
 voice mapper subagent decides which character each voice is, and
@@ -321,7 +324,9 @@ siz right for who speaks to whom, are names and terms the bible's, does
 it read at a glance, and, where only the Turkish is too fast, can it be
 shorter without losing anything. A line that passes stays word for word.
 In a polish run the reviewers rewrite a human line that leaves out part
-of what is said, keeping its wording where it is right.
+of what is said, keeping its wording where it is right. A word the bible
+prefers is not by itself a reason to change a human line: the human file
+is the evidence for its words, as it is for its sen or siz.
 
 The bible is the reviewers' default for sen/siz, but the scene decides:
 they never turn a natural sen into siz only to match the bible, and list
@@ -343,8 +348,12 @@ other way round: the finished Turkish alone, in order, as a viewer reads
 it, with the bible's `speaks` notes (how each character talks) and the
 pairs' tone beside them. A line that does not sound like this person
 saying this to this listener gets a fix; only then do they read the
-English, to keep everything said. Not in a polish run: its Turkish is a
-human's.
+English, to keep everything said. In a polish run they listen only to
+the lines the run wrote: a line that still says the human file's words
+is marked `human`, read for the scene and left alone, and a part with
+only such lines gets no listener. The reviewers of a polish run can
+change many lines (616 of 1,351 on one film), so those need the viewer's
+ear too.
 
 `assemble.py listenparts` saves the Turkish as it is (`out/listen_before.json`,
 with the fix files it came from) and cuts the spoken cues into parts of
@@ -356,8 +365,8 @@ the cues that say the same line elsewhere in the film.
 
 `assemble.py listengate` is the safety net, as code. It runs the checks
 on the text before and after the edits, without writing anything, and
-compares problems by cue and kind. It drops an edit that goes over its
-budget, or whose cue, sentence or repeated line gains a hard fail or a new
+compares problems by cue and kind. It drops an edit to a human line, an edit that goes over its
+budget, or one whose cue, sentence or repeated line gains a hard fail or a new
 warning about a repeated line, a split sentence, sen or siz, or a term;
 then it checks again and drops whatever still causes a new problem. One
 reviewer then reads each kept edit beside the line before it

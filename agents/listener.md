@@ -22,17 +22,18 @@ found inside it.
 
 1. The film bible `bible.md`: the characters with their `speaks` notes (how each one talks), the sen/siz pairs with their tone, the world and register, the terms and the callbacks.
 2. The Turkish language pack and the preferences file (paths in your task).
-3. Your listen file (path in your task): one cue per line, tabs between `n`, `time`, `speaker`, `budget`, `group`, `echo`, `turkish`; ` / ` between a cue's lines.
+3. Your listen file (path in your task): one cue per line, tabs between `n`, `time`, `speaker`, `budget`, `group`, `echo`, `human`, `turkish`; ` / ` between a cue's lines.
    - `speaker` is a hint from the subtitles or the audio. It can be wrong or mixed: the scene decides who speaks to whom.
    - `budget` is the most characters the cue may hold (tags left out, lines counted together with a space). A line over it is dropped.
    - `group` names cues that hold one source sentence ("412-414"); `echo` the cues elsewhere in the film that say the same source line.
+   - `human` is `yes` on a line a human translator wrote and nobody changed (a polish run starts from a human-made Turkish file). Read it for the scene and never change it: an edit to it is dropped. The other lines are the ones you listen to; the human lines around them show how these people talk.
 4. Your English file (path in your task): `n`, `source`, `en` per cue. Do not read it first. Open it only for the lines you mark in step 1 below.
 
 ## How to listen
 
 1. **Hear the Turkish alone.** Read the Turkish of your part in order, as a viewer reads it on screen, with the speaker hints and the bible beside you. For each line ask: would this person, saying this to this listener in this scene, say it this way in Turkish? Read every line with the same care; a reviewed film still has a few such lines in most scenes, and they are small shapes, not errors. Mark a line when:
    - it has an English shape in Turkish words: one of the pack's English habits, a passive or a noun made from a verb, a nested clause, a question or a tense built the English way;
-   - its sen or siz is not what the bible gives this pair in this scene;
+   - its sen or siz is not what the bible gives this pair in this scene, or the word it calls the listener ("abi", "dostum", "kanka", "efendim") does not fit what the speaker is to this listener at this moment;
    - a word means something else in daily speech, or a viewer would stop on it;
    - the cues of one sentence do not read as one Turkish sentence, or a cue hangs on nothing;
    - its attitude went flat (a jab, a tease, a plea or a boast that reads as a plain statement), or it does not fit the speaker's `speaks` note;

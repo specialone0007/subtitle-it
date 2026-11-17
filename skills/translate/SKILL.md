@@ -348,7 +348,7 @@ fails.
 
 - Hard fails: run `assemble.py fixround --work WORK --round r<round>`. It groups the failing cues by chunk and writes, per chunk, a file with each cue's failed checks, source and current Turkish (the chunk output or, in a polish run, the seed, with every fix file so far applied). For each chunk in its result start one `subtitle-it:translator` subagent with the first five lines of that chunk's prompt from step 6 (language pack, bible, preferences, chunk, neighbour chunks), never its two `Write` lines, plus: "Fix round. Current Turkish and failed checks: <its fix_file>. Fix only these cues: <its cues>. Write only those cues to WORK/out/fix_r<round>_<NN>.txt. Write flags to WORK/out/flags_r<round>_<NN>.txt." (the result's `write_to` and `flags_to`). Use the same model as in step 6: the preferences' "Translator model" (`session` means do not set a model). The chunk's first output and flags stay as they are. Then run `check` again. At most 2 rounds. A cue in the result's `outside_chunks` is not in the timing file: name it in the report.
 - Still failing after 2 rounds: one more round the same way, with the model set to `opus`.
-- Still failing after that: go on. Step 11 delivers with `--force` and lists the failing cues in the report. If `check` wrote no draft (a cue is missing or a file is malformed), there is nothing to deliver: stop and tell the user which cues are missing (its result's `missing_cues` names every one).
+- Still failing after that: go on. Step 12 delivers with `--force` and lists the failing cues in the report. If `check` wrote no draft (a cue is missing or a file is malformed), there is nothing to deliver: stop and tell the user which cues are missing (its result's `missing_cues` names every one).
 - Warnings never block. They go to the reviewers.
 
 The check also lays out each cue as it will be shown: at most 2 lines of
@@ -410,14 +410,16 @@ written, so that round's files win over the review's.
 
 ## 11. Listen
 
-Skip this step in a polish run: its Turkish is a human's spoken Turkish.
-
-Mark `listen` with this step's first command, passing the reviewers'
-agents. Run `assemble.py listenparts --work WORK`. It saves the Turkish
+Mark `listen` with this step's first command, passing step 10's agents
+(the reviewers, or in a polish run the soft pass's fixer, if it ran). Run `assemble.py listenparts --work WORK`. It saves the Turkish
 as it is now and cuts the spoken cues into parts of about 480. Each
 part's listener reads the finished Turkish alone, as a viewer would, and
 rewrites the lines that do not sound like this character saying this to
-this listener in Turkish. In ONE message, start one
+this listener in Turkish. In a polish run the listener changes only the
+lines the run wrote: a line that still says the human file's words is
+marked `human`, read for the scene and left as it is, and a part with
+only such lines gets no listener (`parts_all_human`). When `parts` is
+empty, go on to step 12. In ONE message, start one
 `subtitle-it:listener` subagent per part in its result's `parts`, each
 with this prompt:
 
