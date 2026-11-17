@@ -147,6 +147,29 @@ def test_flags_leave_reading_speed_to_the_reviewer(work: Path, tmp_path: Path):
     assert "reading speed" not in out["by_check"]
 
 
+def test_flags_leave_a_repeated_line_to_the_reviewer(tmp_path: Path):
+    # The human file words a stock phrase for each scene. Only a reader of
+    # the scene can tell that from a callback, so the fixer gets no flag to
+    # copy one wording over the other; the reviewer gets the note.
+    en = "".join(f"{n}\n00:00:{n * 4:02d},000 --> 00:00:{n * 4 + 2:02d},000\nWhat the fuck?\n\n" for n in (1, 2, 3))
+    tr = "".join(
+        f"{n}\n00:00:{n * 4:02d},000 --> 00:00:{n * 4 + 2:02d},000\n{line}\n\n"
+        for n, line in ((1, "Bu ne siktir?"), (2, "Bu ne siktir?"), (3, "Siktir bu da ne!"))
+    )
+    (tmp_path / "en.srt").write_text(en, encoding="utf-8")
+    (tmp_path / "tr.srt").write_text(tr, encoding="utf-8")
+    w = tmp_path / "work"
+    prepare.build(w, tmp_path / "en.srt", None, tmp_path / "en.srt")
+    polish.seed(w, tmp_path / "tr.srt")
+    out = polish.flags(w)
+    assert "repeat drift" not in out["by_check"]
+    assert "#3 " not in (w / polish.FLAG_FILE).read_text(encoding="utf-8")
+    part = Path(assemble.review_parts(w)["parts"][0]["file"]).read_text(encoding="utf-8")
+    row = next(ln for ln in part.splitlines() if ln.startswith("3\t"))
+    assert 'repeat drift: "Bu ne siktir?" at cue 1' in row
+    assert "fixer:" not in row
+
+
 def test_untranslated_needs_two_words():
     assert polish.untranslated(["OK."], ["OK."]) is False
     assert polish.untranslated(["See you."], ["See you."]) is True

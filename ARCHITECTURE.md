@@ -209,7 +209,9 @@ also runs at medium effort.
 - `polish.py flags` lists the cues to fix: check fails, lines left in
   English, crude lines the Turkish tones down, and lines that may sit on
   the wrong cue. sen and siz are not among them: the human file is the
-  evidence for them (below).
+  evidence for them (below). Nor is `repeat drift`: a human file words a
+  stock phrase ("What the fuck?") for each scene, and only a reviewer
+  reading the scene can tell that from a callback.
 - One polish fixer subagent changes only those.
 - The step 10 reviewers start in the same message and read the film while
   the fixer works. Where the fixer and a reviewer change the same cue, the
@@ -263,8 +265,11 @@ also runs at medium effort.
   ("Casey'in" for "Casey'nin"). `repeat drift` warns when a line the film says
   again in the same words (a chant, a saying, a callback) is written two
   ways in Turkish, and quotes the other wording, since the two cues often
-  sit in different review parts. `split sentence` looks at each run of cues
-  whose source sentence goes on without a full stop, and warns when the
+  sit in different review parts. The check cannot tell such a line from a
+  stock phrase anyone says ("Come on!", "What the fuck?"); the reviewer
+  does, and words a stock phrase for its scene. `split sentence` looks at
+  each run of cues whose source sentence goes on without a full stop, and
+  warns when the
   Turkish writes a part twice, leaves a cue with nothing of its own, or
   puts a name in another cue than the one that says it. The address check
   leaves out a question and its answer heard as one voice, a name
