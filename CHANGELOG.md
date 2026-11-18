@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.1 (2026-11-18)
+
+The credits get more room at both ends.
+
+- The opening credit "İyi seyirler." starts at 3 s instead of 1 s, so it
+  shows from 0:03 to 0:07. A film that speaks before 7.5 s gets a shorter
+  opening, 3 s at least, and one that speaks before 6.5 s none.
+- The closing credit "Görüşmek üzere." starts 3 s after the last line
+  instead of 1 s, so it no longer runs straight on from it.
+- With `--video`, `deliver` reads the video's length with ffprobe and keeps
+  the closing credit inside it: it moves earlier, to half a second after the
+  last line at most, then ends with the video, kept for 3 s at least; with
+  under 3.5 s between the last line and the video's end, there is none.
+
 ## 0.10.0 (2026-11-18)
 
 The delivered file signs off with the translator's name, and a polish run
