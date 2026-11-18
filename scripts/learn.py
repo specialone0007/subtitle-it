@@ -85,7 +85,12 @@ def diff(work: Path) -> dict:
     # cue, which the bible and the work folder use. An older delivery has
     # no map: its cues are the timing file's, one for one.
     map_file = work / "delivered_map.json"
-    cue_map = json.loads(map_file.read_text(encoding="utf-8"))["cues"] if map_file.exists() else {}
+    full_map = json.loads(map_file.read_text(encoding="utf-8")) if map_file.exists() else {}
+    cue_map = full_map.get("cues", {})
+    # The credit cues are the plugin's own lines, not a translation: an
+    # edit to them teaches nothing.
+    credits = set(full_map.get("credits", []))
+    before = [c for c in before if c.n not in credits]
     by_ts = {c.ts: c for c in after}
     edits, swaps = [], Counter()
     swap_cues: dict[tuple[str, str], list[int]] = {}

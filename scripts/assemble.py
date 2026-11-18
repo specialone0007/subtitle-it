@@ -9,6 +9,7 @@ deliver the result next to the video.
     uv run assemble.py reviewparts --work W [--size 250]
     uv run assemble.py reviews     --work W
     uv run assemble.py deliver     --work W --dest FILM.srt --backups DIR [--force] [--video FILM.mkv]
+                                   [--no-credit] [--credit-name NAME]
     uv run assemble.py where       --work W --cues 12,340
     uv run assemble.py fixround    --work W --round r1
     uv run assemble.py listenparts --work W [--size 480]
@@ -23,13 +24,16 @@ has text, and writes W/checks.json. When a cue is missing or a file is malformed
 written and any older draft is removed. Hard fails block delivery; warnings do
 not, and nothing without a current draft is ever delivered.
 
-The checks go cue for cue with the timing file. The draft is the file as
-it will be delivered: laid out by layout.py (at most two lines of 42
-characters, a long two-speaker cue split into one cue per speaker),
-without the cues that hold only sounds, and numbered from 1. W/cue_map.json
-maps each draft number to the timing file's cue; `deliver` keeps it as
-W/delivered_map.json, and `where` answers from it which delivered cues and
-times a timing cue became.
+The checks go cue for cue with the timing file. The draft is the film's
+lines as they will be delivered: laid out by layout.py (at most two lines
+of 42 characters, a long two-speaker cue split into one cue per speaker),
+without the cues that hold only sounds, and numbered from 1. The delivered
+file is the draft plus, unless --no-credit, one credit cue before the
+first line (when the silence allows it) and one after the last.
+W/cue_map.json maps each draft number to the timing file's cue; `deliver`
+writes it as W/delivered_map.json, its numbers moved past the opening
+credit and the credit cues listed under "credits", and `where` answers
+from it which delivered cues and times a timing cue became.
 
 `reviewparts` cuts the film into parts of about 250 cues for the review,
 each in W/review/part_<NN>.tsv with a few cues of context on each side and
@@ -1422,12 +1426,78 @@ def earlier_beside(work: Path, dest: Path, video: Path) -> list[Path]:
     return out
 
 
-def deliver(work: Path, dest: Path, backups: Path, force: bool, video: Path | None = None) -> dict:
+CREDIT_HELLO = "İyi seyirler."
+CREDIT_BYE = "Görüşmek üzere."
+CREDIT_NAME_MAX = layout.MAX_LINE
+# Each end shows one screen for 4 s: the greeting over the translator's
+# name. The opening starts at 1 s and ends at least half a second before
+# the first line: with a first line before 5.5 s it is cut short, but kept
+# for 3 s at least (a first line from 4.5 s); with less room, nothing. The
+# closing screen follows the last line by 1 s.
+CREDIT_START_AT = 1000
+CREDIT_GAP = 500
+CREDIT_END_AFTER = 1000
+CREDIT_MS = 4000
+CREDIT_MIN_MS = 3000
+
+
+def credit_lines(greeting: str, translator: str = "") -> list[str]:
+    """One credit screen: the greeting over the translator's name, or the
+    greeting alone when no name is given."""
+    translator = " ".join(translator.split())
+    if len(translator) > CREDIT_NAME_MAX:
+        raise SystemExit(f"the credit name is longer than {CREDIT_NAME_MAX} characters: {translator!r}")
+    return [greeting, translator] if translator else [greeting]
+
+
+def with_credit(cues: list[srt.Cue], translator: str = "") -> tuple[list[srt.Cue], int, list[int]]:
+    """The delivered cues with the credit added, renumbered from 1; how many
+    cues were put before the film's own (0 or 1), and the numbers of the
+    credit cues, which are no translation."""
+    if not cues:
+        return cues, 0, []
+
+    def cue(start: int, end: int, lines: list[str]) -> srt.Cue:
+        return srt.Cue(n=0, start=start, end=end, ts=f"{srt.fmt_ms(start)} --> {srt.fmt_ms(end)}", lines=lines)
+
+    head: list[srt.Cue] = []
+    room = cues[0].start - CREDIT_GAP
+    at = CREDIT_START_AT
+    if room >= at + CREDIT_MIN_MS:
+        head = [cue(at, min(room, at + CREDIT_MS), credit_lines(CREDIT_HELLO, translator))]
+    bye_at = max(c.end for c in cues) + CREDIT_END_AFTER
+    tail = [cue(bye_at, bye_at + CREDIT_MS, credit_lines(CREDIT_BYE, translator))]
+    out = [srt.Cue(n=i, start=c.start, end=c.end, ts=c.ts, lines=c.lines) for i, c in enumerate(head + cues + tail, 1)]
+    credits = list(range(1, len(head) + 1)) + [len(out)]
+    return out, len(head), credits
+
+
+def credit_map(cue_map: dict, shift: int, credits: list[int]) -> dict:
+    """The draft's cue map moved down by the cues put before the film's own,
+    with the credit cues listed apart: they lead back to no timing cue."""
+    moved = {str(int(n) + shift): v for n, v in cue_map["cues"].items()}
+    return {**cue_map, "cues": moved, "credits": credits}
+
+
+def deliver(
+    work: Path,
+    dest: Path,
+    backups: Path,
+    force: bool,
+    video: Path | None = None,
+    credit: bool = True,
+    translator: str = "",
+) -> dict:
     """Write the draft to `dest`, moving any file already there to
     `backups`. With `video` (the run delivers to the default place, the
     video's own name), this plugin's earlier deliveries of that video under
     another name go to `backups` too and are listed under
-    `moved_earlier_deliveries`; without it, files beside `dest` stay put."""
+    `moved_earlier_deliveries`; without it, files beside `dest` stay put.
+    `credit` adds the opening and closing credit cues (`with_credit`),
+    naming `translator` when given; only the delivered file has them, never
+    the draft."""
+    if credit:
+        credit_lines(CREDIT_HELLO, translator)  # a name too long stops before any file moves
     checks = json.loads((work / "checks.json").read_text(encoding="utf-8"))
     draft = work / "draft.tr.srt"
     if not checks.get("draft") or not draft.exists():
@@ -1467,11 +1537,19 @@ def deliver(work: Path, dest: Path, backups: Path, force: bool, video: Path | No
     # With a BOM, TVs that read the file next to the video show ş, ğ and ı
     # instead of guessing a Western code page.
     data = draft.read_bytes()
+    credits: list[int] = []
+    if credit:
+        shown, shift, credits = with_credit(srt.parse_text(srt.decode(data)[0]), translator)
+        data = srt.render(shown).replace("\n", "\r\n").encode("utf-8")
     if not data.startswith(UTF8_BOM):
         data = UTF8_BOM + data
     dest.write_bytes(data)
     (work / "delivered.tr.srt").write_bytes(data)
-    shutil.copyfile(work / MAP_FILE, work / DELIVERED_MAP_FILE)
+    if credits:
+        cue_map = json.loads((work / MAP_FILE).read_text(encoding="utf-8"))
+        (work / DELIVERED_MAP_FILE).write_text(json.dumps(credit_map(cue_map, shift, credits), indent=1), encoding="utf-8")
+    else:
+        shutil.copyfile(work / MAP_FILE, work / DELIVERED_MAP_FILE)
     info = {
         "delivered_to": str(dest),
         # Paths delivered before under another name, still next to the
@@ -1486,6 +1564,9 @@ def deliver(work: Path, dest: Path, backups: Path, force: bool, video: Path | No
         "delivered_at": datetime.now().isoformat(timespec="seconds"),
         "hard_fails_at_delivery": checks["hard_fail_count"],
         "warnings_at_delivery": checks["warning_count"],
+        "credit": credit,
+        "credit_name": translator if credit else "",
+        "credit_cues": credits,
     }
     (work / "delivered.json").write_text(json.dumps(info, indent=1), encoding="utf-8")
     shutil.rmtree(work / "chunks", ignore_errors=True)
@@ -1527,6 +1608,10 @@ def main(argv: list[str] | None = None) -> None:
     d.add_argument("--backups", type=result.path, required=True)
     d.add_argument("--force", action="store_true")
     d.add_argument("--video", type=result.path, help="the film; pass it only when --dest is the default name next to it")
+    d.add_argument("--no-credit", dest="credit", action="store_false", help="add no opening and closing credit")
+    d.add_argument(
+        "--credit-name", default="", help="the translator the credit names under its greeting; none: the greeting alone"
+    )
     wh = sub.add_parser("where")
     wh.add_argument("--work", type=result.path, required=True)
     wh.add_argument("--cues", required=True, help="comma-separated cue numbers of the timing file")
@@ -1569,7 +1654,7 @@ def main(argv: list[str] | None = None) -> None:
     elif a.cmd == "fixround":
         result.emit(fix_round(a.work, a.round), a.result)
     else:
-        result.emit(deliver(a.work, a.dest, a.backups, a.force, a.video), a.result)
+        result.emit(deliver(a.work, a.dest, a.backups, a.force, a.video, a.credit, a.credit_name), a.result)
 
 
 if __name__ == "__main__":
