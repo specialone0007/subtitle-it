@@ -413,3 +413,36 @@ def test_deliver_cli_passes_the_credit_flags(tmp_path: Path):
     shown, _ = srt.parse(dest)
     assert all(assemble.CREDIT_HELLO not in c.lines and assemble.CREDIT_BYE not in c.lines for c in shown)
     assert json.loads((w / "delivered.json").read_text(encoding="utf-8"))["credit"] is False
+
+
+def test_deliver_holds_the_closing_credit_to_the_video(tmp_path: Path, monkeypatch):
+    (tmp_path / "fr.srt").write_text(FR_LATE, encoding="utf-8")
+    w = tmp_path / "work"
+    prepare.build(w, tmp_path / "fr.srt", None, None)
+    prepare.chunks(w, target=250)
+    (w / "out" / "tr_01.txt").write_text(TR, encoding="utf-8")
+    assemble.run_checks(w)
+    draft, _ = srt.parse(w / "draft.tr.srt")
+    last = max(c.end for c in draft)
+    asked = []
+
+    def video_end(video: Path) -> int:
+        asked.append(video)
+        return last + 3_600
+
+    monkeypatch.setattr(assemble, "video_end_ms", video_end)
+    # Without --video the length is never read: the closing credit keeps its 3 s gap.
+    dest = tmp_path / "elsewhere.srt"
+    assemble.deliver(w, dest, tmp_path / "b", force=False)
+    shown, _ = srt.parse(dest)
+    assert asked == [] and (shown[-1].start, shown[-1].end) == (last + 3_000, last + 7_000)
+    # With it, the closing credit moves earlier and ends with the video.
+    film = tmp_path / "Film"
+    film.mkdir()
+    video = film / "Film.mkv"
+    video.write_bytes(b"x")
+    dest = film / "Film.srt"
+    assemble.deliver(w, dest, tmp_path / "b", force=False, video=video)
+    shown, _ = srt.parse(dest)
+    assert asked == [video] and shown[-1].lines == [assemble.CREDIT_BYE]
+    assert (shown[-1].start, shown[-1].end) == (last + 500, last + 3_600)
