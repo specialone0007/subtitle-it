@@ -225,7 +225,9 @@ subtitle file. In this order:
 1. The one extra download, before `build`: run
    `sources.py others --local '${CLAUDE_PLUGIN_DATA}/results/sources-local.json' --timing-language <the timing file's language>`,
    with one `--also <language>` for each file from `opensubtitles.py` that
-   passed validation. It counts the other languages the candidates hold.
+   passed validation and fits, and one `--unfit <path>` for each candidate
+   `srt.py fit` turned down. It counts the other languages the candidates
+   hold.
    When its `download` names a language (fewer than two others), make
    one search and one download for it, never a second try:
    `opensubtitles.py search --config 'CONFIG' --video V --imdb <IMDb id> --languages <download>`,
@@ -306,7 +308,7 @@ Mark `hints_bible` with this step's first command.
      `--shift-ms` is the same number the files were shifted by: `build` moves the on-screen entries by it instead of
      finding them again, so every cue keeps its number. It always counts from the files of the first build, so
      running the same rebuild again moves nothing twice. Never pass `--screen` here: an entry read from the picture
-     keeps its video times, and one the shift leaves no room is kept out under its number. Then run `speakers.py run` once
+     keeps its video times and its number, and is added or left out again by where the shifted lines now fall. Then run `speakers.py run` once
      more (in the foreground), since the voices were matched on the old
      times. The bible stays: a shift moves times, not cue numbers. Do not
      shift a second time; note the shift and the second verdict for the

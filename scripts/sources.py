@@ -8,7 +8,7 @@
     uv run sources.py local    --video V --work W
     uv run sources.py validate --file F [--duration-ms N]
     uv run sources.py remember --file V --prefs CONFIG/preferences.md
-    uv run sources.py others   --local LOCAL.json --timing-language L [--also LANG ...]
+    uv run sources.py others   --local LOCAL.json --timing-language L [--also LANG ...] [--unfit PATH ...]
 
 `find` lists video and subtitle files whose names match the query, and
 names any listed folder that is not there (an unplugged drive, say).
@@ -26,7 +26,9 @@ Needs ffmpeg and ffprobe on PATH.
 `others` counts the other languages that can show on-screen text: the
 usable full text candidates of a `local` result (validated with no issues,
 not forced-only), plus `--also` for each downloaded file that passed
-`validate`, without Turkish, `und` and the timing file's language. With
+`validate`, without Turkish, `und` and the timing file's language, and
+without a candidate whose path is given as `--unfit` (`srt.py fit` turned
+it down, so its lines are never used). With
 fewer than two it names the one extra language to download, French then
 Spanish, in `download`; with two or more, none.
 """
@@ -448,11 +450,18 @@ def usable(candidate: dict) -> bool:
     return bool(check) and not check.get("issues") and not candidate.get("forced_only")
 
 
-def others(local_result: dict, timing_language: str, also: list[str]) -> dict:
+def others(local_result: dict, timing_language: str, also: list[str], unfit: list[str] = ()) -> dict:
     """The other languages among the usable candidates (srt.other_languages)
     and the one extra language to download when there are fewer than two:
-    French, then Spanish, skipping one already there or the timing file's."""
-    langs = [c.get("language", "und") for c in local_result.get("candidates", []) if usable(c)]
+    French, then Spanish, skipping one already there or the timing file's.
+    A candidate whose path is in `unfit` did not fit the timing file, so it
+    does not count."""
+    skip_paths = {str(Path(x).resolve()) for x in unfit}
+    langs = [
+        c.get("language", "und")
+        for c in local_result.get("candidates", [])
+        if usable(c) and str(Path(c.get("path", "")).resolve()) not in skip_paths
+    ]
     found = srt.other_languages(langs + list(also), timing_language)
     skip = set(found) | set(srt.other_languages([timing_language], None))
     want = None if len(found) >= 2 else next((x for x in EXTRA_LANGUAGES if x not in skip), None)
@@ -566,6 +575,7 @@ def main(argv: list[str] | None = None) -> None:
     o.add_argument("--local", type=result.path, required=True, help="the result file of `sources.py local`")
     o.add_argument("--timing-language", required=True)
     o.add_argument("--also", action="append", default=[], help="LANG of a downloaded file that passed validate (repeatable)")
+    o.add_argument("--unfit", action="append", default=[], help="PATH of a candidate `srt.py fit` turned down (repeatable)")
     result.add_argument(p)
     a = result.parse(p, argv)
     if a.cmd == "find":
@@ -577,7 +587,7 @@ def main(argv: list[str] | None = None) -> None:
     elif a.cmd == "validate":
         out = validate(a.file, a.duration_ms)
     elif a.cmd == "others":
-        out = others(json.loads(a.local.read_text(encoding="utf-8")), a.timing_language, a.also)
+        out = others(json.loads(a.local.read_text(encoding="utf-8")), a.timing_language, a.also, a.unfit)
     else:
         out = {"slug": slug(a.name)}
     result.emit(out, a.result)
