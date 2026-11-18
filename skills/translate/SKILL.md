@@ -208,10 +208,13 @@ lines each track up itself. It adds a line as a cue of its own, marked
 `[on-screen text]` in the chunks, when tracks in two languages show it
 where the timing file shows nothing, or a forced track shows it. One
 language alone is not enough: a French track also subtitles shouts the
-English one leaves out. Keep its `on_screen` for the report: the cues
-added (number, time, text per language), how many lines only one
-language showed, and any track that did not fit. With one candidate in
-all, pass no `--track`.
+English one leaves out. Every text it finds, added or left out, is a
+row of `WORK/on_screen.json` with its time, its text per language and,
+when left out, a reason (one language only, no room, a subtitle credit,
+a song line, shown during a song or a sound). From its `on_screen`, keep
+only the tracks that did not fit for the report: the report's on-screen
+section comes from `deliver` at step 12 alone, so no entry is reported
+twice. With one candidate in all, pass no `--track`.
 
 ## 3–5. Speaker hints, film bible and bible check, side by side
 
@@ -254,8 +257,11 @@ Mark `hints_bible` with this step's first command.
      subtitles to the audio. Shift every file you passed to `build` by minus
      `sync.median_offset_ms`, with
      `srt.py shift '<file>' 'WORK/sources/<name>_shifted.srt' --ms <minus median_offset_ms>`;
-     run `build` again with the shifted files, the same `--track` and `--forced-track`
-     options (shift the forced tracks too; `build` lines the others up itself) and `--keep-bible-check`, then `speakers.py run` once
+     run `prepare.py build --work WORK --timing <shifted> [--source <shifted>] [--en <shifted>] --hi <the same> --keep-bible-check --shift-ms <minus median_offset_ms>`
+     with the same `--track` and `--forced-track` options (shift the forced tracks too; `build` lines the others up itself).
+     `--shift-ms` is the same number the files were shifted by: `build` moves the on-screen entries by it instead of
+     finding them again, so every cue keeps its number. It always counts from the files of the first build, so
+     running the same rebuild again moves nothing twice. Then run `speakers.py run` once
      more (in the foreground), since the voices were matched on the old
      times. The bible stays: a shift moves times, not cue numbers. Do not
      shift a second time; note the shift and the second verdict for the
@@ -511,7 +517,7 @@ changed, and how many lines are still softer than the source), any timing shift
 and sync verdict, whether each source file is hearing-impaired and how
 many cues lost tags or labels and how many sound-only cues were left
 out, how many bare sounds were left out, the songs (song cues found,
-translated, left out, and the `Songs` mode), the on-screen text `build` added from other tracks (each cue's time and text) and how many lines only one language showed, any file `build` warned was malformed, the voices dropped as mixed, the bible check (decisions, agreed,
+translated, left out, and the `Songs` mode), the on-screen text from `deliver`'s `on_screen` (each entry in `delivered` with its time and text; each in `left_out_at_ends` with its time, text and reason; the counts in `left_out` with the path in `file`; in a polish run each line in `unplaced_human_lines` with its time and text; then its two `limits` lines as they are), any file `build` warned was malformed, the voices dropped as mixed, the bible check (decisions, agreed,
 judged, ties, questions the second reader never answered), in a polish
 run the lines whose sen or siz differs from the human file
 (`address_changes` in `WORK/checks.json`, each with its reason, and those

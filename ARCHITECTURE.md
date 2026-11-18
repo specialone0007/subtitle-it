@@ -89,8 +89,16 @@ Then it settles the timings:
 - On-screen text: `build` also reads the film's other subtitle tracks
   (`--track`, `--forced-track`). A line two languages show, or a forced
   track shows, where the timing file shows nothing (a title card, a sign)
-  joins the timing file as a cue of its own, marked `on_screen`. One
-  language alone is only counted for the report.
+  joins the timing file as a cue of its own, marked `on_screen`. Such a
+  cue is never marked a song, a sound or a bare sound, and `check` fails
+  when one is left out. Every text found is a row of `W/on_screen.json`,
+  added or left out with a reason: one language only (a French track also
+  subtitles shouts), no room between two lines, a subtitle credit, a song
+  line marked with `#`, or a sign two languages show during a song or a
+  sound (a track also translates lyrics marked by italics alone, so it is
+  recorded, not added). A line the timing file covers is its own line: it
+  is only counted. The list is empty when no track is given, so no
+  earlier run's entries survive.
 - Unless your preferences say `Hearing-impaired tags: keep`, `build` takes
   sound descriptions in square brackets (`[door slams]`) and bracketed
   names (`[Sandra]`, `[1. Man]`) out of every text. From a file that is
@@ -131,7 +139,12 @@ film.
   the best other offset, so fast, overlapping talk, where many starts
   land near some cue whatever the offset, still gives a clear answer.
 - Subtitles more than 300 ms off are shifted with `srt.py shift`, and the
-  voices are matched again.
+  voices are matched again. `build` runs again with `--shift-ms`: it moves
+  the on-screen entries of `W/on_screen.json` by the same amount, rather
+  than finding them again, and drops the same timing cues under them, so
+  every cue keeps its number and the bible's citations stay true. The
+  amount counts from the times the first build found, so running the
+  same rebuild twice moves the entries once.
 - A voice can gather several characters. When a voice has at least six
   cues with a speaker label and no character holds two thirds of them, its
   cues get no voice hint, and the address-form check leaves them alone.
@@ -210,7 +223,10 @@ also runs at medium effort.
 
 - `polish.py seed` puts the Turkish file's text on the timing file's cues.
   Timing cues the file does not cover get no text; the check counts them
-  as missing, and the polish fixer translates them.
+  as missing, and the polish fixer translates them. A Turkish line that
+  lands on no cue is kept with its time in `polish_placement.json`; the
+  report lists those that lie under no on-screen cue delivered, since the
+  human translator may have subtitled a sign the tracks lack.
 - `polish.py flags` lists the cues to fix: check fails, lines left in
   English, crude lines the Turkish tones down, and lines that may sit on
   the wrong cue. sen and siz are not among them: the human file is the
@@ -321,7 +337,9 @@ each ending at the longest pause near an even cut. Each part file holds
 its cues side by side with the source, 20 cues of context on each
 side, and each cue's notes, cut short: the check's warnings, the polish
 fixer's flags and the translators' flags. A reading speed note shows only
-where the Turkish alone is fast. The part file, the pack, the bible and
+where the Turkish alone is fast. A cue that is on-screen text shows
+`on-screen text` as its speaker, here and in the listener's files, so it
+is read as text on screen, not speech. The part file, the pack, the bible and
 the preferences are all a reviewer reads, so a part costs little more
 than its own cues. The reviewers run at medium reasoning effort
 (`effort: medium` in `agents/reviewer.md`), whatever effort the session
@@ -413,7 +431,13 @@ only moves a file that still holds Turkish. `sources.py local` reads the
 same records, so such a file is never taken as a source. The cue map is kept with the
 delivered copy, and with a backup of an earlier delivery, so the report,
 learn mode and old files can still name each cue. `assemble.py where`
-turns a work folder cue number into its delivered number and time. `report.md` ends with "Check after
+turns a work folder cue number into its delivered number and time.
+`deliver` also returns the report's on-screen section: every on-screen cue
+delivered (time, text), every entry left out before the first spoken line
+or after the story's end (time, text, reason), counts for the rest with
+the path of `W/on_screen.json`, and two lines on what no run finds: text
+shown while someone speaks, and text in the middle of the film that no
+subtitle track shows. `report.md` ends with "Check after
 watching": what could not be settled for certain, with timestamps, kept out
 of the chat so nothing is spoiled.
 

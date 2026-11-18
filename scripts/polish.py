@@ -170,7 +170,9 @@ def seed(work: Path, tr_path: Path) -> dict:
         # nowhere: songs and on-screen text often end up there.
         k = bisect.bisect_left(starts, o.start)
         near = [timing[i].n for i in (k - 1, k) if 0 <= i < len(timing)]
-        placement["unplaced"].append({"near": near, "text": prepare._one_line(o.lines)})
+        # The times let the report tell a line under on-screen text that is
+        # delivered from one the film may still lack.
+        placement["unplaced"].append({"near": near, "start": o.start, "end": o.end, "text": prepare._one_line(o.lines)})
     out = work / "out"
     out.mkdir(exist_ok=True)
     seeded = joined = rewrapped = reformed = 0

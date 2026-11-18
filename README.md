@@ -57,6 +57,11 @@ when no other command uses that name.)
 - **An honest report.** What it could not settle for certain goes under
   "Check after watching" in the film's `report.md`, with timestamps. The
   report also gives the run's time per step and its subagents' tokens.
+- **Title cards and signs.** A card, a sign or a dedication that the
+  English subtitles leave to the picture is often in the French or Spanish
+  ones. When two languages show it, it joins the Turkish file. Every one
+  found is recorded with its time, and the report says which were added,
+  and how many were left out, and why.
 - **It learns from you.** Fix lines after watching, and it turns your edits
   into rules for the next film.
 - **A short credit.** "İyi seyirler." over your name opens the file in the

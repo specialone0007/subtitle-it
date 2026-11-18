@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 import assemble
+import polish
 import prepare
 import srt
 
@@ -35,26 +36,40 @@ def _cues(path: Path) -> list[srt.Cue]:
     return srt.parse(path)[0]
 
 
+def _added(entries: list[dict]) -> list[dict]:
+    return [e for e in entries if e["state"] == "cue"]
+
+
+def _left(entries: list[dict], reason: str) -> list[dict]:
+    return [e for e in entries if e["state"] == "left_out" and e["reason"] == reason]
+
+
 def test_a_line_two_languages_show_in_a_gap_is_added(tmp_path: Path):
     fr = _film(tmp_path, "fr.srt", "Ligne", [(*CARD, "À une époque lointaine...")])
     es = _film(tmp_path, "es.srt", "Línea", [(CARD[0] + 200, CARD[1] + 100, "UNA ERA LEJANA...")], offset=150)
-    added, summary = prepare.on_screen(_cues(_timing(tmp_path)), [("fr", fr), ("es", es)], [])
-    assert len(added) == 1 and summary["added"] == 1
+    entries, summary = prepare.on_screen(_cues(_timing(tmp_path)), [("fr", fr), ("es", es)], [])
+    assert len(entries) == 1 and summary["added"] == 1 and summary["states"] == {"cue": 1}
     # The first track given leads: its text and times, the shift undone.
-    assert added[0]["lines"] == ["À une époque lointaine..."]
-    assert (added[0]["start"], added[0]["end"]) == CARD
-    assert added[0]["texts"] == {"fr": ["À une époque lointaine..."], "es": ["UNA ERA LEJANA..."]}
+    e = entries[0]
+    assert e["state"] == "cue" and "reason" not in e and e["id"] == "1:1"
+    assert e["lines"] == ["À une époque lointaine..."]
+    assert (e["start"], e["end"]) == CARD
+    assert e["texts"] == {"fr": ["À une époque lointaine..."], "es": ["UNA ERA LEJANA..."]}
+    assert e["evidence"] == [
+        {"track": 1, "language": "fr", "forced": False, "cue": 1},
+        {"track": 2, "language": "es", "forced": False, "cue": 1},
+    ]
     assert [t["fits"] for t in summary["tracks"]] == [True, True]
 
 
-def test_one_language_alone_is_reported_not_added(tmp_path: Path):
+def test_one_language_alone_is_recorded_not_added(tmp_path: Path):
     # A French track also subtitles shouts the English one leaves out.
     fr = _film(tmp_path, "fr.srt", "Ligne", [(*CARD, "Allez!")])
     es = _film(tmp_path, "es.srt", "Línea")
-    added, summary = prepare.on_screen(_cues(_timing(tmp_path)), [("fr", fr), ("es", es)], [])
-    assert added == []
-    assert summary["only_one_language"] == 1
-    assert summary["only_one_language_first"][0]["text"] == "Allez!"
+    entries, summary = prepare.on_screen(_cues(_timing(tmp_path)), [("fr", fr), ("es", es)], [])
+    assert _added(entries) == [] and summary["reasons"] == {prepare.ONE_LANGUAGE: 1}
+    assert entries[0]["lines"] == ["Allez!"] and (entries[0]["start"], entries[0]["end"]) == CARD
+    assert entries[0]["n"] is None and entries[0]["texts"] == {"fr": ["Allez!"]}
 
 
 def test_credits_sounds_and_one_language_twice_are_never_added(tmp_path: Path):
@@ -64,25 +79,39 @@ def test_credits_sounds_and_one_language_twice_are_never_added(tmp_path: Path):
     sdh = _film(tmp_path, "sdh.srt", "Line", [(*CARD, "POLYBUS: Hmm...")])
     en2 = _film(tmp_path, "en2.srt", "Line", [(*CREDIT, "THE END")])
     tracks = [("fr", fr), ("es", es), ("en", sdh), ("en", en2)]
-    added, summary = prepare.on_screen(_cues(_timing(tmp_path)), tracks, [])
-    assert added == []
-    # "Mmmh." alone is left; the credits and "Hmm..." never count.
-    assert [x["text"] for x in summary["only_one_language_first"]] == ["Mmmh.", "THE END"]
+    entries, summary = prepare.on_screen(_cues(_timing(tmp_path)), tracks, [])
+    assert _added(entries) == []
+    # "Mmmh." alone is left; "Hmm..." and the song never count. The two
+    # credits, shown at the same time, are one entry left out as such.
+    assert [e["lines"] for e in _left(entries, prepare.ONE_LANGUAGE)] == [["Mmmh."], ["THE END"]]
+    credit = _left(entries, prepare.CREDIT)
+    assert len(credit) == 1 and credit[0]["texts"] == {"fr": ["Sous-titres : Jean"], "es": ["Subtítulos: Gabriel"]}
+    assert len(entries) == 3
 
 
 def test_one_language_with_and_without_a_region_is_still_one(tmp_path: Path):
     pt = _film(tmp_path, "pt.srt", "Linha", [(*CARD, "UMA ERA DISTANTE")])
     br = _film(tmp_path, "br.srt", "Linha", [(*CARD, "UMA ERA DISTANTE")])
-    added, summary = prepare.on_screen(_cues(_timing(tmp_path)), [("pt", pt), ("pt-br", br)], [])
-    assert added == [] and summary["only_one_language"] == 1
+    entries, summary = prepare.on_screen(_cues(_timing(tmp_path)), [("pt", pt), ("pt-br", br)], [])
+    assert _added(entries) == [] and summary["reasons"] == {prepare.ONE_LANGUAGE: 1}
 
 
 def test_a_forced_track_alone_is_enough_and_is_not_shifted(tmp_path: Path):
     forced = tmp_path / "forced.srt"
     forced.write_text(f"1\n{srt.fmt_ms(CARD[0])} --> {srt.fmt_ms(CARD[1])}\nWESTMINSTER, 1890\n", encoding="utf-8")
-    added, summary = prepare.on_screen(_cues(_timing(tmp_path)), [], [("en", forced)])
-    assert [a["lines"] for a in added] == [["WESTMINSTER, 1890"]]
+    entries, summary = prepare.on_screen(_cues(_timing(tmp_path)), [], [("en", forced)])
+    assert [e["lines"] for e in _added(entries)] == [["WESTMINSTER, 1890"]]
+    assert entries[0]["evidence"] == [{"track": 1, "language": "en", "forced": True, "cue": 1}]
     assert summary["tracks"][0]["forced"] is True and "fits" not in summary["tracks"][0]
+
+
+def test_the_id_names_the_first_track_and_a_forced_track_gives_the_text(tmp_path: Path):
+    forced = tmp_path / "forced.srt"
+    forced.write_text(f"1\n{srt.fmt_ms(CARD[0])} --> {srt.fmt_ms(CARD[1])}\nWESTMINSTER, 1890\n", encoding="utf-8")
+    tracks = _two(tmp_path, [(*CARD, "WESTMINSTER")], [(*CARD, "WESTMINSTER (1890)")])
+    entries, _ = prepare.on_screen(_cues(_timing(tmp_path)), tracks, [("en", forced)])
+    # Tracks come before forced tracks in the list: the forced one is 3rd.
+    assert [(e["id"], e["lines"]) for e in _added(entries)] == [("1:1", ["WESTMINSTER, 1890"])]
 
 
 def test_a_track_that_does_not_fit_is_left_out(tmp_path: Path):
@@ -90,8 +119,8 @@ def test_a_track_that_does_not_fit_is_left_out(tmp_path: Path):
     # Every line two seconds apart from the timing file's: another cut.
     other = "".join(f"{k + 1}\n{srt.fmt_ms(k * 2_000)} --> {srt.fmt_ms(k * 2_000 + 900)}\nUna {k}\n\n" for k in range(200))
     (tmp_path / "es.srt").write_text(other, encoding="utf-8")
-    added, summary = prepare.on_screen(_cues(_timing(tmp_path)), [("fr", fr), ("es", tmp_path / "es.srt")], [])
-    assert added == []
+    entries, summary = prepare.on_screen(_cues(_timing(tmp_path)), [("fr", fr), ("es", tmp_path / "es.srt")], [])
+    assert _added(entries) == [] and summary["reasons"] == {prepare.ONE_LANGUAGE: 1}
     assert summary["tracks"][1]["fits"] is False and summary["tracks"][1]["reason"]
 
 
@@ -102,9 +131,10 @@ def test_an_added_cue_is_clipped_between_its_neighbours_or_dropped(tmp_path: Pat
     tight = (12_600, 13_000)  # 400 ms between line 1 (ends 12,500) and line 2
     fr = _film(tmp_path, "fr.srt", "Ligne", [(*late, "LONDRES"), (*tight, "PARIS")])
     es = _film(tmp_path, "es.srt", "Línea", [(*late, "LONDRES"), (*tight, "PARÍS")])
-    added, summary = prepare.on_screen(_cues(_timing(tmp_path)), [("fr", fr), ("es", es)], [])
-    assert [(a["start"], a["end"]) for a in added] == [(7_000, 10_000)]
-    assert summary["no_room"] == [{"ts": srt.fmt_ms(tight[0]), "text": "PARIS"}]
+    entries, summary = prepare.on_screen(_cues(_timing(tmp_path)), [("fr", fr), ("es", es)], [])
+    assert [(a["start"], a["end"]) for a in _added(entries)] == [(7_000, 10_000)]
+    # Recorded with the track's own times.
+    assert [(e["start"], e["end"], e["lines"]) for e in _left(entries, prepare.NO_ROOM)] == [(*tight, ["PARIS"])]
 
 
 def test_build_adds_the_cue_and_the_run_delivers_it(tmp_path: Path):
@@ -257,3 +287,327 @@ def test_build_clears_the_picture_folder_of_an_earlier_run(tmp_path: Path):
     (w / "screen" / "ends.json").write_text("{}", encoding="utf-8")
     prepare.build(w, _timing(tmp_path), None, None)
     assert not (w / "screen").exists()
+
+
+# --- the list: every text found is recorded (on_screen.json) ---------------
+
+
+def _two(tmp: Path, extra_fr: list, extra_es: list) -> list[tuple[str, Path]]:
+    return [("fr", _film(tmp, "fr.srt", "Ligne", extra_fr)), ("es", _film(tmp, "es.srt", "Línea", extra_es))]
+
+
+def _entries(w: Path) -> list[dict]:
+    return json.loads((w / prepare.ON_SCREEN_FILE).read_text(encoding="utf-8"))
+
+
+def _translate(w: Path) -> None:
+    """A Turkish line for every cue the build kept, as a translator writes."""
+    rows = json.loads((w / "cues.json").read_text(encoding="utf-8"))
+    (w / "out").mkdir(exist_ok=True)
+    tr = "".join(f"{r['n']}\n{r['n']}. satır.\n\n" for r in rows if not prepare.left_out(r))
+    (w / "out" / "tr_01.txt").write_text(tr, encoding="utf-8")
+
+
+# Between line 36 (ends 2:32.5) and line 37 (starts 2:34).
+MIDDLE = (152_600, 153_800)
+
+
+def test_build_writes_every_entry_found_and_numbers_the_added_ones(tmp_path: Path):
+    tracks = _two(tmp_path, [(*CARD, "UN JOUR"), (*MIDDLE, "Hé!"), (*CREDIT, "# Au revoir #")], [(*CARD, "UN DÍA")])
+    w = tmp_path / "work"
+    summary = prepare.build(w, _timing(tmp_path), None, None, tracks=tracks)
+    entries = _entries(w)
+    assert [(e["state"], e.get("reason"), e["n"]) for e in entries] == [
+        ("cue", None, 1),
+        ("left_out", prepare.ONE_LANGUAGE, None),
+        ("left_out", prepare.SONG_LINE, None),
+    ]
+    assert entries[0]["id"] == "1:1" and entries[1]["lines"] == ["Hé!"] and entries[2]["start"] == CREDIT[0]
+    info = summary["on_screen"]
+    assert info["added"] == 1 and info["states"] == {"cue": 1, "left_out": 2}
+    assert info["reasons"] == {prepare.ONE_LANGUAGE: 1, prepare.SONG_LINE: 1}
+    # Every line of the two tracks that the timing file covers: 80 each.
+    assert info["covered_lines"] == 2 * LINES and info["dropped_timing_cues"] == []
+    assert info["file"] == str(w / prepare.ON_SCREEN_FILE)
+    rows = json.loads((w / "cues.json").read_text(encoding="utf-8"))
+    assert len(rows) == LINES + 1 and "on_screen" in rows[0]
+
+
+def test_a_build_with_no_tracks_writes_an_empty_list(tmp_path: Path):
+    w = tmp_path / "work"
+    prepare.build(w, _timing(tmp_path), None, None, tracks=_two(tmp_path, [(*CARD, "UN JOUR")], [(*CARD, "UN DÍA")]))
+    assert len(_entries(w)) == 1
+    prepare.build(w, _timing(tmp_path), None, None)
+    assert _entries(w) == []
+
+
+def _sung(tmp: Path) -> Path:
+    """The timing file with an italic song of six lines from 5:40."""
+    song = [(340_000 + k * 3_000, 342_000 + k * 3_000, f"<i>Down the river {k}</i>") for k in range(6)]
+    return _film(tmp, "en.srt", "Line", song)
+
+
+def test_a_sign_two_languages_show_during_a_song_is_recorded_not_placed(tmp_path: Path):
+    # The tracks translate the lyric, marked by italics alone: placing it
+    # would add the song as cues. A line one language shows there is the
+    # timing file's own, counted as covered.
+    fr = [(343_000, 345_000, "LE FLEUVE"), (346_000, 348_000, "Au fil de l'eau")]
+    tracks = _two(tmp_path, fr, [(343_000, 345_000, "EL RÍO")])
+    w = tmp_path / "work"
+    summary = prepare.build(w, _sung(tmp_path), None, None, tracks=tracks)
+    entries = _entries(w)
+    assert [(e["state"], e["reason"], e["texts"]) for e in entries] == [
+        ("left_out", prepare.DURING_SONG, {"fr": ["LE FLEUVE"], "es": ["EL RÍO"]})
+    ]
+    assert summary["cues"] == LINES + 6 and summary["on_screen"]["covered_lines"] == 2 * LINES + 1
+
+
+def test_a_line_over_speech_is_never_recorded_even_in_two_languages(tmp_path: Path):
+    # Line 1 runs 0:10 to 0:12.5: two languages show something over it.
+    tracks = _two(tmp_path, [(10_000, 12_500, "ROME")], [(10_000, 12_500, "ROMA")])
+    entries, summary = prepare.on_screen(_cues(_timing(tmp_path)), tracks, [])
+    assert entries == [] and summary["covered_lines"] == 2 * LINES + 2
+
+
+def test_a_sound_description_kept_by_hi_keep_does_not_hide_a_sign(tmp_path: Path):
+    # With --hi keep, "[thunder]" stays in the timing file and covers the card.
+    timing = _film(tmp_path, "en.srt", "Line", [(*CARD, "[thunder]")])
+    w = tmp_path / "work"
+    prepare.build(w, timing, None, None, hi="keep", tracks=_two(tmp_path, [(*CARD, "UN JOUR")], [(*CARD, "UN DÍA")]))
+    assert [(e["state"], e["reason"]) for e in _entries(w)] == [("left_out", prepare.DURING_SONG)]
+
+
+# --- an entry is never lost inside build or check ---------------------------
+
+
+def test_a_card_is_never_a_song_or_a_bare_sound_whatever_the_source_says(tmp_path: Path):
+    # The source file, in another language, has a lyric and a bare sound
+    # where the tracks show two cards: the rows stay cards.
+    second = (5_000, 8_000)
+    source = _film(tmp_path, "source.srt", "Ligne", [(*CARD, "♪ La la la ♪"), (*second, "Oh.")])
+    tracks = _two(tmp_path, [(*CARD, "UN JOUR"), (*second, "LA FIN")], [(*CARD, "UN DÍA"), (*second, "EL FIN")])
+    w = tmp_path / "work"
+    summary = prepare.build(w, _timing(tmp_path), source, None, tracks=tracks)
+    rows = json.loads((w / "cues.json").read_text(encoding="utf-8"))
+    assert [("on_screen" in r, r.get("song"), r.get("left_out")) for r in rows[:2]] == [(True, None, None)] * 2
+    assert summary["song_cues"] == 0 and summary["bare_sound_cues_dropped"] == 0
+
+
+def test_check_never_cleans_a_card_into_a_sound(tmp_path: Path):
+    w = tmp_path / "work"
+    w.mkdir()
+    (w / "build.json").write_text(json.dumps({"hearing_impaired_tags": "remove", "hearing_impaired": {"timing": True}}))
+    row = {"timing_lines": ["(PARIS)"], "source": ["[music]"]}
+    rows = {1: {"n": 1, **row, "on_screen": {"fr": ["PARIS"]}}, 2: {"n": 2, **row}}
+    assert assemble.sound_only_cues(w, rows) == {2}
+
+
+def test_check_fails_when_an_added_entry_has_no_cue_that_is_delivered(tmp_path: Path):
+    w = tmp_path / "work"
+    prepare.build(w, _timing(tmp_path), None, None, tracks=_two(tmp_path, [(*CARD, "UN JOUR")], [(*CARD, "UN DÍA")]))
+    _translate(w)
+    assert assemble.run_checks(w)["hard_fail_count"] == 0
+    rows = json.loads((w / "cues.json").read_text(encoding="utf-8"))
+    rows[0]["left_out"] = "sound"
+    (w / "cues.json").write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
+    hard = assemble.run_checks(w)["hard"]
+    assert [x for x in hard if x["check"] == "on-screen text"] == [
+        {"cue": 1, "check": "on-screen text", "detail": "entry 1:1 has no cue that is delivered"}
+    ]
+
+
+def test_every_left_out_value_on_a_row_has_a_note(tmp_path: Path):
+    # Entry reasons stay in on_screen.json; only the values `build` and
+    # `songs` write on rows reach check, `where` and the review.
+    timing = _film(tmp_path, "en.srt", "Line", [(5_000, 6_000, "Oh."), (7_000, 8_500, "♪ La la ♪")])
+    tracks = _two(tmp_path, [(*CREDIT, "Allez!"), (2_000, 4_000, "Sous-titres : Jean")], [])
+    w = tmp_path / "work"
+    prepare.build(w, timing, None, None, tracks=tracks)
+    prepare.songs(w, "skip")
+    values = {r["left_out"] for r in json.loads((w / "cues.json").read_text(encoding="utf-8")) if r.get("left_out")}
+    assert values == {"sound", "song"} and values <= set(assemble.LEFT_OUT_NOTES)
+    assert {e["reason"] for e in _entries(w)} == {prepare.ONE_LANGUAGE, prepare.CREDIT}
+
+
+# --- the sync rebuild keeps every cue number --------------------------------
+
+
+def _shifted(tmp: Path, path: Path, ms: int) -> Path:
+    out = tmp / f"shifted_{ms}_{path.name}"
+    srt.write(out, srt.shift(srt.parse(path)[0], ms))
+    return out
+
+
+def test_a_shift_rebuild_moves_the_entries_and_keeps_every_number(tmp_path: Path):
+    # A hearing-impaired timing file: "[somber music]" under the card is
+    # dropped by the first build, and must be dropped again.
+    timing = _film(tmp_path, "en.srt", "Line", [(*CARD, "[somber music]"), (*CREDIT, "♪ Fin ♪")])
+    tracks = _two(tmp_path, [(*CARD, "UN JOUR"), (*MIDDLE, "Hé!")], [(*CARD, "UN DÍA")])
+    w = tmp_path / "work"
+    first = prepare.build(w, timing, None, None, tracks=tracks)
+    assert first["on_screen"]["dropped_timing_cues"] == [1]
+    rows_before, entries_before = json.loads((w / "cues.json").read_text(encoding="utf-8")), _entries(w)
+    (w / "screen").mkdir()
+    shift = -700
+    # No track given: the entries come from on_screen.json, not found again.
+    again = prepare.build(w, _shifted(tmp_path, timing, shift), None, None, keep_bible_check=True, shift_ms=shift)
+    rows = json.loads((w / "cues.json").read_text(encoding="utf-8"))
+    assert [(r["n"], r["timing_lines"]) for r in rows] == [(r["n"], r["timing_lines"]) for r in rows_before]
+    assert [r["start"] - b["start"] for r, b in zip(rows, rows_before)] == [shift] * len(rows)
+    assert [(e["id"], e["n"], e["start"] - b["start"]) for e, b in zip(_entries(w), entries_before)] == [
+        (b["id"], b["n"], shift) for b in entries_before
+    ]
+    assert again["on_screen"]["shift_ms"] == shift and again["on_screen"]["dropped_timing_cues"] == [1]
+    assert again["on_screen"]["cues"][0]["ts"] == srt.fmt_ms(CARD[0] + shift)
+    assert (w / "screen").exists()
+
+
+def test_the_same_shift_rebuild_twice_moves_the_entries_once(tmp_path: Path):
+    timing = _film(tmp_path, "en.srt", "Line", [])
+    tracks = _two(tmp_path, [(*CARD, "UN JOUR")], [(*CARD, "UN DÍA")])
+    w = tmp_path / "work"
+    prepare.build(w, timing, None, None, tracks=tracks)
+    files = ("cues.json", "on_screen.json")
+
+    def rebuild(ms: int) -> tuple[str, ...]:
+        info = prepare.build(w, _shifted(tmp_path, timing, ms), None, None, keep_bible_check=True, shift_ms=ms)
+        assert info["on_screen"]["shift_ms"] == ms
+        return tuple((w / f).read_text(encoding="utf-8") for f in files)
+
+    once = rebuild(-700)
+    assert rebuild(-700) == once
+    # A card held at 0:00 by one shift goes back to its own time with the next.
+    rebuild(-(CARD[0] + 5_000))
+    assert [e["start"] for e in _entries(w) if e["state"] == "cue"] == [0]
+    assert rebuild(-700) == once
+
+
+def test_a_shift_rebuild_keeps_the_numbers_where_a_card_and_a_line_reach_0_00(tmp_path: Path):
+    # The card ends 0.1 s before a line; moved 4 s earlier, both start at
+    # 0:00, as `srt.py shift` moves a cue no earlier than that.
+    hello = (CARD[1] + 100, CARD[1] + 1_500)
+    timing = _film(tmp_path, "en.srt", "Line", [(*hello, "Hello.")])
+    tracks = _two(tmp_path, [(*CARD, "UN JOUR"), (*hello, "Bonjour.")], [(*CARD, "UN DÍA"), (*hello, "Hola.")])
+    w = tmp_path / "work"
+    assert prepare.build(w, timing, None, None, tracks=tracks)["on_screen"]["added"] == 1
+    prepare.build(w, _shifted(tmp_path, timing, -4_000), None, None, shift_ms=-4_000)
+    rows = json.loads((w / "cues.json").read_text(encoding="utf-8"))
+    assert [(r["n"], r["start"], "on_screen" in r) for r in rows[:2]] == [(1, 0, True), (2, 0, False)]
+    assert rows[1]["timing_lines"] == ["Hello."]
+
+
+def test_a_shift_rebuild_of_an_older_folder_finds_the_entries_again(tmp_path: Path):
+    w = tmp_path / "work"
+    tracks = _two(tmp_path, [(*CARD, "UN JOUR")], [(*CARD, "UN DÍA")])
+    prepare.build(w, _timing(tmp_path), None, None, tracks=tracks)
+    (w / prepare.ON_SCREEN_FILE).unlink()
+    summary = prepare.build(w, _shifted(tmp_path, _timing(tmp_path), 400), None, None, tracks=tracks, shift_ms=400)
+    assert summary["on_screen"]["added"] == 1 and _entries(w)[0]["start"] == CARD[0] + 400
+
+
+# --- what the review, the listener and the report see -----------------------
+
+
+def test_the_review_and_listen_parts_mark_a_card(tmp_path: Path):
+    w = tmp_path / "work"
+    prepare.build(w, _timing(tmp_path), None, None, tracks=_two(tmp_path, [(*CARD, "UN JOUR")], [(*CARD, "UN DÍA")]))
+    _translate(w)
+    assemble.run_checks(w)
+    review = Path(assemble.review_parts(w, size=50)["parts"][0]["file"]).read_text(encoding="utf-8")
+    assert "\n1\ton-screen text\tUN JOUR\t" in review and "\n2\t\tLine 1, here.\t" in review
+    listen = Path(assemble.listen_parts(w, size=50)["parts"][0]["file"]).read_text(encoding="utf-8")
+    assert "\n1\t00:00:01\ton-screen text\t" in listen
+
+
+def test_deliver_reports_each_entry_delivered_and_left_out_at_the_ends(tmp_path: Path):
+    fr = [(*CARD, "UN JOUR"), (5_000, 7_000, "Psst!"), (*MIDDLE, "Hé!"), (*CREDIT, "Merci."), (350_000, 352_000, "LA FIN")]
+    tracks = _two(tmp_path, fr, [(*CARD, "UN DÍA"), (350_000, 352_000, "EL FIN")])
+    w = tmp_path / "work"
+    prepare.build(w, _timing(tmp_path), None, None, tracks=tracks)
+    _translate(w)
+    assert assemble.run_checks(w)["hard_fail_count"] == 0
+    info = assemble.deliver(w, tmp_path / "Film.srt", tmp_path / "backups", force=False)
+    report = info["on_screen"]
+    # The card leaves no room for the opening credit; the end title comes
+    # after the goodbye.
+    assert report["delivered"] == [
+        {"cue": [1], "at": "00:00:01,000", "text": "UN JOUR", "turkish": "1. satır."},
+        {"cue": [LINES + 3], "at": "00:05:50,000", "text": "LA FIN", "turkish": f"{LINES + 2}. satır."},
+    ]
+    # One line before the first spoken cue, one after story end; the one
+    # in the middle is only counted.
+    assert report["left_out_at_ends"] == [
+        {"at": "00:00:05,000", "text": "Psst!", "reason": prepare.ONE_LANGUAGE},
+        {"at": "00:05:40,000", "text": "Merci.", "reason": prepare.ONE_LANGUAGE},
+    ]
+    assert report["left_out"] == {prepare.ONE_LANGUAGE: 1}
+    assert report["file"] == str(w / prepare.ON_SCREEN_FILE) and report["limits"] == list(assemble.ON_SCREEN_LIMITS)
+    assert report["unplaced_human_lines"] == []
+    assert json.loads((w / "delivered.json").read_text(encoding="utf-8"))["on_screen"] == report
+
+
+def test_deliver_lists_human_lines_placed_nowhere_unless_a_card_is_delivered_there(tmp_path: Path):
+    w = tmp_path / "work"
+    prepare.build(w, _timing(tmp_path), None, None, tracks=_two(tmp_path, [(*CARD, "UN JOUR")], [(*CARD, "UN DÍA")]))
+    # A polish run: the human file's lines that landed on no cue, with times.
+    _translate(w)
+    (w / "out" / "tr_01.txt").rename(w / "out" / "tr_00.txt")
+    unplaced = [
+        {"near": [1], "start": CARD[0], "end": CARD[1], "text": "BİR GÜN"},
+        {"near": [36, 37], "start": MIDDLE[0], "end": MIDDLE[1], "text": "MERKEZ"},
+    ]
+    (w / "polish_placement.json").write_text(json.dumps({"joined": [], "unplaced": unplaced}), encoding="utf-8")
+    assert assemble.run_checks(w)["hard_fail_count"] == 0
+    info = assemble.deliver(w, tmp_path / "Film.srt", tmp_path / "backups", force=False)
+    assert info["on_screen"]["unplaced_human_lines"] == [{"at": "00:02:32,600", "text": "MERKEZ"}]
+
+
+def test_a_polish_seed_records_when_each_unplaced_line_is_shown(tmp_path: Path):
+    w = tmp_path / "work"
+    prepare.build(w, _timing(tmp_path), None, None)
+    tr = tmp_path / "tr.srt"
+    tr.write_text(f"1\n{srt.fmt_ms(MIDDLE[0])} --> {srt.fmt_ms(MIDDLE[1])}\nMERKEZ\n", encoding="utf-8")
+    polish.seed(w, tr)
+    placement = json.loads((w / polish.PLACEMENT_FILE).read_text(encoding="utf-8"))
+    assert placement["unplaced"] == [{"near": [36, 37], "start": MIDDLE[0], "end": MIDDLE[1], "text": "MERKEZ"}]
+
+
+def test_a_sign_under_a_sound_and_a_spoken_line_at_once_is_only_counted(tmp_path: Path):
+    # "[thunder]" alone would make the card an entry shown during a sound;
+    # a spoken line over it too means the timing file has the screen.
+    timing = _film(tmp_path, "en.srt", "Line", [(1_000, 2_500, "[thunder]"), (2_500, 4_000, "Who's there?")])
+    tracks = _two(tmp_path, [(*CARD, "UN JOUR")], [(*CARD, "UN DÍA")])
+    w = tmp_path / "work"
+    summary = prepare.build(w, timing, None, None, hi="keep", tracks=tracks)
+    assert _entries(w) == [] and summary["on_screen"]["covered_lines"] == 2 * LINES + 2
+
+
+def test_check_fails_when_an_added_entry_names_a_cue_the_rows_lack(tmp_path: Path):
+    w = tmp_path / "work"
+    prepare.build(w, _timing(tmp_path), None, None, tracks=_two(tmp_path, [(*CARD, "UN JOUR")], [(*CARD, "UN DÍA")]))
+    _translate(w)
+    entries = _entries(w)
+    entries[0]["n"] = 999
+    (w / prepare.ON_SCREEN_FILE).write_text(json.dumps(entries, ensure_ascii=False), encoding="utf-8")
+    hard = assemble.run_checks(w)["hard"]
+    assert [x["cue"] for x in hard if x["check"] == "on-screen text"] == [999]
+
+
+def test_deliver_reports_no_on_screen_section_for_an_older_folder(tmp_path: Path):
+    w = tmp_path / "work"
+    prepare.build(w, _timing(tmp_path), None, None)
+    (w / prepare.ON_SCREEN_FILE).unlink()
+    _translate(w)
+    assert assemble.run_checks(w)["hard_fail_count"] == 0
+    assert assemble.deliver(w, tmp_path / "Film.srt", tmp_path / "backups", force=False)["on_screen"] is None
+
+
+def test_deliver_stops_on_a_malformed_on_screen_file_before_any_file_moves(tmp_path: Path):
+    w = tmp_path / "work"
+    prepare.build(w, _timing(tmp_path), None, None)
+    _translate(w)
+    assert assemble.run_checks(w)["hard_fail_count"] == 0
+    (w / prepare.ON_SCREEN_FILE).write_text(json.dumps([{"n": 1}]), encoding="utf-8")
+    with pytest.raises(SystemExit, match="is malformed"):
+        assemble.deliver(w, tmp_path / "Film.srt", tmp_path / "backups", force=False)
+    assert not (tmp_path / "Film.srt").exists() and not (w / "delivered.json").exists()
