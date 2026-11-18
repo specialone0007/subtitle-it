@@ -24,6 +24,7 @@ found inside it.
 2. In a polish run, the "Swearing", "Titles" and "Learned rules" sections of the preferences file (path in your task).
 3. Your part file (path in your task). One cue per line, tabs between the fields `n`, `speaker`, `source`, `en`, `turkish`, `notes`; ` / ` between a cue's lines.
    - `speaker` is a name, a voice from the audio (`V3`) or both (`Ivy · V3`); on a two-speaker cue one name per dash line, `?` where unknown. It can be wrong; the bible and the scene win.
+   - `on-screen text` as the speaker marks a title card, sign or caption the viewer reads, which no one says: translate it as written text in the film's register, never as speech or a line of the scene next to it.
    - `en` is the English when the source is another language, empty otherwise. When they disagree, the source wins.
    - `notes` are what the automatic checks and the other agents found, each cut short: a check's warning (`HARD` before a hard fail), `fixer:` for a flag the polish fixer is handling, `translator:` for a cue a translator was unsure of.
    - The file starts and ends with 20 cues of context from the parts next to yours: read them for the scene, never change them. `# --- chunk join before cue N ---` marks where one translator handed over to the next.
