@@ -233,6 +233,9 @@ def build(
     # fixes, draft, checks and speaker labels must never be read into this
     # one: the new timing file may number its cues differently.
     shutil.rmtree(work / "out", ignore_errors=True)
+    # W/screen/ is reserved for on-screen text read from the video's frames,
+    # a step no script runs yet. Clearing it here means that step can never
+    # read files an earlier run left for other cue numbers.
     shutil.rmtree(work / "screen", ignore_errors=True)
     # The bible check's files belong to the earlier run's bible too, unless
     # this rebuild only shifts the times of the same cues.
