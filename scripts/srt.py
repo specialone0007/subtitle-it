@@ -57,6 +57,21 @@ class Cue:
         return max(self.end - self.start, 1)
 
 
+OVERRIDE_TAG_RE = re.compile(r"\{\\[^}]*\}")
+
+
+def drop_override_tags(lines: list[str]) -> list[str]:
+    """The lines without `{\\an8}`-style tags. They move a line to the top
+    of the screen, and many TV players print them as text instead. A line
+    that held only a tag is gone."""
+    out = []
+    for ln in lines:
+        bare = OVERRIDE_TAG_RE.sub("", ln)
+        if bare.strip() or not ln.strip():
+            out.append(bare)
+    return out
+
+
 def strip_tags(s: str) -> str:
     return TAG_RE.sub("", s)
 
