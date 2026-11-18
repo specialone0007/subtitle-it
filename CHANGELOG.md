@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.10.0 (2026-11-18)
+
+The delivered file signs off with the translator's name, and a polish run
+keeps the human file's wording unless a real check fails.
+
+- The delivered file carries a short credit at both ends, one screen of
+  4 s each: "İyi seyirler." over the translator's name from 1 s, and
+  "Görüşmek üzere." over the name 1 s after the last line (the greeting
+  alone when no name is set). A film that speaks before 5.5 s gets a
+  shorter opening, 3 s at least, and one that speaks before 4.5 s none.
+  Only the delivered file has it; the draft, the checks and the reviewers
+  never see it.
+- `assemble.py deliver --credit-name NAME` and `--no-credit`, set by the
+  new `Credit` preference (`on` or `off`, with the name on the line below).
+  The file holds no web address, since some subtitle sites remove files
+  that do.
+- `delivered_map.json` moves its numbers down past an opening credit and
+  lists the credit cues under `credits`; `learn.py diff` skips them, so an
+  edit to the credit teaches nothing.
+- Polish run: a human line keeps its words unless it fails a real check; a
+  word the bible prefers is not by itself a reason (reviewer item 15).
+- Polish run: the listener now runs too. `listenparts` marks untouched
+  human lines (`human` column) and skips parts that hold only such lines;
+  `listengate` drops an edit to one.
+- Polish run: repeat drift is a reviewer-only warning, like reading speed,
+  so the polish fixer no longer copies one wording of a repeated line over
+  every scene. Reviewers and translators match a line the viewer should
+  recognise and word a stock phrase for its own scene.
+- The bible writer gives address words ("abi", "dostum", "kanka") per pair
+  of characters, never one word for every listener.
+- Step 4 keeps the voice round's answers (`WORK/second.voices.json`) for
+  step 5's `compare`, unless `bible.py voices` gave up.
+
 ## 0.9.0 (2026-11-16)
 
 Lines read the way Turkish people say them: a listener reads the finished
