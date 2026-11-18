@@ -428,7 +428,16 @@ the file in the silence before the first line, and "Görüşmek üzere." comes
 kept song counts as story). It takes the first free 2 s from there,
 skipping any card in its way, and ends 0.1 s before the next one, so an
 end title read from another track comes after it. With no free 2 s, or
-no story cue at all, it follows the last cue by 3 s. With `--video` it
+no story cue at all, it follows the last cue by 3 s. When
+`screen.py ends` found a cut to black after the story
+(`W/screen/ends.json`), the goodbye starts on the first black stretch
+that begins within 30 s after story end instead: half a second after the
+story's last line at the earliest, and after any cue still on screen. It
+ends 0.1 s before the next cue, 4 s at most; with under 2 s free there,
+the rule above places it. `deliver` reads the file only when it covers
+half a second after story end to 30 s after it, so a later `check` that
+holds the last line a little longer keeps it. The result's `goodbye` says
+which rule placed it. With `--video` it
 stays inside the video's length, moving earlier or ending with the video.
 For an `.srt` input the name keeps the input's, with `tr` as its
 language, so the input is never written over. When it delivers to that

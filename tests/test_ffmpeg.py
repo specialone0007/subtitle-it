@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+import screen
 import sources
 import srt
 
@@ -76,3 +77,27 @@ def test_local_reads_a_real_text_track(tmp_path: Path):
     assert [c.start for c in cues] == [500, 2000, 3600]
     assert [c.end for c in cues] == [1500, 3200, 4800]
     assert cues[2].lines == ["- Coming?", "- In a minute."]
+
+
+def test_screen_ends_finds_a_real_cut_to_black(tmp_path: Path):
+    # White to 6 s, black from 6 s to 9 s, white again to 12 s. The story
+    # ends at 3 s, so ffmpeg seeks there and the times must be moved back.
+    video = tmp_path / "Film.mkv"
+    subprocess.run(
+        [
+            "ffmpeg", "-v", "error", "-y",
+            "-f", "lavfi", "-i", "color=c=white:s=160x90:r=25:d=6",
+            "-f", "lavfi", "-i", "color=c=black:s=160x90:r=25:d=3",
+            "-f", "lavfi", "-i", "color=c=white:s=160x90:r=25:d=3",
+            "-filter_complex", "[0:v][1:v][2:v]concat=n=3:v=1:a=0",
+            "-c:v", "mpeg4", str(video),
+        ],
+        check=True,
+    )  # fmt: skip
+    w = tmp_path / "work"
+    w.mkdir()
+    (w / "draft.tr.srt").write_text("1\n00:00:00,500 --> 00:00:03,000\nMerhaba.\n", encoding="utf-8")
+    (w / "cues.json").write_text("[]", encoding="utf-8")
+    out = screen.ends(w, video)
+    [(start, end)] = out["black"]
+    assert out["story_end_ms"] == 3_000 and abs(start - 6_000) <= 80 and abs(end - 9_000) <= 80

@@ -381,6 +381,16 @@ fails.
 - Still failing after that: go on. Step 12 delivers with `--force` and lists the failing cues in the report. If `check` wrote no draft (a cue is missing or a file is malformed), there is nothing to deliver: stop and tell the user which cues are missing (its result's `missing_cues` names every one).
 - Warnings never block. They go to the reviewers.
 
+When the input is a video and the last `check` wrote a draft, run
+`screen.py ends --work WORK --video '<video>'` once, in the background
+(the Bash tool's `run_in_background`), and go on with step 10 without
+waiting for it; before step 12, wait for it to end. ffmpeg reads the 2.5 minutes after the story's last line
+for the cut to black, which takes about half a minute; `deliver` then
+starts "Görüşmek üzere." on it. Its result never stops a run: when it has
+an `error` (no ffmpeg, the video could not be read), put that in one line
+of the report, and `deliver` places the goodbye as it does without it.
+Skip it for an `.srt` input.
+
 The check also lays out each cue as it will be shown: at most 2 lines of
 42 characters, and in a two-speaker cue one line per speaker. A
 two-speaker cue that does not fit is split into one cue per speaker when
@@ -516,7 +526,9 @@ Turkish file it started from, how many cues the fixer and the reviewers
 changed, and how many lines are still softer than the source), any timing shift
 and sync verdict, whether each source file is hearing-impaired and how
 many cues lost tags or labels and how many sound-only cues were left
-out, how many bare sounds were left out, the songs (song cues found,
+out, how many bare sounds were left out, where the goodbye went
+(`deliver`'s `goodbye`: on the `cut to black` or `after the story`, and
+`screen.py ends`'s `error` when it had one), the songs (song cues found,
 translated, left out, and the `Songs` mode), the on-screen text from `deliver`'s `on_screen` (each entry in `delivered` with its time and text; each in `left_out_at_ends` with its time, text and reason; the counts in `left_out` with the path in `file`; in a polish run each line in `unplaced_human_lines` with its time and text; then its two `limits` lines as they are), any file `build` warned was malformed, the voices dropped as mixed, the bible check (decisions, agreed,
 judged, ties, questions the second reader never answered), in a polish
 run the lines whose sen or siz differs from the human file

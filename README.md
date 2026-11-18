@@ -66,7 +66,8 @@ when no other command uses that name.)
   into rules for the next film.
 - **A short credit.** "İyi seyirler." over your name opens the file in the
   silence before the first line, and "Görüşmek üzere." over your name
-  follows the story's last line, before any end title. Put your name
+  follows the story's last line, before any end title. When the film cuts
+  to black after its last line, the goodbye starts on the black. Put your name
   under `Credit` in your preferences, or set it to `off`.
 
 ## Languages
@@ -290,6 +291,7 @@ scripts/learn.py                find user edits for learn mode
 scripts/compare.py              blind side-by-side comparison of two or three delivered files
 scripts/speakers.py             voices per cue from the audio, sync check
 scripts/transcribe.py           subtitles from the audio when no file exists, the last resort
+scripts/screen.py               read the picture with ffmpeg: the cut to black after the story
 scripts/settings.py             find the settings folder; move the one from before the rename
 scripts/result.py               print each script's JSON result and save it to --result
 tests/                          pytest suite
