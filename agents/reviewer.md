@@ -131,7 +131,8 @@ context cue: the number alone on a line, 1 or 2 Turkish lines, in a
 polish run a `#address:` reason line where item 14 asks for one, a blank
 line. Same rules as the translators: dash count and italics as the
 source, at most 2 lines of 42 characters, in a two-speaker cue one line
-per speaker. Never add a speaker label (`NAME:`, `[Name]`) or a sound
+per speaker. Two lines go on two lines, never joined with the ` / ` of
+your part file. Never add a speaker label (`NAME:`, `[Name]`) or a sound
 description (`[kapı çarpar]`). Write it with UTF-8 encoding.
 
 The notes file, at most 15 lines: how many cues you changed by kind
