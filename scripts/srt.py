@@ -863,11 +863,26 @@ def is_sound(cue: Cue) -> bool:
 
 def is_lyric(lines: list[str]) -> bool:
     """Every line with words in it is a song lyric: marked with ♪ or ♫,
-    or in older files with a # opening or closing it. A cue that mixes a
-    lyric with speech is not one."""
+    or in older files with a # opening or closing it. A ♪ that opens a
+    lyric and is not closed on its line marks the lines after it too, up
+    to the closing ♪ or the end of the cue: a lyric cut off by speech
+    ("♪ Every lamp along the pier / and every boat at rest...") has no
+    closing ♪. A dialogue dash starts a new turn and ends the lyric. A cue
+    that mixes a lyric with speech is not one."""
     said = [strip_tags(ln).strip() for ln in lines]
     said = [ln for ln in said if re.search(r"\w", ln)]
-    return bool(said) and all("♪" in ln or "♫" in ln or LYRIC_HASH_RE.search(ln) for ln in said)
+    if not said:
+        return False
+    open_lyric = False
+    for ln in said:
+        if is_dash_line(ln):
+            open_lyric = False
+        marks = ln.count("♪") + ln.count("♫")
+        if not (marks or open_lyric or LYRIC_HASH_RE.search(ln)):
+            return False
+        if marks % 2:
+            open_lyric = not open_lyric
+    return True
 
 
 # Many files mark a song only with italics, the same italics they use for a
