@@ -167,8 +167,14 @@ def test_deliver_keeps_the_map_and_learn_reads_it(work: Path, tmp_path: Path):
     assemble.run_checks(work)
     dest = tmp_path / "Film.srt"
     assemble.deliver(work, dest, tmp_path / "backups", force=False)
-    assert (work / "delivered_map.json").read_text(encoding="utf-8") == (work / "cue_map.json").read_text(encoding="utf-8")
-    dest.write_text(dest.read_text(encoding="utf-8").replace("Tamam.", "Peki."), encoding="utf-8")
+    # The film speaks at 1 s: no opening credit, so the numbers stay; the
+    # closing credit cue comes after the film's four.
+    delivered = json.loads((work / "delivered_map.json").read_text(encoding="utf-8"))
+    assert delivered["cues"] == json.loads((work / "cue_map.json").read_text(encoding="utf-8"))["cues"]
+    assert delivered["credits"] == [5]
+    # An edit to a credit cue teaches nothing; an edit to a line does.
+    text = dest.read_text(encoding="utf-8").replace("Tamam.", "Peki.").replace(assemble.CREDIT_BYE, "Görüşürüz.")
+    dest.write_text(text, encoding="utf-8")
     d = learn.diff(work)
     assert [(e["cue"], e["timing_cue"]) for e in d["edits"]] == [(4, 4)]
     # A second delivery backs up the first with its map, so its numbers
@@ -294,3 +300,98 @@ def test_check_never_runs_a_fast_cue_into_the_next_one(tmp_path: Path):
     draft, _ = srt.parse(w / "draft.tr.srt")
     assert draft[0].ts == "00:00:01,000 --> 00:00:03,000"
     assert [x["detail"][:4] for x in r["warnings"] if x["check"] == "reading speed"] == ["23.5"]
+
+
+def _cues(*spans: tuple[int, int]) -> list[srt.Cue]:
+    return [
+        srt.Cue(n=i, start=a, end=b, ts=f"{srt.fmt_ms(a)} --> {srt.fmt_ms(b)}", lines=[f"Satır {i}."])
+        for i, (a, b) in enumerate(spans, 1)
+    ]
+
+
+HELLO = [assemble.CREDIT_HELLO, "specialone0007"]
+BYE = [assemble.CREDIT_BYE, "specialone0007"]
+
+
+def test_credit_opens_in_the_silence_and_closes_after_the_last_line():
+    shown, shift, credits = assemble.with_credit(_cues((10_000, 12_000), (60_000, 62_500)), "specialone0007")
+    assert shift == 1 and credits == [1, 4] and [c.n for c in shown] == [1, 2, 3, 4]
+    assert shown[0].ts == "00:00:01,000 --> 00:00:05,000" and shown[0].lines == HELLO
+    assert shown[1].lines == ["Satır 1."] and shown[1].ts == "00:00:10,000 --> 00:00:12,000"
+    assert shown[3].ts == "00:01:03,500 --> 00:01:07,500" and shown[3].lines == BYE
+
+
+def test_credit_opening_shortens_or_drops_when_the_film_speaks_early():
+    # First line at 5.5 s: just room for the full 4 s.
+    shown, shift, _ = assemble.with_credit(_cues((5_500, 9_000)), "specialone0007")
+    assert shift == 1 and shown[0].ts == "00:00:01,000 --> 00:00:05,000"
+    # First line at 4.5 s: cut to 3 s, ending half a second before it.
+    shown, shift, _ = assemble.with_credit(_cues((4_500, 6_000)))
+    assert shift == 1 and shown[0].ts == "00:00:01,000 --> 00:00:04,000"
+    # First line at 4.4 s: under 3 s of room, so no opening credit.
+    shown, shift, credits = assemble.with_credit(_cues((4_400, 6_000)))
+    assert shift == 0 and credits == [2] and shown[0].lines == ["Satır 1."]
+
+
+def test_credit_without_a_name_shows_the_greeting_alone():
+    shown, _, _ = assemble.with_credit(_cues((10_000, 12_000)), "  ")
+    assert shown[0].lines == [assemble.CREDIT_HELLO] and shown[-1].lines == [assemble.CREDIT_BYE]
+
+
+def test_credit_name_too_long_stops():
+    with pytest.raises(SystemExit):
+        assemble.credit_lines(assemble.CREDIT_HELLO, "x" * (assemble.CREDIT_NAME_MAX + 1))
+    assert assemble.credit_lines(assemble.CREDIT_BYE, "x" * assemble.CREDIT_NAME_MAX)[1] == "x" * assemble.MAX_LINE
+
+
+def test_deliver_with_credit_moves_the_map_and_keeps_the_draft(tmp_path: Path):
+    (tmp_path / "fr.srt").write_text(
+        FR.replace("00:00:01,000 --> 00:00:03,000", "00:00:06,000 --> 00:00:08,000", 1).replace(
+            "00:00:03,500 --> 00:00:04,000", "00:00:08,500 --> 00:00:09,000"
+        ),
+        encoding="utf-8",
+    )
+    w = tmp_path / "work"
+    prepare.build(w, tmp_path / "fr.srt", None, None)
+    prepare.chunks(w, target=250)
+    (w / "out" / "tr_01.txt").write_text(TR, encoding="utf-8")
+    assert assemble.run_checks(w)["hard_fail_count"] == 0
+    draft = (w / "draft.tr.srt").read_bytes()
+    dest = tmp_path / "Film.srt"
+    info = assemble.deliver(w, dest, tmp_path / "backups", force=False, translator="specialone0007")
+    assert info["credit"] is True and info["credit_name"] == "specialone0007" and info["credit_cues"] == [1, 6]
+    assert (w / "draft.tr.srt").read_bytes() == draft
+    raw = dest.read_bytes()
+    assert raw.startswith(assemble.UTF8_BOM) and b"\r\n" in raw and b"\r\r" not in raw
+    shown, _ = srt.parse(dest)
+    assert [c.n for c in shown] == list(range(1, 7)) and shown[1].lines == ["Gel."]
+    assert shown[0].lines == HELLO and shown[-1].lines == BYE
+    assert [x["delivered"] for x in assemble.where(w, [1, 3])] == [[2], [3, 4]]
+    # Off: the file is the draft as it was, BOM added.
+    assemble.deliver(w, dest, tmp_path / "backups", force=False, credit=False)
+    assert dest.read_bytes() == assemble.UTF8_BOM + draft.removeprefix(assemble.UTF8_BOM)
+
+
+def test_deliver_cli_passes_the_credit_flags(tmp_path: Path):
+    (tmp_path / "fr.srt").write_text(
+        FR.replace("00:00:01,000 --> 00:00:03,000", "00:00:06,000 --> 00:00:08,000", 1).replace(
+            "00:00:03,500 --> 00:00:04,000", "00:00:08,500 --> 00:00:09,000"
+        ),
+        encoding="utf-8",
+    )
+    w = tmp_path / "work"
+    prepare.build(w, tmp_path / "fr.srt", None, None)
+    prepare.chunks(w, target=250)
+    (w / "out" / "tr_01.txt").write_text(TR, encoding="utf-8")
+    assemble.run_checks(w)
+    dest, res = tmp_path / "Film.srt", tmp_path / "res.json"
+    base = ["--result", str(res), "deliver", "--work", str(w), "--dest", str(dest), "--backups", str(tmp_path / "b")]
+    assemble.main(base + ["--credit-name", "specialone0007"])
+    shown, _ = srt.parse(dest)
+    assert shown[0].lines == HELLO and shown[-1].lines == BYE
+    info = json.loads((w / "delivered.json").read_text(encoding="utf-8"))
+    assert info["credit"] is True and info["credit_name"] == "specialone0007"
+    assemble.main(base + ["--no-credit"])
+    shown, _ = srt.parse(dest)
+    assert all(assemble.CREDIT_HELLO not in c.lines and assemble.CREDIT_BYE not in c.lines for c in shown)
+    assert json.loads((w / "delivered.json").read_text(encoding="utf-8"))["credit"] is False
