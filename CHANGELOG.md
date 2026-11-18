@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+- The delivered file carries a short credit at both ends, each line on a
+  screen of at most two lines. From 1 s: "İyi seyirler." for 2 s, then
+  "Çeviri: <name>" over "subtitle-it ile hazırlanmıştır" for 4 s (the tool
+  line alone when no name is set); a film that speaks before 7.5 s gets only the credit, and one
+  that speaks before 4.5 s gets no opening. 1 s after the last line:
+  "Tekrar görüşmek üzere." for 2 s, then the same credit for 4 s. Only the
+  delivered file has it; the draft, the checks and the reviewers never
+  see it.
+- `assemble.py deliver --credit-name NAME` and `--no-credit`, set by the
+  new `Credit` preference (`on` or `off`, with the name on the line below).
+  The file holds no web address, since some subtitle sites remove files
+  that do.
+- `delivered_map.json` moves its numbers down past an opening credit and
+  lists the credit cues under `credits`; `learn.py diff` skips them, so an
+  edit to the credit teaches nothing.
+
 ## 0.9.0 (2026-11-16)
 
 Lines read the way Turkish people say them: a listener reads the finished
