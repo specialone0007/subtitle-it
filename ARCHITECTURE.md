@@ -86,6 +86,11 @@ Then it settles the timings:
 - `prepare.py build` writes the work folder: `cues.json` (every cue with its
   source and English text) and `chunks.json` (about 250 cues each, cut at
   the longest pause).
+- On-screen text: `build` also reads the film's other subtitle tracks
+  (`--track`, `--forced-track`). A line two languages show, or a forced
+  track shows, where the timing file shows nothing (a title card, a sign)
+  joins the timing file as a cue of its own, marked `on_screen`. One
+  language alone is only counted for the report.
 - Unless your preferences say `Hearing-impaired tags: keep`, `build` takes
   sound descriptions in square brackets (`[door slams]`) and bracketed
   names (`[Mara]`, `[1. Man]`) out of every text. From a file that is
@@ -389,7 +394,15 @@ the counts: kept, dropped by the gate (by reason), written back.
 the video's name so TVs pick it up, as UTF-8 with a BOM. Any file already
 there is moved to a backups folder, and the result says what it was:
 `earlier delivery`, `Turkish` or `not Turkish` (an English `<film>.srt`,
-say). For an `.srt` input the name keeps the input's, with `tr` as its
+say). Unless the preferences turn the credit off, "İyi seyirler." opens
+the file in the silence before the first line, and "Görüşmek üzere." comes
+3 s after the story's last line: the last cue that is not `on_screen` (a
+kept song counts as story). It takes the first free 2 s from there,
+skipping any card in its way, and ends 0.1 s before the next one, so an
+end title read from another track comes after it. With no free 2 s, or
+no story cue at all, it follows the last cue by 3 s. With `--video` it
+stays inside the video's length, moving earlier or ending with the video.
+For an `.srt` input the name keeps the input's, with `tr` as its
 language, so the input is never written over. When it delivers to that
 default name next to the video (`--video`), this plugin's earlier
 deliveries of the film under another name, such as a `<film>.tr.srt` from

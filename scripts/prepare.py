@@ -5,6 +5,7 @@
 """Build a film's work folder and cut it into chunks for the translators.
 
     uv run prepare.py build  --work W --timing T [--source S] [--en E] [--keep-bible-check] [--hi remove|keep]
+                             [--track LANG=PATH ...] [--forced-track LANG=PATH ...]
     uv run prepare.py songs  --work W [--mode story|skip|all]
     uv run prepare.py chunks --work W [--target 250]
 
@@ -31,11 +32,25 @@ songs.json and the preferences' "Songs".
 
 `--keep-bible-check` is for a rebuild that only shifts the times of the same
 cues: the bible check's files stay, since its answers cite cue numbers.
+
+On-screen text. A title card, a sign or a dedication is often missing from
+the timing file: English tracks tend to leave it to the picture, while a
+French or Spanish track subtitles it. `--track LANG=PATH` (any number) names
+other subtitle files of the same film; `--forced-track LANG=PATH` names a
+forced track of the same video, which holds only on-screen text and
+foreign-language lines. `build` lines each `--track` up with the timing file
+(srt.fit; one that does not fit is left out) and takes a forced track as it
+is. A line that falls where the timing file shows nothing becomes a new cue,
+marked `on_screen` in cues.json, when tracks in two languages show it at the
+same time, or a forced track shows it. One language alone is reported, not
+added: a French track also subtitles shouts the English one leaves out.
+Subtitle credits ("Subtítulos: ...") are never added.
 """
 
 from __future__ import annotations
 
 import argparse
+import bisect
 import json
 import os
 import re
@@ -52,6 +67,109 @@ import srt  # noqa: E402
 # forms themselves ("MARA:", "[Mara] Hi.") are read by srt.clean_line.
 NOT_NAMES = {"MAN", "WOMAN", "BOTH", "ALL", "MUSIC", "LAUGHS", "SIGHS", "NARRATOR", "CROWD", "VOICE", "TV", "RADIO"}
 HI_MODES = ("remove", "keep")
+
+# --- on-screen text from other tracks ---------------------------------------
+
+# A track's line counts as missing from the timing file when timing cues
+# cover less than this share of its time.
+GAP_MAX_COVERED = 0.2
+# Two tracks' lines show the same thing when they overlap by at least this
+# share of the shorter one.
+SAME_LINE_SHARE = 0.5
+# An added cue squeezed between two timing cues must still last this long.
+ON_SCREEN_MIN_MS = 700
+# A subtitler's own credit or a site's advert, in the languages tracks come in.
+CREDIT_RE = re.compile(
+    r"subt[ií]t|sous-titr|untertitel|sottotitol|legendas|altyaz|napisy|traduc|translat|übersetz"
+    r"|\bsync|opensubtitles|www\.|https?:|\.(?:com|org|net)\b",
+    re.IGNORECASE,
+)
+
+
+def track_arg(text: str) -> tuple[str, Path]:
+    """`fr=path/to/file.srt` for --track and --forced-track."""
+    lang, sep, path = text.partition("=")
+    lang = lang.strip().lower()
+    # OpenSubtitles keeps a region on some codes: pt-BR, zh-CN.
+    if not sep or not re.fullmatch(r"[a-z]{2,3}(-[a-z0-9]{2,4})?", lang) or not path.strip():
+        raise argparse.ArgumentTypeError(f"expected LANG=PATH with a language code like fr or pt-br, got {text!r}")
+    return lang, result.path(path.strip())
+
+
+def on_screen(timing: list[srt.Cue], tracks: list[tuple[str, Path]], forced: list[tuple[str, Path]]) -> tuple[list[dict], dict]:
+    """Lines the other tracks show where the timing file shows nothing.
+
+    Returns the cues to add, each {"start", "end", "lines", "texts"} with
+    `texts` one entry per language in the order given, and a summary for
+    build.json. Tracks are given in order of preference: the first one
+    with the line gives the added cue's text and times."""
+    found: list[tuple[int, str, bool, srt.Cue]] = []  # (track order, language, forced, cue)
+    summary_tracks = []
+    for k, (lang, path, is_forced) in enumerate([(a, b, False) for a, b in tracks] + [(a, b, True) for a, b in forced]):
+        cues, _ = srt.parse(path)
+        entry = {"language": lang, "path": str(path), "forced": is_forced, "cues": len(cues)}
+        if not is_forced and cues:
+            f = srt.fit(timing, cues)
+            entry.update(fits=f["fits"], offset_ms=f["offset_ms"], reason=f["reason"])
+            if not f["fits"]:
+                summary_tracks.append(entry)
+                continue
+            cues = srt.shift(cues, f["offset_ms"])
+        summary_tracks.append(entry)
+        for c, covered in zip(cues, srt._coverage(cues, timing) if cues and timing else []):
+            if c.end <= c.start or covered >= GAP_MAX_COVERED:
+                continue
+            # Read as a hearing-impaired line: "HARTLEY: Hmm..." is a sound.
+            said = srt.strip_hi(c.lines, True)[0]
+            if srt.is_sound(c) or not said or srt.is_bare_sound(said) or CREDIT_RE.search(c.plain):
+                continue
+            found.append((k, lang, is_forced, c))
+
+    # Group the lines that show the same thing: each joins the first group
+    # whose first line it overlaps enough.
+    found.sort(key=lambda x: (x[3].start, x[0]))
+    groups: list[list[tuple[int, str, bool, srt.Cue]]] = []
+    for item in found:
+        c = item[3]
+        for g in groups[-3:]:
+            a = g[0][3]
+            ov = min(a.end, c.end) - max(a.start, c.start)
+            if ov >= SAME_LINE_SHARE * min(a.duration, c.duration):
+                g.append(item)
+                break
+        else:
+            groups.append([item])
+
+    starts = [c.start for c in timing]
+    added, single, no_room = [], [], []
+    last_end = 0
+    for g in groups:
+        # pt and pt-br are one language here: two of them prove nothing.
+        langs = {lang.split("-")[0] for _, lang, _, _ in g if lang != "und"}
+        anchor = min(g, key=lambda x: (not x[2], x[0]))[3]
+        if not any(f for _, _, f, _ in g) and len(langs) < 2:
+            single.append({"ts": srt.fmt_ms(anchor.start), "language": g[0][1], "text": srt.strip_tags(" / ".join(anchor.lines))})
+            continue
+        i = bisect.bisect_left(starts, anchor.start)
+        start = max(anchor.start, timing[i - 1].end if i else 0, last_end)
+        end = min(anchor.end, timing[i].start if i < len(timing) else anchor.end)
+        text = srt.strip_tags(" / ".join(anchor.lines))
+        if end - start < ON_SCREEN_MIN_MS:
+            no_room.append({"ts": srt.fmt_ms(anchor.start), "text": text})
+            continue
+        texts: dict[str, list[str]] = {}
+        for _k, lang, _, c in sorted(g, key=lambda x: (not x[2], x[0])):
+            texts.setdefault(lang, []).extend(c.lines)
+        added.append({"start": start, "end": end, "lines": list(anchor.lines), "texts": texts})
+        last_end = end
+    summary = {
+        "tracks": summary_tracks,
+        "added": len(added),
+        "only_one_language": len(single),
+        "only_one_language_first": single[:10],
+        "no_room": no_room,
+    }
+    return added, summary
 
 
 def labels_in(lines: list[str], hi: bool = True) -> list[str]:
@@ -104,6 +222,8 @@ def build(
     en_path: Path | None,
     keep_bible_check: bool = False,
     hi: str = "remove",
+    tracks: list[tuple[str, Path]] | None = None,
+    forced: list[tuple[str, Path]] | None = None,
 ) -> dict:
     if hi not in HI_MODES:
         raise SystemExit(f"--hi is one of {', '.join(HI_MODES)}")
@@ -113,6 +233,10 @@ def build(
     # fixes, draft, checks and speaker labels must never be read into this
     # one: the new timing file may number its cues differently.
     shutil.rmtree(work / "out", ignore_errors=True)
+    # W/screen/ is reserved for on-screen text read from the video's frames,
+    # a step no script runs yet. Clearing it here means that step can never
+    # read files an earlier run left for other cue numbers.
+    shutil.rmtree(work / "screen", ignore_errors=True)
     # The bible check's files belong to the earlier run's bible too, unless
     # this rebuild only shifts the times of the same cues.
     stale = ("draft.tr.srt", "checks.json", "speakers.json") + (() if keep_bible_check else BIBLE_CHECK_FILES)
@@ -126,6 +250,38 @@ def build(
         raise SystemExit(f"no cues found in {timing_path}")
     hearing_impaired = {"timing": srt.hearing_impaired(timing)["hearing_impaired"]}
 
+    # On-screen text the timing file lacks joins it as cues of its own, so
+    # every later step (pairing, chunks, the delivered file) treats them
+    # like the rest. Cue numbers follow the merged order.
+    screen_summary = None
+    screen: dict[int, dict] = {}
+    if tracks or forced:
+        # Timing cues that `build` drops as sound only ("[somber music]")
+        # leave the screen empty: they neither cover a line nor bound it.
+        kept = [c for c in timing if srt.strip_hi(c.lines, hearing_impaired["timing"])[0]] if remove else timing
+        extra, screen_summary = on_screen(kept, tracks or [], forced or [])
+        if extra:
+            # A sound-only cue under an added one goes: paired with the
+            # source file's copy of the card, it would deliver it twice.
+            kept_n = {c.n for c in kept}
+            timing = [
+                c for c in timing if c.n in kept_n or not any(min(c.end, e["end"]) > max(c.start, e["start"]) for e in extra)
+            ]
+            merged = [(c.start, 0, c, None) for c in timing] + [(e["start"], 1, None, e) for e in extra]
+            merged.sort(key=lambda x: (x[0], x[1]))
+            timing = []
+            for i, (_, _, c, e) in enumerate(merged, 1):
+                if c is not None:
+                    timing.append(srt.Cue(n=i, start=c.start, end=c.end, ts=c.ts, lines=c.lines))
+                else:
+                    ts = f"{srt.fmt_ms(e['start'])} --> {srt.fmt_ms(e['end'])}"
+                    timing.append(srt.Cue(n=i, start=e["start"], end=e["end"], ts=ts, lines=e["lines"]))
+                    screen[i] = e
+        screen_summary["cues"] = [
+            {"n": n, "ts": srt.fmt_ms(e["start"]), "texts": {k: _one_line(v) for k, v in e["texts"].items()}}
+            for n, e in screen.items()
+        ]
+
     src_pairs = None
     if source_path and source_path.resolve() != timing_path.resolve():
         repairs["source"] = []
@@ -133,8 +289,10 @@ def build(
         src_pairs = srt.pair(timing, source)
         hearing_impaired["source"] = srt.hearing_impaired(source)["hearing_impaired"]
     # Songs marked only with italics, found in the file the source text
-    # comes from (srt.italic_songs).
-    italic_timing = srt.italic_songs(timing)
+    # comes from (srt.italic_songs). The on-screen cues are not the timing
+    # file's: a card between two song lines must not split the song, and
+    # italics on another language's track say nothing about songs.
+    italic_timing = srt.italic_songs([c for c in timing if c.n not in screen])
     italic_source = srt.italic_songs(source) if src_pairs is not None else set()
     en_pairs = None
     if en_path and en_path.resolve() != timing_path.resolve():
@@ -189,6 +347,14 @@ def build(
             "source": src_lines,
             "en": en_lines,
         }
+        if c.n in screen:
+            # The other tracks' text stands in where the source file has
+            # none here; `chunks` shows the rest of the languages.
+            row["on_screen"] = {k: list(v) for k, v in screen[c.n]["texts"].items()}
+            if not src_lines:
+                row["source"] = timing_lines
+            if not en_lines:
+                row["en"] = None
         if f1 or f2 or f3:
             # The check reads this: a label or a description in parentheses
             # in the Turkish is a fail only where the source had tags.
@@ -197,7 +363,10 @@ def build(
             row["sound_only"] = True
             dropped += 1
         elif srt.is_lyric(said) or (
-            srt.whole_italic(said)
+            # Italics say nothing about songs on an on-screen cue, whichever
+            # file its text comes from.
+            c.n not in screen
+            and srt.whole_italic(said)
             and (
                 all(o.n in italic_source for o in src_pairs[c.n]) if src_pairs is not None and src_lines else c.n in italic_timing
             )
@@ -222,7 +391,7 @@ def build(
         if not sound_only and "left_out" not in row:
             asked = bool(said) and srt.strip_tags(said[-1]).strip().endswith("?")
         if not sound_only:
-            if src_pairs is not None and not src_lines:
+            if src_pairs is not None and not src_lines and c.n not in screen:
                 unpaired += 1
             label = cue_label(src_raw, hi_source) or cue_label(en_raw or [], hi_en)
             if label:
@@ -253,6 +422,7 @@ def build(
         "sound_only_cues_dropped": dropped,
         "song_cues": songs,
         "bare_sound_cues_dropped": sounds,
+        "on_screen": screen_summary,
         "repairs": {name: len(found) for name, found in repairs.items()},
         "warnings": [
             f"the {name} file is malformed; repairs made while reading it: {len(found)} (first: {found[0]})"
@@ -359,16 +529,20 @@ def chunks(work: Path, target: int) -> list[dict]:
         with open(tmp, "w", encoding="utf-8") as f:
             f.write(f"# chunk {k:02d} of {total:02d}, cues {first}-{last}\n")
             f.write("# src = text to translate; en = English cross-check; [..] = speaker hint\n")
-            f.write("# ' / ' separates the source's own lines\n\n")
+            f.write("# ' / ' separates the source's own lines\n")
+            f.write("# [on-screen text] = only other-language tracks have it; 'also' = the same line in them\n\n")
             for r in rows[first - 1 : last]:
                 if left_out(r):
                     continue
-                hint = speaker_hint(speakers.get(str(r["n"]), {}))
+                hint = "on-screen text" if r.get("on_screen") else speaker_hint(speakers.get(str(r["n"]), {}))
                 head = f"#{r['n']} {r['ts'][:8]}" + (f" [{hint}]" if hint else "")
                 f.write(head + "\n")
                 f.write("src: " + _one_line(r["source"]) + "\n")
                 if r["en"] is not None and r["en"] != r["source"]:
                     f.write("en: " + _one_line(r["en"]) + "\n")
+                for lang, lines in (r.get("on_screen") or {}).items():
+                    if lines != r["source"]:
+                        f.write(f"also: {lang}: " + _one_line(lines) + "\n")
                 f.write("\n")
         _swap(tmp, path)
         info.append({"chunk": k, "file": str(path), "first": first, "last": last, "out": str(work / "out" / f"tr_{k:02d}.txt")})
@@ -409,6 +583,20 @@ def main(argv: list[str] | None = None) -> None:
         default="remove",
         help="hearing-impaired sound descriptions and speaker labels: remove them (default) or keep them",
     )
+    b.add_argument(
+        "--track",
+        type=track_arg,
+        action="append",
+        default=[],
+        help="LANG=PATH: another subtitle file of this film, to find on-screen text the timing file lacks (repeatable)",
+    )
+    b.add_argument(
+        "--forced-track",
+        type=track_arg,
+        action="append",
+        default=[],
+        help="LANG=PATH: a forced track of the same video as the timing file, taken without a shift (repeatable)",
+    )
     g = sub.add_parser("songs")
     g.add_argument("--work", type=result.path, required=True)
     g.add_argument("--mode", choices=SONG_MODES, default="story")
@@ -418,7 +606,7 @@ def main(argv: list[str] | None = None) -> None:
     result.add_argument(p)
     a = result.parse(p, argv)
     if a.cmd == "build":
-        result.emit(build(a.work, a.timing, a.source, a.en, a.keep_bible_check, a.hi), a.result)
+        result.emit(build(a.work, a.timing, a.source, a.en, a.keep_bible_check, a.hi, a.track, a.forced_track), a.result)
     elif a.cmd == "songs":
         result.emit(songs(a.work, a.mode), a.result)
     else:

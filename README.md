@@ -61,8 +61,8 @@ when no other command uses that name.)
   into rules for the next film.
 - **A short credit.** "İyi seyirler." over your name opens the file in the
   silence before the first line, and "Görüşmek üzere." over your name
-  closes it. Put your name under `Credit` in your preferences, or set it
-  to `off`.
+  follows the story's last line, before any end title. Put your name
+  under `Credit` in your preferences, or set it to `off`.
 
 ## Languages
 
