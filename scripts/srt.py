@@ -57,6 +57,36 @@ class Cue:
         return max(self.end - self.start, 1)
 
 
+OVERRIDE_TAG_RE = re.compile(r"\{\\[^}]*\}")
+
+
+def drop_override_tags(lines: list[str]) -> list[str]:
+    """The lines without `{\\an8}`-style tags. They move a line to the top
+    of the screen, and many TV players print them as text instead. A line
+    that held only a tag is gone."""
+    out = []
+    for ln in lines:
+        bare = OVERRIDE_TAG_RE.sub("", ln)
+        if bare.strip() or not ln.strip():
+            out.append(bare)
+    return out
+
+
+def drop_music_notes(lines: list[str]) -> list[str]:
+    """The lines without ♪ or ♫. In a musical nearly every line is sung,
+    so the notes only clutter the screen. A line that held only notes is
+    gone."""
+    out = []
+    for ln in lines:
+        bare = re.sub(r"\s*[♪♫]\s*", " ", ln)
+        bare = re.sub(r"(<i>)\s+", r"\1", bare)
+        bare = re.sub(r"\s+(</i>)", r"\1", bare)
+        bare = re.sub(r" {2,}", " ", bare).strip()
+        if strip_tags(bare).strip() or not strip_tags(ln).strip():
+            out.append(bare)
+    return out
+
+
 def strip_tags(s: str) -> str:
     return TAG_RE.sub("", s)
 
@@ -863,11 +893,28 @@ def is_sound(cue: Cue) -> bool:
 
 def is_lyric(lines: list[str]) -> bool:
     """Every line with words in it is a song lyric: marked with ♪ or ♫,
-    or in older files with a # opening or closing it. A cue that mixes a
-    lyric with speech is not one."""
+    or in older files with a # opening or closing it. A line that opens
+    with ♪ and does not close it marks the lines after it too, up to a
+    line with a ♪ or the end of the cue: a lyric cut off by speech
+    ("♪ Every lamp along the pier / and every boat at rest...") has no
+    closing ♪. A ♪ at the end of a line closes the lyric, and a dialogue
+    dash starts a new turn and ends it too. A cue that mixes a lyric with
+    speech is not one ("and every boat at rest ♪ / Who sang that?")."""
     said = [strip_tags(ln).strip() for ln in lines]
     said = [ln for ln in said if re.search(r"\w", ln)]
-    return bool(said) and all("♪" in ln or "♫" in ln or LYRIC_HASH_RE.search(ln) for ln in said)
+    if not said:
+        return False
+    open_lyric = False
+    for ln in said:
+        if is_dash_line(ln):
+            open_lyric = False
+        marks = ln.count("♪") + ln.count("♫")
+        if not (marks or open_lyric or LYRIC_HASH_RE.search(ln)):
+            return False
+        if marks:
+            words = ln.lstrip("- ")
+            open_lyric = words[0] in "♪♫" and ln[-1] not in "♪♫"
+    return True
 
 
 # Many files mark a song only with italics, the same italics they use for a

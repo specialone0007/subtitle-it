@@ -52,6 +52,14 @@ def test_answer_sound(lines, answer):
         (["# Old song line #"], True),
         (["♪ ♪"], False),
         (["- ♪ La la ♪", "- Turn it off!"], False),
+        # A lyric cut off by speech has no closing ♪ (seen in one test film).
+        (["<i>♪ Every lamp along the pier", "and every boat at rest...</i>"], True),
+        (["<i>♪ I'll wait here", "where the harbour ends...</i>"], True),
+        (["♪ La la ♪", "Turn it off!"], False),
+        (["- ♪ La la", "- Turn it off!"], False),
+        # A ♪ at the end of a line closes the lyric the cue before opened.
+        (["and every boat at rest ♪", "Who sang that?"], False),
+        (["<i>and every boat at rest ♪</i>", "<i>♪ Every lamp", "along the pier</i>"], True),
         (["Turn it off!"], False),
     ],
 )
