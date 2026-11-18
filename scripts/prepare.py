@@ -70,9 +70,13 @@ left out as one language only, a subtitle credit or a song line; an unsure
 entry the picture did not show is left out, `not confirmed by the picture`
 when its frames were read, `not checked by the picture` otherwise; a story
 text no entry holds is a new entry (`evidence: picture`), added when no
-timing cue covers it and there is room. `--screen` keeps W/screen/. In a
-`--shift-ms` rebuild a picture entry keeps its times, which are the video's;
-one left with no room keeps its number, left out (NO_ROOM_SHIFT).
+timing cue covers it and there is room. Every picture entry gets a cue
+number, the ones left out (no room, or under a timing line) too: their rows
+are left out and not delivered. `--screen` keeps W/screen/. In a
+`--shift-ms` rebuild a picture entry keeps its times, which are the video's
+(`found`), and each is judged again against the shifted timing cues: one
+they cover is left out, and one left with no room keeps its number, left
+out (NO_ROOM_SHIFT).
 """
 
 from __future__ import annotations
@@ -127,7 +131,19 @@ NOT_CHECKED = "not checked by the picture"
 # A picture entry a sync rebuild left with no room. Its row in cues.json is
 # left out with this reason, so `assemble.py` knows it (LEFT_OUT_NOTES).
 NO_ROOM_SHIFT = "no room after the timing shift"
-ON_SCREEN_REASONS = (ONE_LANGUAGE, NO_ROOM, CREDIT, SONG_LINE, DURING_SONG, NOT_CONFIRMED, NOT_CHECKED, NO_ROOM_SHIFT)
+# A story text only the picture shows, under a line of the timing file.
+UNDER_TIMING = "under a line of the timing file"
+ON_SCREEN_REASONS = (
+    ONE_LANGUAGE,
+    NO_ROOM,
+    CREDIT,
+    SONG_LINE,
+    DURING_SONG,
+    NOT_CONFIRMED,
+    NOT_CHECKED,
+    NO_ROOM_SHIFT,
+    UNDER_TIMING,
+)
 # What the reader agent says a frame shows. A story reading is one the film
 # wants read, of a kind that is not credits, a logo or the background.
 READER_KINDS = (
@@ -251,6 +267,8 @@ def _picture_entry(r: dict, state: str, reason: str | None = None, start: int | 
         "kind": r.get("kind"),
         "frames": list(r.get("frames", [])),
         "state": state,
+        # The reading's own time, which a sync rebuild starts from.
+        "found": [a, b],
     }
     if reason:
         entry["reason"] = reason
@@ -363,13 +381,14 @@ def on_screen(
         else:
             entries.append(_entry(g, "left_out", ONE_LANGUAGE))
     # A story text only the picture shows: speech wins, so one the timing
-    # file covers is its own line, as for a track's line.
+    # file covers is its own line, as for a track's line. It is kept, left
+    # out, so a sync rebuild can look at it again.
     covered_readings = 0
     for r in pic.get("readings", ()):
         a, b = picture_span(r)
-        span = srt.Cue(n=0, start=a, end=b, ts="", lines=[])
-        if timing and srt._coverage([span], timing)[0] >= GAP_MAX_COVERED:
+        if _under_timing(a, b, timing):
             covered_readings += 1
+            entries.append(_picture_entry(r, "left_out", UNDER_TIMING))
             continue
         place.append((a, len(place), r))
     place.sort(key=lambda x: (x[0], x[1]))
@@ -400,10 +419,16 @@ def on_screen(
         summary["picture"] = {
             **pic.get("info", {}),
             "readings_already_in_timing": covered_readings,
-            "found": sum(1 for e in entries if e.get("evidence") == PICTURE),
+            "found": sum(1 for e in entries if e.get("evidence") == PICTURE and e.get("reason") != UNDER_TIMING),
             "looked_at": sum(1 for e in entries if e.get("picture")),
         }
     return entries, summary
+
+
+def _under_timing(start: int, end: int, timing: list[srt.Cue]) -> bool:
+    """Timing cues cover at least GAP_MAX_COVERED of this time span."""
+    span = srt.Cue(n=0, start=start, end=end, ts="", lines=[])
+    return bool(timing) and srt._coverage([span], timing)[0] >= GAP_MAX_COVERED
 
 
 def on_screen_counts(entries: list[dict]) -> dict:
@@ -571,6 +596,9 @@ def build(
     screen: dict[int, dict] = {}
     entries: list[dict] = []
     dropped_under: list[int] = []
+    # Timing cues that `build` drops as sound only ("[somber music]")
+    # leave the screen empty: they neither cover a line nor bound it.
+    kept = [c for c in timing if srt.strip_hi(c.lines, hearing_impaired["timing"])[0]] if remove else timing
     if before is not None:
         entries, screen_summary = before
         screen_summary = dict(screen_summary) if screen_summary else None
@@ -583,10 +611,14 @@ def build(
                 # Video times: the shift moves the subtitles onto them.
                 e["start"], e["end"] = e.get("found") or (e["start"], e["end"])
                 e["found"] = [e["start"], e["end"]]
-                if e.get("reason") == NO_ROOM_SHIFT:
-                    # Placed by the first build; its room is looked at again.
+                # The timing cues moved, so each is judged again from its
+                # own times: speech covers it, or its room is looked at
+                # again (_fit_picture_entries).
+                if _under_timing(e["start"], e["end"], kept):
+                    e["state"], e["reason"] = "left_out", UNDER_TIMING
+                else:
                     e["state"] = "cue"
-                    e.pop("reason")
+                    e.pop("reason", None)
                 continue
             start, end = e.get("found") or (e["start"] - was, e["end"] - was)
             e["found"] = [start, end]
@@ -596,15 +628,14 @@ def build(
             screen_summary["shift_ms"] = shift_ms
             dropped_under = list(screen_summary.get("dropped_timing_cues", []))
     elif tracks or forced or picture is not None:
-        # Timing cues that `build` drops as sound only ("[somber music]")
-        # leave the screen empty: they neither cover a line nor bound it.
-        kept = [c for c in timing if srt.strip_hi(c.lines, hearing_impaired["timing"])[0]] if remove else timing
         entries, screen_summary = on_screen(kept, tracks or [], forced or [], picture)
         if timing_language:
             # Which other languages the tracks hold, as `sources.py others`
             # counts them: `screen.py frames` reads this.
             screen_summary["timing_language"] = timing_language
-            screen_summary["other_languages"] = srt.other_languages([lang for lang, _ in tracks or []], timing_language)
+            # A track that does not fit was never used, so it does not count.
+            used = [t["language"] for t in screen_summary["tracks"] if not t["forced"] and t.get("fits")]
+            screen_summary["other_languages"] = srt.other_languages(used, timing_language)
         extra = [e for e in entries if e["state"] == "cue"]
         # A sound-only cue under an added one goes: paired with the source
         # file's copy of the card, it would deliver it twice. The numbers
@@ -615,12 +646,16 @@ def build(
         ]
         screen_summary["dropped_timing_cues"] = dropped_under
         # Times as the build without --shift-ms found them, so a later
-        # sync rebuild moves each entry from there, never twice.
+        # sync rebuild moves each entry from there, never twice. A picture
+        # entry holds its reading's own time already.
         for e in entries:
-            e["found"] = [e["start"] - (shift_ms or 0), e["end"] - (shift_ms or 0)]
+            if e.get("evidence") != PICTURE:
+                e["found"] = [e["start"] - (shift_ms or 0), e["end"] - (shift_ms or 0)]
         if shift_ms is not None:
             screen_summary["shift_ms"] = shift_ms
-    extra = [e for e in entries if e["state"] == "cue"]
+    # Every picture entry has a number, left out or not, so a sync rebuild
+    # can place it again without moving any other cue's number.
+    extra = [e for e in entries if e["state"] == "cue" or e.get("evidence") == PICTURE]
     if extra:
         gone = set(dropped_under)
         rest = [c for c in timing if c.n not in gone]
@@ -635,10 +670,9 @@ def build(
         else:
             merged = [(c, None) for c in rest] + [(None, e) for e in extra]
             merged.sort(key=lambda x: (x[0].start, 0) if x[0] is not None else (x[1]["start"], 1))
-        if before is not None:
-            _fit_picture_entries(merged)
-            if screen_summary is not None:
-                screen_summary.update(on_screen_counts(entries))
+        _fit_picture_entries(merged, refit=before is not None)
+        if screen_summary is not None:
+            screen_summary.update(on_screen_counts(entries))
         timing = []
         for i, (c, e) in enumerate(merged, 1):
             if c is not None:
@@ -653,6 +687,7 @@ def build(
         screen_summary["cues"] = [
             {"n": n, "ts": srt.fmt_ms(e["start"]), "texts": {k: _one_line(v) for k, v in e["texts"].items()}}
             for n, e in screen.items()
+            if e["state"] == "cue"
         ]
 
     src_pairs = None
@@ -728,8 +763,8 @@ def build(
             # none here; `chunks` shows the rest of the languages.
             row["on_screen"] = {k: list(v) for k, v in screen[c.n]["texts"].items()}
             if screen[c.n]["state"] == "left_out":
-                # A picture entry a sync rebuild left with no room: it keeps
-                # its number and is not delivered.
+                # A picture entry left out (no room, or under a timing
+                # line): it keeps its number and is not delivered.
                 row["left_out"] = screen[c.n]["reason"]
             if not src_lines:
                 row["source"] = timing_lines
@@ -819,11 +854,12 @@ def build(
     return summary
 
 
-def _fit_picture_entries(merged: list[tuple[srt.Cue | None, dict | None]]) -> None:
-    """In a sync rebuild the cues around a picture entry moved and it did
-    not. Each keeps its place in `merged`; one left under ON_SCREEN_MIN_MS
-    between its neighbours is left out (NO_ROOM_SHIFT), its times clipped
-    into its slot so the file stays in time order."""
+def _fit_picture_entries(merged: list[tuple[srt.Cue | None, dict | None]], refit: bool) -> None:
+    """In a sync rebuild (`refit`) the cues around a picture entry moved and
+    it did not. Each keeps its place in `merged`; one left under
+    ON_SCREEN_MIN_MS between its neighbours is left out (NO_ROOM_SHIFT). A
+    picture entry left out, in any build, has its times clipped into its
+    slot so the file stays in time order."""
 
     def span(item: tuple[srt.Cue | None, dict | None]) -> tuple[int, int]:
         c, e = item
@@ -834,11 +870,14 @@ def _fit_picture_entries(merged: list[tuple[srt.Cue | None, dict | None]]) -> No
             continue
         lo = span(merged[i - 1])[1] if i else 0
         hi = span(merged[i + 1])[0] if i + 1 < len(merged) else max(e["end"], lo)
-        start, end = max(e["start"], lo), min(e["end"], hi)
-        if end - start >= ON_SCREEN_MIN_MS:
-            e["start"], e["end"] = start, end
-            continue
-        e["state"], e["reason"] = "left_out", NO_ROOM_SHIFT
+        if e["state"] == "cue":
+            if not refit:
+                continue
+            start, end = max(e["start"], lo), min(e["end"], hi)
+            if end - start >= ON_SCREEN_MIN_MS:
+                e["start"], e["end"] = start, end
+                continue
+            e["state"], e["reason"] = "left_out", NO_ROOM_SHIFT
         if lo > hi:
             e["start"] = e["end"] = hi
         else:

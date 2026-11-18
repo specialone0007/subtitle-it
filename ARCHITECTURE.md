@@ -130,6 +130,8 @@ Then it settles the timings:
   subtitle credit, a song line) is added when a story reading names it.
   A story reading no entry holds becomes an entry of its own,
   `picture:<first ms>`, added under the same coverage and room rules.
+  One a timing line covers or with no room still gets a cue number, as
+  a row left out and never delivered, so a sync rebuild can place it.
   Credits, logos, background text and text the film does not want read
   are never added. The report lists every entry the picture looked at.
 - Unless your preferences say `Hearing-impaired tags: keep`, `build` takes
@@ -181,10 +183,12 @@ film.
   every cue keeps its number and the bible's citations stay true. The
   amount counts from the times the first build found, so running the
   same rebuild twice moves the entries once. An entry read from the
-  picture keeps its video times. When the shifted lines leave it less
-  than 0.7 s, it keeps its cue number, clipped into its slot and marked
-  `left_out: no room after the timing shift`, so `check` skips it with a
-  note.
+  picture keeps its video times (`found`, the reading's own time) and is
+  judged again against the shifted lines: one they cover is left out as
+  `under a line of the timing file`, one they leave less than 0.7 s is
+  left out as `no room after the timing shift`, and the rest are added.
+  Each keeps its cue number, a row left out clipped into its slot, so
+  `check` skips it with a note.
 - A voice can gather several characters. When a voice has at least six
   cues with a speaker label and no character holds two thirds of them, its
   cues get no voice hint, and the address-form check leaves them alone.

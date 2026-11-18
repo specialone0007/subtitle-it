@@ -74,6 +74,35 @@ def test_others_names_the_one_extra_download(cands, also, timing, langs, downloa
     assert out == {"languages": langs, "count": len(langs), "download": download}
 
 
+def test_others_leaves_out_a_candidate_that_does_not_fit(tmp_path: Path):
+    cands = [
+        {"language": "fr", "path": str(tmp_path / "fr.srt"), "check": {"issues": []}},
+        {"language": "es", "path": str(tmp_path / "es.srt"), "check": {"issues": []}},
+    ]
+    assert sources.others({"candidates": cands}, "en", [])["download"] is None
+    out = sources.others({"candidates": cands}, "en", [], [str(tmp_path / "es.srt")])
+    assert out["languages"] == ["fr"] and out["download"] == "es"
+
+
+def test_build_counts_only_the_tracks_that_fit(tmp_path: Path):
+    w = tmp_path / "work"
+    fr = _film(tmp_path, "fr.srt", "Ligne", [(*CARD, "UN JOUR")])
+    # Ten minutes late from the middle on: a different cut, so it does not fit.
+    es = tmp_path / "es.srt"
+    cues = [
+        (10_000 + k * 4_000 + (600_000 if k >= 40 else 0), 12_500 + k * 4_000 + (600_000 if k >= 40 else 0)) for k in range(LINES)
+    ]
+    es.write_text(
+        "".join(f"{i}\n{srt.fmt_ms(a)} --> {srt.fmt_ms(b)}\nLínea {i}.\n\n" for i, (a, b) in enumerate(cues, 1)), encoding="utf-8"
+    )
+    summary = prepare.build(
+        w, _film(tmp_path, "en.srt", "Line"), None, None, tracks=[("fr", fr), ("es", es)], timing_language="en"
+    )
+    info = summary["on_screen"]
+    assert [t["fits"] for t in info["tracks"]] == [True, False]
+    assert info["other_languages"] == ["fr"]
+
+
 def test_others_reads_the_local_result_file(tmp_path: Path, capsys):
     local = tmp_path / "sources-local.json"
     local.write_text(json.dumps({"candidates": [_cand("en"), _cand("fr")]}), encoding="utf-8")
@@ -180,13 +209,17 @@ def test_a_frame_lists_the_entries_within_3_s():
 # --- saving the frames, ffmpeg faked ------------------------------------------
 
 
-def _fake_ffmpeg(monkeypatch, duration=600_000, hdr=False, zscale=True) -> list:
+def _fake_ffmpeg(monkeypatch, duration=600_000, hdr=False, zscale=True, tone_fails=False, short=0) -> list:
+    """`tone_fails`: a window with the tone map saves nothing. `short`: each
+    window saves that many files fewer than asked."""
     calls = []
 
     def window(exe, video, a, b, vf, pattern):
         calls.append(("window", a, b, vf))
         files = [Path(str(pattern) % (k + 1)) for k in range(-(-(b - a) // screen.FRAME_STEP_MS))]
-        for f in files:
+        if tone_fails and screen.TONE_MAP in vf:
+            return files
+        for f in files[: len(files) - short]:
             f.write_bytes(b"jpg")
         return files
 
@@ -248,6 +281,26 @@ def test_frames_tone_map_hdr_or_say_why_not(tmp_path: Path, monkeypatch):
     out = screen.frames(w, tmp_path / "Film.mkv")
     assert out["tone_mapped"] is False and "without tone mapping" in out["notes"][0]
     assert _json(w / prepare.FRAMES_FILE)["notes"] == out["notes"]
+
+
+def test_frames_save_again_without_the_tone_map_when_it_saves_nothing(tmp_path: Path, monkeypatch):
+    w = _one_language_build(tmp_path)
+    calls = _fake_ffmpeg(monkeypatch, hdr=True, tone_fails=True)
+    out = screen.frames(w, tmp_path / "Film.mkv")
+    assert out["tone_mapped"] is False and out["frames"] == 7 + 100 + 5
+    assert out["notes"] == ["HDR video: tone mapping failed, so the frames were saved without it"]
+    # Tried once with the tone map, then every window and frame without it.
+    windows = [c[-1] for c in calls if c[0] == "window"]
+    assert screen.TONE_MAP in windows[0] and all(vf == screen.SCALE for vf in windows[1:]) and len(windows) == 3
+    assert all(c[-1] == screen.SCALE for c in calls if c[0] == "one")
+
+
+def test_frames_name_the_frames_that_could_not_be_saved(tmp_path: Path, monkeypatch):
+    w = _one_language_build(tmp_path)
+    _fake_ffmpeg(monkeypatch, short=2)
+    out = screen.frames(w, tmp_path / "Film.mkv")
+    assert out["frames"] == 7 + 100 + 5 - 4
+    assert out["notes"] == ["4 frames could not be saved (past the end of the video or unreadable)"]
 
 
 def test_frames_never_fail_a_run(tmp_path: Path, monkeypatch):
@@ -317,6 +370,16 @@ def test_collect_sends_missing_doubled_and_bad_frames_back_once(tmp_path: Path):
     # Once only: frame 6 is still missing, and no second redo is asked.
     assert second["missing"] == ["frame_0006.jpg"] and second["redo"] is None and second["read"] == 5
     assert _json(w / screen.READINGS_FILE)["missing"] == ["frame_0006.jpg"]
+
+
+def test_collect_sends_back_a_line_with_a_list_where_a_name_belongs(tmp_path: Path):
+    w = tmp_path / "work"
+    outs = _frames_file(w, [(0, ["1:1"]), (1_500, ["1:1"]), (3_000, [])])
+    bad_frame = json.dumps({"frame": ["frame_0003.jpg"], "text": "", "kind": "background", "wants_read": False})
+    Path(outs[0]).write_text("\n".join([_line(1), _line(2, "A", "sign", True, ["1:1"]), bad_frame]), encoding="utf-8")
+    out = screen.collect(w)
+    assert out["missing"] == ["frame_0002.jpg", "frame_0003.jpg"] and out["redo"]
+    assert [f["file"] for f in _json(Path(out["redo"]))["frames"]] == out["missing"]
 
 
 def test_collect_joins_neighbouring_frames_with_the_same_text(tmp_path: Path):
@@ -450,15 +513,24 @@ def test_a_story_text_no_entry_holds_becomes_a_picture_entry(tmp_path: Path):
     found = [e for e in _entries(w).values() if e.get("evidence") == prepare.PICTURE]
     assert [(e["id"], e["state"], e.get("reason"), e["lines"]) for e in found] == [
         ("picture:13400", "left_out", prepare.NO_ROOM, ["FAST"]),
+        ("picture:20000", "left_out", prepare.UNDER_TIMING, ["LOUD SIGN"]),
         (f"picture:{TAIL_TEXT[0]}", "cue", None, ["THE END"]),
     ]
-    end = found[1]
-    assert (end["start"], end["end"], end["n"], end["picture"]) == (*TAIL_TEXT, LINES + 1, "found")
+    # Each has a number, so a sync rebuild can place it again; the two
+    # left out are rows left out, with their reading's own times kept.
+    assert [e["n"] for e in found] == [2, 5, LINES + 3]
+    assert [e["found"] for e in found] == [[13_400, 14_100], [20_000, 21_000], list(TAIL_TEXT)]
+    rows = {r["n"]: r for r in _json(w / "cues.json")}
+    assert (rows[2]["left_out"], rows[5]["left_out"]) == (prepare.NO_ROOM, prepare.UNDER_TIMING)
+    assert {prepare.NO_ROOM, prepare.UNDER_TIMING} <= set(assemble.LEFT_OUT_NOTES)
+    assert [r["n"] for r in rows.values()] == list(range(1, LINES + 4))
+    end = found[2]
+    assert (end["start"], end["end"], end["picture"]) == (*TAIL_TEXT, "found")
     info = summary["on_screen"]["picture"]
     assert info["readings_already_in_timing"] == 1 and info["found"] == 2
     prepare.chunks(w, target=250)
     chunk = (w / "chunks" / "chunk_01.txt").read_text(encoding="utf-8")
-    assert f"#{LINES + 1} 00:05:40 [on-screen text]\nsrc: THE END\n\n" in chunk
+    assert f"#{LINES + 3} 00:05:40 [on-screen text]\nsrc: THE END\n\n" in chunk
     assert "or the picture" in chunk.splitlines()[3]
 
 
@@ -497,19 +569,47 @@ def test_a_picture_entry_keeps_its_times_and_number_in_a_shift_rebuild(tmp_path:
             assert (e["start"], e["end"]) == (max(TAIL_TEXT[0], last_line), TAIL_TEXT[1])
             assert "left_out" not in rows[-1]
         else:
-            # Clipped into its slot after the last line, and left out.
-            assert e["reason"] == prepare.NO_ROOM_SHIFT and (e["start"], e["end"]) == (last_line, TAIL_TEXT[1])
-            assert rows[-1]["left_out"] == prepare.NO_ROOM_SHIFT and rows[-1]["start"] >= rows[-2]["start"]
+            # The last line now covers it: clipped into its slot after that
+            # line, and left out.
+            assert e["reason"] == prepare.UNDER_TIMING and (e["start"], e["end"]) == (last_line, TAIL_TEXT[1])
+            assert rows[-1]["left_out"] == prepare.UNDER_TIMING and rows[-1]["start"] >= rows[-2]["start"]
     # The track entries still move with the shift.
     card = next(e for e in _entries(w).values() if e["lines"] == ["UN JOUR"])
     assert card["start"] == CARD[0] + 2_000
 
 
+def test_a_reading_under_the_unshifted_timing_is_placed_by_the_shift_rebuild(tmp_path: Path):
+    # The timing file is 2 s late: before the sync rebuild its first line
+    # (10.0-12.5 s) covers a card shown at 10.6-11.9 s on the video.
+    w, _ = _screen_film(tmp_path)
+    card = (10_600, 11_900)
+    path = _picture(w, [(card[0], [])], [], [_reading("A CARD", *card, kind="title card")])
+    _build_screen(tmp_path, w, path)
+    e = _entries(w)[f"picture:{card[0]}"]
+    assert (e["state"], e["reason"], e["n"], e["found"]) == ("left_out", prepare.UNDER_TIMING, 2, list(card))
+    before = [r["n"] for r in _json(w / "cues.json")]
+    timing = tmp_path / "en.srt"
+    for shift, state in ((-2_000, "cue"), (0, "left_out"), (-2_000, "cue")):
+        prepare.build(w, _shifted(tmp_path, timing, shift), None, None, keep_bible_check=True, shift_ms=shift)
+        rows = _json(w / "cues.json")
+        assert [r["n"] for r in rows] == before
+        e = _entries(w)[f"picture:{card[0]}"]
+        assert e["state"] == state and e["n"] == 2 and e["found"] == list(card)
+        if state == "cue":
+            # Shifted, the first line ends at 10.5 s and the second starts
+            # at 12.0 s: the card fits between them at its own times.
+            assert (e["start"], e["end"]) == card and "left_out" not in rows[1]
+        else:
+            assert e["reason"] == prepare.UNDER_TIMING and rows[1]["left_out"] == prepare.UNDER_TIMING
+
+
 def test_every_left_out_value_a_row_can_hold_has_a_note(tmp_path: Path):
     w, _ = _screen_film(tmp_path)
-    path = _picture(w, [(TAIL_TEXT[0], [])], [], [_reading("THE END", *TAIL_TEXT, kind="closing text")])
+    # One frame: 0.7 s on screen. Shifted 11.6 s, the last line ends 0.1 s
+    # into it: too little to cover it, too much to leave it room.
+    path = _picture(w, [(TAIL_TEXT[0], [])], [], [_reading("THE END", TAIL_TEXT[0], TAIL_TEXT[0], kind="closing text")])
     _build_screen(tmp_path, w, path)
-    prepare.build(w, _shifted(tmp_path, tmp_path / "en.srt", 14_000), None, None, keep_bible_check=True, shift_ms=14_000)
+    prepare.build(w, _shifted(tmp_path, tmp_path / "en.srt", 11_600), None, None, keep_bible_check=True, shift_ms=11_600)
     rows = _json(w / "cues.json")
     assert {r["left_out"] for r in rows if r.get("left_out")} <= set(assemble.LEFT_OUT_NOTES)
     # A Turkish line for the left-out card is rejected with its note.

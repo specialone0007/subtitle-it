@@ -306,6 +306,8 @@ LEFT_OUT_NOTES = {
     "sound": "a bare sound, left out",
     "song": "a song left out",
     prepare.NO_ROOM_SHIFT: "on-screen text read from the picture, left out: no room after the timing shift",
+    prepare.NO_ROOM: "on-screen text read from the picture, left out: no room between the lines",
+    prepare.UNDER_TIMING: "on-screen text read from the picture, left out: under a line of the timing file",
 }
 ON_SCREEN_MARK = prepare.ON_SCREEN_MARK
 

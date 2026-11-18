@@ -483,7 +483,9 @@ def parse_line(line: str, frames_by_name: dict[str, dict]) -> tuple[str | None, 
         item = json.loads(line)
     except ValueError:
         return None, None
-    if not isinstance(item, dict) or item.get("frame") not in frames_by_name:
+    # A value of the wrong type (a list, a number) is a bad line, never a
+    # crash: it is what the redo is for.
+    if not isinstance(item, dict) or not isinstance(item.get("frame"), str) or item["frame"] not in frames_by_name:
         return None, None
     name = item["frame"]
     text, kind, wants = item.get("text"), item.get("kind"), item.get("wants_read")
@@ -493,7 +495,7 @@ def parse_line(line: str, frames_by_name: dict[str, dict]) -> tuple[str | None, 
     listed = {e["id"] for e in frames_by_name[name].get("entries", [])}
     if not isinstance(text, str) or kind not in prepare.READER_KINDS or not isinstance(wants, bool):
         return name, None
-    if shows is not None and shows not in listed:
+    if shows is not None and (not isinstance(shows, str) or shows not in listed):
         return name, None
     return name, {"text": _norm(text), "kind": kind, "wants_read": wants, "shows_entry": shows}
 
