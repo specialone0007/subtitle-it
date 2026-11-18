@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.12.0 (2026-11-19)
+
+Every on-screen text the other subtitle tracks show is now recorded, the
+closing credit starts on the cut to black after the story, and delivered
+files lose three kinds of stray marks.
+
+- `prepare.py build` writes `W/on_screen.json` on every build: each text
+  the other tracks show, with its time and its state, added as a cue or
+  left out with a reason (one language only, no room, a subtitle credit,
+  a song line, or shown during a song or a sound). A cue that is
+  on-screen text is never marked a song, a sound or a bare sound, and
+  `check` fails when one is not delivered.
+- `build --shift-ms N` moves the earlier build's on-screen entries by N
+  instead of finding them again, so a sync rebuild keeps every cue number,
+  and running it twice gives the same files.
+- `deliver` returns the report's on-screen section and stops before any
+  file moves when `on_screen.json` is malformed. The review and listen
+  parts mark on-screen cues.
+- New `screen.py ends` reads the 2.5 minutes after the story's last line
+  with ffmpeg and records the black stretches in `W/screen/ends.json`.
+  The translate skill runs it in the background for a video input.
+  `deliver` then starts "Görüşmek üzere." on the first black stretch
+  within 30 s after the story, and falls back to the old rule when there
+  is none or ffmpeg is missing. The result's `goodbye` says which placed it.
+- A `♪` that opens a lyric and is not closed on its line now covers the
+  rest of the cue, so a lyric cut off by speech is left out like any song;
+  a `♪` at the end of a line closes the lyric.
+- `check` fails a Turkish line with a listing slash (` / `) that the
+  source and English lines lack, removes `{\an8}`-style position tags so
+  every line stays at the bottom of the screen, and a film marked
+  `"musical": true` in `songs.json` is delivered without music notes.
+
 ## 0.11.0 (2026-11-19)
 
 Title cards and signs the English track leaves to the picture are now
