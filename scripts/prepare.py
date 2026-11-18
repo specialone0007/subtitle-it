@@ -90,8 +90,9 @@ def track_arg(text: str) -> tuple[str, Path]:
     """`fr=path/to/file.srt` for --track and --forced-track."""
     lang, sep, path = text.partition("=")
     lang = lang.strip().lower()
-    if not sep or not re.fullmatch(r"[a-z]{2,3}", lang) or not path.strip():
-        raise argparse.ArgumentTypeError(f"expected LANG=PATH with a 2- or 3-letter language code, got {text!r}")
+    # OpenSubtitles keeps a region on some codes: pt-BR, zh-CN.
+    if not sep or not re.fullmatch(r"[a-z]{2,3}(-[a-z0-9]{2,4})?", lang) or not path.strip():
+        raise argparse.ArgumentTypeError(f"expected LANG=PATH with a language code like fr or pt-br, got {text!r}")
     return lang, result.path(path.strip())
 
 
@@ -116,7 +117,7 @@ def on_screen(timing: list[srt.Cue], tracks: list[tuple[str, Path]], forced: lis
             cues = srt.shift(cues, f["offset_ms"])
         summary_tracks.append(entry)
         for c, covered in zip(cues, srt._coverage(cues, timing) if cues and timing else []):
-            if c.duration <= 0 or covered >= GAP_MAX_COVERED:
+            if c.end <= c.start or covered >= GAP_MAX_COVERED:
                 continue
             # Read as a hearing-impaired line: "HARTLEY: Hmm..." is a sound.
             said = srt.strip_hi(c.lines, True)[0]
@@ -143,7 +144,8 @@ def on_screen(timing: list[srt.Cue], tracks: list[tuple[str, Path]], forced: lis
     added, single, no_room = [], [], []
     last_end = 0
     for g in groups:
-        langs = {lang for _, lang, _, _ in g if lang != "und"}
+        # pt and pt-br are one language here: two of them prove nothing.
+        langs = {lang.split("-")[0] for _, lang, _, _ in g if lang != "und"}
         anchor = min(g, key=lambda x: (not x[2], x[0]))[3]
         if not any(f for _, _, f, _ in g) and len(langs) < 2:
             single.append({"ts": srt.fmt_ms(anchor.start), "language": g[0][1], "text": srt.strip_tags(" / ".join(anchor.lines))})
@@ -250,7 +252,10 @@ def build(
     screen_summary = None
     screen: dict[int, dict] = {}
     if tracks or forced:
-        extra, screen_summary = on_screen(timing, tracks or [], forced or [])
+        # Timing cues that `build` drops as sound only ("[somber music]")
+        # leave the screen empty: they neither cover a line nor bound it.
+        kept = [c for c in timing if srt.strip_hi(c.lines, hearing_impaired["timing"])[0]] if remove else timing
+        extra, screen_summary = on_screen(kept, tracks or [], forced or [])
         if extra:
             merged = [(c.start, 0, c, None) for c in timing] + [(e["start"], 1, None, e) for e in extra]
             merged.sort(key=lambda x: (x[0], x[1]))
@@ -274,8 +279,10 @@ def build(
         src_pairs = srt.pair(timing, source)
         hearing_impaired["source"] = srt.hearing_impaired(source)["hearing_impaired"]
     # Songs marked only with italics, found in the file the source text
-    # comes from (srt.italic_songs).
-    italic_timing = srt.italic_songs(timing)
+    # comes from (srt.italic_songs). The on-screen cues are not the timing
+    # file's: a card between two song lines must not split the song, and
+    # italics on another language's track say nothing about songs.
+    italic_timing = srt.italic_songs([c for c in timing if c.n not in screen])
     italic_source = srt.italic_songs(source) if src_pairs is not None else set()
     en_pairs = None
     if en_path and en_path.resolve() != timing_path.resolve():
@@ -346,9 +353,7 @@ def build(
             row["sound_only"] = True
             dropped += 1
         elif srt.is_lyric(said) or (
-            # Italics on another language's track say nothing about songs.
-            c.n not in screen
-            and srt.whole_italic(said)
+            srt.whole_italic(said)
             and (
                 all(o.n in italic_source for o in src_pairs[c.n]) if src_pairs is not None and src_lines else c.n in italic_timing
             )

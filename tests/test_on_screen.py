@@ -58,8 +58,9 @@ def test_one_language_alone_is_reported_not_added(tmp_path: Path):
 
 
 def test_credits_sounds_and_one_language_twice_are_never_added(tmp_path: Path):
-    fr = _film(tmp_path, "fr.srt", "Ligne", [(*CREDIT, "Sous-titres : Jean"), (*CARD, "Mmmh.")])
-    es = _film(tmp_path, "es.srt", "Línea", [(*CREDIT, "Subtítulos: Gabriel")])
+    song = (5_000, 7_000)  # both tracks sing it: still a song, not on-screen text
+    fr = _film(tmp_path, "fr.srt", "Ligne", [(*CREDIT, "Sous-titres : Jean"), (*CARD, "Mmmh."), (*song, "♪ La la la ♪")])
+    es = _film(tmp_path, "es.srt", "Línea", [(*CREDIT, "Subtítulos: Gabriel"), (*song, "♪ La la la ♪")])
     sdh = _film(tmp_path, "sdh.srt", "Line", [(*CARD, "HARTLEY: Hmm...")])
     en2 = _film(tmp_path, "en2.srt", "Line", [(*CREDIT, "THE END")])
     tracks = [("fr", fr), ("es", es), ("en", sdh), ("en", en2)]
@@ -67,6 +68,13 @@ def test_credits_sounds_and_one_language_twice_are_never_added(tmp_path: Path):
     assert added == []
     # "Mmmh." alone is left; the credits and "Hmm..." never count.
     assert [x["text"] for x in summary["only_one_language_first"]] == ["Mmmh.", "THE END"]
+
+
+def test_one_language_with_and_without_a_region_is_still_one(tmp_path: Path):
+    pt = _film(tmp_path, "pt.srt", "Linha", [(*CARD, "TRÊS DIAS ANTES")])
+    br = _film(tmp_path, "br.srt", "Linha", [(*CARD, "TRÊS DIAS ANTES")])
+    added, summary = prepare.on_screen(_cues(_timing(tmp_path)), [("pt", pt), ("pt-br", br)], [])
+    assert added == [] and summary["only_one_language"] == 1
 
 
 def test_a_forced_track_alone_is_enough_and_is_not_shifted(tmp_path: Path):
@@ -125,6 +133,56 @@ def test_build_adds_the_cue_and_the_run_delivers_it(tmp_path: Path):
     assert len(draft) == LINES + 1
 
 
+def test_build_reads_past_a_sound_only_timing_cue(tmp_path: Path):
+    # A hearing-impaired timing file shows "[somber music]" over the card.
+    # Build drops that cue, so the card is added in its place.
+    timing = _film(tmp_path, "en.srt", "Line", [(*CARD, "[somber music]")])
+    fr = _film(tmp_path, "fr.srt", "Ligne", [(*CARD, "Trois jours plus tôt...")])
+    es = _film(tmp_path, "es.srt", "Línea", [(*CARD, "TRES DÍAS ANTES...")])
+    w = tmp_path / "work"
+    summary = prepare.build(w, timing, None, None, tracks=[("fr", fr), ("es", es)])
+    assert [c["ts"] for c in summary["on_screen"]["cues"]] == [srt.fmt_ms(CARD[0])]
+    rows = json.loads((w / "cues.json").read_text(encoding="utf-8"))
+    assert rows[0].get("sound_only") is True and rows[1]["on_screen"]["fr"] == ["Trois jours plus tôt..."]
+
+
+def test_build_with_other_source_and_english_files_keeps_the_card(tmp_path: Path):
+    # Neither the source file nor the English one has the card: the row
+    # takes the track's text, has no English, and is no unpaired cue.
+    timing = _timing(tmp_path)
+    source = _film(tmp_path, "source.srt", "Ligne")
+    en = _film(tmp_path, "en-other.srt", "Line")
+    fr = _film(tmp_path, "fr.srt", "Ligne", [(*CARD, "Trois jours plus tôt...")])
+    es = _film(tmp_path, "es.srt", "Línea", [(*CARD, "TRES DÍAS ANTES...")])
+    w = tmp_path / "work"
+    summary = prepare.build(w, timing, source, en, tracks=[("fr", fr), ("es", es)])
+    assert summary["cues_without_source_text"] == 0
+    rows = json.loads((w / "cues.json").read_text(encoding="utf-8"))
+    assert rows[0]["source"] == ["Trois jours plus tôt..."] and rows[0]["en"] is None
+    assert rows[1]["source"] == ["Ligne 1, here."] and rows[1]["en"] == ["Line 1, here."]
+
+
+@pytest.mark.parametrize("tag", ["", "<i>"], ids=["plain card", "italic card"])
+def test_a_card_inside_an_italic_song_neither_splits_it_nor_joins_it(tmp_path: Path, tag: str):
+    # Six italic lines with no sentence end are a song. A card the other
+    # tracks show between the third and the fourth is not part of it: a
+    # plain one does not split the song in two runs of three, too short to
+    # count, and an italic one does not join it.
+    song = [(340_000 + k * 3_000 + (3_000 if k > 2 else 0), 342_000 + k * 3_000 + (3_000 if k > 2 else 0)) for k in range(6)]
+    card = (348_500, 350_500)
+    timing = _film(tmp_path, "en.srt", "Line", [(a, b, f"<i>Down the river {k}</i>") for k, (a, b) in enumerate(song)])
+    end = tag.replace("<", "</")
+    fr = _film(tmp_path, "fr.srt", "Ligne", [(*card, f"{tag}Quelque part au nord{end}")])
+    es = _film(tmp_path, "es.srt", "Línea", [(*card, f"{tag}En algún lugar del norte{end}")])
+    w = tmp_path / "work"
+    summary = prepare.build(w, timing, None, None, tracks=[("fr", fr), ("es", es)])
+    assert summary["on_screen"]["added"] == 1
+    rows = json.loads((w / "cues.json").read_text(encoding="utf-8"))
+    tail = rows[LINES:]
+    assert [r.get("song", False) for r in tail] == [True, True, True, False, True, True, True]
+    assert "on_screen" in tail[3]
+
+
 def test_build_without_tracks_reports_no_on_screen_step(tmp_path: Path):
     summary = prepare.build(tmp_path / "work", _timing(tmp_path), None, None)
     assert summary["on_screen"] is None and summary["cues"] == LINES
@@ -132,6 +190,7 @@ def test_build_without_tracks_reports_no_on_screen_step(tmp_path: Path):
 
 def test_track_arg_reads_lang_and_path():
     assert prepare.track_arg("FR=a/b.srt") == ("fr", Path("a/b.srt"))
-    for bad in ("a/b.srt", "french=a.srt", "fr=", "=a.srt"):
+    assert prepare.track_arg("pt-BR=a.srt") == ("pt-br", Path("a.srt"))
+    for bad in ("a/b.srt", "french=a.srt", "fr=", "=a.srt", "pt-=a.srt", "pt_BR=a.srt"):
         with pytest.raises(argparse.ArgumentTypeError):
             prepare.track_arg(bad)
