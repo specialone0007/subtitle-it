@@ -632,6 +632,17 @@ def read_song_choice(work: Path) -> list[tuple[int, int]]:
     return out
 
 
+def is_musical(work: Path) -> bool:
+    """The bible writer marked the film a musical in songs.json
+    ({"musical": true, "keep": [...]}): its characters sing the story."""
+    path = work / SONGS_FILE
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return isinstance(data, dict) and data.get("musical") is True
+
+
 def songs(work: Path, mode: str) -> dict:
     """Mark which song cues are left out, by the preferences' "Songs":
     `story` keeps only the songs listed in songs.json, `skip` leaves every

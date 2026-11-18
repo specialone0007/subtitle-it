@@ -95,6 +95,67 @@ def test_check_hard_fails_and_warnings(work: Path):
     assert (1, "infinitive command") in warns and (4, "caps") in warns
 
 
+def test_a_listing_slash_in_the_turkish_is_a_hard_fail(work: Path):
+    # Love Of Your Life: the listener wrote "var ya… / Oysa" back, the
+    # " / " its listing puts between a cue's lines.
+    leak = GOOD.replace("<i>Hava soğuk.</i>", "<i>Hava / soğuk.</i>").replace("Gel.", "Gel /")
+    (work / "out" / "tr_01.txt").write_text(leak, encoding="utf-8")
+    hard = {(x["cue"], x["check"]) for x in assemble.run_checks(work)["hard"]}
+    assert {(1, "line-join slash"), (2, "line-join slash")} <= hard
+    # A slash inside a word or a number is no listing slash.
+    (work / "out" / "tr_01.txt").write_text(GOOD.replace("Tamam.", "7/24 açık."), encoding="utf-8")
+    assert not [x for x in assemble.run_checks(work)["hard"] if x["check"] == "line-join slash"]
+
+
+@pytest.mark.parametrize("side", ["source", "en"])
+def test_a_slash_the_source_or_english_line_has_is_no_listing_slash(tmp_path: Path, side: str):
+    # A score written "1 / 2" on screen is kept as it is.
+    fr = FR.replace("D'accord.", "Score : 1 / 2.") if side == "source" else FR
+    en = EN.replace("Okay.", "Score: 1 / 2.") if side == "en" else EN
+    (tmp_path / "fr.srt").write_text(fr, encoding="utf-8")
+    (tmp_path / "en.srt").write_text(en, encoding="utf-8")
+    w = tmp_path / "work"
+    prepare.build(w, tmp_path / "fr.srt", None, tmp_path / "en.srt")
+    (w / "out").mkdir(exist_ok=True)
+    (w / "out" / "tr_01.txt").write_text(GOOD.replace("Tamam.", "Skor: 1 / 2."), encoding="utf-8")
+    assert not [x for x in assemble.run_checks(w)["hard"] if x["check"] == "line-join slash"]
+
+
+def test_position_tags_never_reach_the_draft(work: Path):
+    tagged = GOOD.replace("Gel.", "{\\an8}Gel.").replace("4\nTamam.", "4\n{\\an8}\nTamam.")
+    (work / "out" / "tr_01.txt").write_text(tagged, encoding="utf-8")
+    r = assemble.run_checks(work)
+    assert r["hard_fail_count"] == 0, r["hard"]
+    draft = (work / "draft.tr.srt").read_text(encoding="utf-8")
+    assert "{\\" not in draft and "\nGel.\n" in draft and "\nTamam.\n" in draft
+
+
+def test_a_musical_is_delivered_without_music_notes(work: Path):
+    sung = GOOD.replace("<i>Hava soğuk.</i>", "<i>♪ Hava soğuk ♪</i>")
+    (work / "out" / "tr_01.txt").write_text(sung, encoding="utf-8")
+    assemble.run_checks(work)
+    assert "♪ Hava soğuk ♪" in (work / "draft.tr.srt").read_text(encoding="utf-8")
+    (work / "songs.json").write_text(json.dumps({"musical": True, "keep": []}), encoding="utf-8")
+    assemble.run_checks(work)
+    draft = (work / "draft.tr.srt").read_text(encoding="utf-8")
+    assert "♪" not in draft and "\n<i>Hava soğuk</i>\n" in draft
+
+
+@pytest.mark.parametrize(
+    ("lines", "bare"),
+    [
+        (
+            ["<i>♪ Çok eskidendi</i>", "<i>Düşündüğünüzden de eski ♪</i>"],
+            ["<i>Çok eskidendi</i>", "<i>Düşündüğünüzden de eski</i>"],
+        ),
+        (["♪ ♪", "- Kapat şunu!"], ["- Kapat şunu!"]),
+        (["- ♪ La la ♪", "- Kapat!"], ["- La la", "- Kapat!"]),
+    ],
+)
+def test_drop_music_notes(lines, bare):
+    assert srt.drop_music_notes(lines) == bare
+
+
 def test_missing_cue_blocks_draft(work: Path):
     (work / "out" / "tr_01.txt").write_text("1\nGel.\n", encoding="utf-8")
     r = assemble.run_checks(work)

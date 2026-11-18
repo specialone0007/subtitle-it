@@ -96,6 +96,9 @@ WORDISH_RE = re.compile(r"\w")
 # A spoken line that starts with "Ve", as an English "And" does: Turkish
 # drops it or says "Hadi", "Bir de", "-da/-de".
 VE_OPENING_RE = re.compile(r"^\s*(?:<i>)?\s*(?:-\s*)?(?:<i>)?Ve\s")
+# A slash standing alone ("var ya… / Oysa"), as the agents' listings join
+# a cue's lines. An agent that copies it back means a line break.
+LINE_JOIN_RE = re.compile(r"(?:^|\s)/(?:\s|$)")
 
 
 def word_italics(lines: list[str]) -> bool:
@@ -516,6 +519,12 @@ def run_checks(work: Path, texts: dict[int, list[str]] | None = None, write: boo
         texts, problems = load_translation(work)
     else:
         problems = []
+    # Every line stays at the bottom of the screen: a `{\an8}` the source
+    # or the human file had, or an agent copied, is never delivered.
+    texts = {n: srt.drop_override_tags(t) for n, t in texts.items()}
+    # In a musical the songs are the story: no ♪ on any line.
+    if prepare.is_musical(work):
+        texts = {n: srt.drop_music_notes(t) for n, t in texts.items()}
     remove_hi = hi_mode(work) == "remove"
     hard: list[dict] = []
     warn: list[dict] = []
@@ -576,6 +585,10 @@ def run_checks(work: Path, texts: dict[int, list[str]] | None = None, write: boo
             h(c.n, "italic tags", "source and Turkish differ")
         if srt.dash_lines(src) != srt.dash_lines(tr):
             h(c.n, "dialogue dashes", f"source {srt.dash_lines(src)}, Turkish {srt.dash_lines(tr)}")
+        if any(LINE_JOIN_RE.search(srt.strip_tags(ln)) for ln in tr) and not any(
+            LINE_JOIN_RE.search(srt.strip_tags(ln)) for ln in [*src, *(rows[c.n]["en"] or [])]
+        ):
+            h(c.n, "line-join slash", "a ' / ' from the listings is in the Turkish: write a real line break instead")
         if remove_hi:
             for check, detail in hi_problems(tr, bool(rows[c.n].get("tags_removed"))):
                 h(c.n, check, detail)
