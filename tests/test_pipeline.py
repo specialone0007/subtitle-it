@@ -107,6 +107,15 @@ def test_a_listing_slash_in_the_turkish_is_a_hard_fail(work: Path):
     assert not [x for x in assemble.run_checks(work)["hard"] if x["check"] == "line-join slash"]
 
 
+def test_position_tags_never_reach_the_draft(work: Path):
+    tagged = GOOD.replace("Gel.", "{\\an8}Gel.").replace("4\nTamam.", "4\n{\\an8}\nTamam.")
+    (work / "out" / "tr_01.txt").write_text(tagged, encoding="utf-8")
+    r = assemble.run_checks(work)
+    assert r["hard_fail_count"] == 0, r["hard"]
+    draft = (work / "draft.tr.srt").read_text(encoding="utf-8")
+    assert "{\\" not in draft and "\nGel.\n" in draft and "\nTamam.\n" in draft
+
+
 def test_missing_cue_blocks_draft(work: Path):
     (work / "out" / "tr_01.txt").write_text("1\nGel.\n", encoding="utf-8")
     r = assemble.run_checks(work)
