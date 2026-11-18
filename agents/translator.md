@@ -50,7 +50,8 @@ it.
 ## Write your output file (path in your task)
 
 One block per cue, every cue of your chunk, in order: the number alone on
-a line, then 1 or 2 lines of Turkish, then a blank line.
+a line, then 1 or 2 lines of Turkish, then a blank line. Two lines go on
+two lines, never joined with the ` / ` of `src:`.
 
 ```
 501

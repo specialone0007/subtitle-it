@@ -50,8 +50,9 @@ right; more than about 1 line in 15 changed is over-editing.
 One file, path in your task: only the cues you change, never a cue of
 another part. The number alone on a line, 1 or 2 Turkish lines, a blank
 line. At most 2 lines of 42 characters; in a two-speaker cue one line per
-speaker, starting with `- `. Never add a speaker label or a sound
-description. Write it with UTF-8 encoding, once, whole (empty when you
+speaker, starting with `- `. Two lines go on two lines: the ` / ` of
+your listen file only shows where a line breaks and is never written.
+Never add a speaker label or a sound description. Write it with UTF-8 encoding, once, whole (empty when you
 change nothing): the run goes on as soon as it is written and stays
 unchanged for a moment.
 
