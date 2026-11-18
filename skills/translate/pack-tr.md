@@ -111,7 +111,7 @@ before translation (Netflix Turkish style guide, I.20). For a song you do
 get:
 
 - A short, loose paraphrase that keeps the meaning; a rhyme is welcome, never at the cost of the meaning.
-- In italics, with `♪` and a space at the start and at the end of each cue: `<i>♪ Dönüp bakıyorum hayatıma ♪</i>`.
+- In italics, with `♪` and a space at the start and at the end of each cue: `<i>♪ Dönüp bakıyorum hayatıma ♪</i>`. In a musical (the bible says so) no `♪` at all: the italics alone; the delivery removes any left.
 - Each lyric line starts with a capital letter. No comma or full stop at the end of a line; only `?` and `!` may end one.
 - A song title goes in quotation marks.
 - When the song goes on under the next dialogue, end the last lyric line you write with `...`.

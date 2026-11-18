@@ -72,6 +72,21 @@ def drop_override_tags(lines: list[str]) -> list[str]:
     return out
 
 
+def drop_music_notes(lines: list[str]) -> list[str]:
+    """The lines without ♪ or ♫. In a musical nearly every line is sung,
+    so the notes only clutter the screen. A line that held only notes is
+    gone."""
+    out = []
+    for ln in lines:
+        bare = re.sub(r"\s*[♪♫]\s*", " ", ln)
+        bare = re.sub(r"(<i>)\s+", r"\1", bare)
+        bare = re.sub(r"\s+(</i>)", r"\1", bare)
+        bare = re.sub(r" {2,}", " ", bare).strip()
+        if strip_tags(bare).strip() or not strip_tags(ln).strip():
+            out.append(bare)
+    return out
+
+
 def strip_tags(s: str) -> str:
     return TAG_RE.sub("", s)
 

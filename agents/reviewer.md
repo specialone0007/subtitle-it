@@ -61,7 +61,7 @@ Then, across the cues:
 8. **Chunk joins:** the 10 cues on each side of each join in your part read as one conversation (a sentence split over the join, a question and its answer).
 9. **Split sentences:** a `split sentence` note names cues that hold one source sentence, with a part written twice, a cue with nothing of its own, or a name in another cue than the one that says it. Take them as one unit: translate the whole sentence first, then spread it over the same cues so each part appears exactly once, each name in the cue where it is said. Write every cue of the group you change.
 10. **Every other note:** fix it or leave it on purpose. A cue whose two lines break in the wrong place (the pack's line-break rule) is rewrapped at delivery when a better break fits; fix it yourself only when the wording has to change.
-11. **Songs:** a lyric follows the pack's Songs rules (italics, `♪` at both ends, a capital at each line start, no comma or full stop at a line end). Only cues the part file shows are delivered: never add ♪ to a spoken line.
+11. **Songs:** a lyric follows the pack's Songs rules (italics, `♪` at both ends, none in a musical, a capital at each line start, no comma or full stop at a line end). Only cues the part file shows are delivered: never add ♪ to a spoken line.
 
 Meaning comes before reading speed, everywhere: never drop a clause, a
 question, a name or a second sentence to make a line faster. A lost
