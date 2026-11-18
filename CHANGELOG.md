@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.11.0 (2026-11-19)
+
+Title cards and signs the English track leaves to the picture are now
+translated when other subtitle tracks show them, and the closing credit
+follows the story instead of the last end title.
+
+- `prepare.py build --track LANG=PATH` and `--forced-track LANG=PATH`
+  (both repeatable) add lines the timing file lacks as cues of their own,
+  marked `on_screen` in `cues.json`. A line is added when tracks in two
+  languages show it at the same time, or a forced track shows it; a line
+  in one language only is counted in `build.json`, not added. Subtitle
+  credits, song lines and bare sounds are never added, and an added cue
+  needs 700 ms of room between its neighbours.
+- The translate skill passes every other non-Turkish track as `--track`
+  (forced-only ones as `--forced-track`), repeats them on the sync
+  rebuild, and reports what was added. Chunks mark such a cue
+  `[on-screen text]` with the other languages' wording below it.
+- The closing credit "Görüşmek üzere." starts 3 s after the story's last
+  line, the last cue that is not on-screen text (a kept song counts), in
+  the first free 2 s from there, and ends 0.1 s before the next cue. With
+  no free 2 s, or no story cue, it follows the last cue by 3 s as before.
+  With `--video` it still stays inside the video's length.
+- `delivered_map.json` numbers the draft around the credits wherever they
+  fall, so `where` stays right when the closing credit is not the last cue.
+- `build` clears `W/screen/` of an earlier run.
+
 ## 0.10.1 (2026-11-18)
 
 The credits get more room at both ends.
