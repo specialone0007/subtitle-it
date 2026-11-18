@@ -39,6 +39,14 @@ label you see in the hint was one of them. `[Lena · V3]` adds the voice heard i
 with two dash lines gets one name per line, `?` where it is unknown:
 `[? / Daniel]`.
 
+`[on-screen text]` marks a line the timing file lacks: a title card, a
+sign or a dedication, found in tracks in other languages. Its `src:` may
+be French, Spanish or another language, and `also:` lines give the same
+text from the other tracks; between them they say what is on screen.
+Translate it as on-screen text: no speaker, short, capitals kept where
+the source is in capitals, and the film's own title as the bible gives
+it.
+
 ## Write your output file (path in your task)
 
 One block per cue, every cue of your chunk, in order: the number alone on
