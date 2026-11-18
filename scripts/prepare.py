@@ -346,10 +346,11 @@ def build(
     # one: the new timing file may number its cues differently.
     shutil.rmtree(work / "out", ignore_errors=True)
     if shift_ms is None:
-        # W/screen/ is reserved for on-screen text read from the video's
-        # frames, a step no script runs yet. Clearing it here means that
-        # step can never read files an earlier run left for other cue
-        # numbers. A sync rebuild keeps the numbers, and the folder.
+        # W/screen/ holds what is read from the video's picture
+        # (`screen.py`), for this build's cues. Clearing it here means no
+        # step can read files an earlier run left for other cues. A sync
+        # rebuild keeps the numbers, and the folder; `deliver` reads its
+        # ends.json only when it still fits the draft's story end.
         shutil.rmtree(work / "screen", ignore_errors=True)
     # The bible check's files belong to the earlier run's bible too, unless
     # this rebuild only shifts the times of the same cues.

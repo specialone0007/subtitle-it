@@ -448,6 +448,32 @@ def test_deliver_holds_the_closing_credit_to_the_video(tmp_path: Path, monkeypat
     assert (shown[-1].start, shown[-1].end) == (last + 500, last + 3_600)
 
 
+def test_deliver_puts_the_goodbye_on_the_cut_to_black(tmp_path: Path):
+    (tmp_path / "fr.srt").write_text(FR_LATE, encoding="utf-8")
+    w = tmp_path / "work"
+    prepare.build(w, tmp_path / "fr.srt", None, None)
+    prepare.chunks(w, target=250)
+    (w / "out" / "tr_01.txt").write_text(TR, encoding="utf-8")
+    assemble.run_checks(w)
+    draft, _ = srt.parse(w / "draft.tr.srt")
+    last = max(c.end for c in draft)
+    dest = tmp_path / "Film.srt"
+    info = assemble.deliver(w, dest, tmp_path / "b", force=False)
+    assert info["goodbye"] == "after the story"
+    (w / "screen").mkdir()
+    ends = {"story_end_ms": last, "from_ms": last, "to_ms": last + 150_000, "black": [[last + 1_000, last + 6_000]]}
+    (w / assemble.ENDS_FILE).write_text(json.dumps(ends), encoding="utf-8")
+    info = assemble.deliver(w, dest, tmp_path / "b", force=False)
+    shown, _ = srt.parse(dest)
+    assert info["goodbye"] == "cut to black" and (shown[-1].start, shown[-1].end) == (last + 1_000, last + 5_000)
+    # A file written for a draft that ended more than half a second later is not read.
+    (w / assemble.ENDS_FILE).write_text(json.dumps({**ends, "from_ms": last + 501}), encoding="utf-8")
+    info = assemble.deliver(w, dest, tmp_path / "b", force=False)
+    shown, _ = srt.parse(dest)
+    assert info["goodbye"] == "after the story" and shown[-1].start == last + 3_000
+    assert assemble.deliver(w, dest, tmp_path / "b", force=False, credit=False)["goodbye"] is None
+
+
 def test_goodbye_follows_the_story_not_an_end_title():
     # The third cue is an end title from another track: the goodbye comes
     # 3 s after the story's last line, before it.
