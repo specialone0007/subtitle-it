@@ -9,6 +9,7 @@ deliver the result next to the video.
     uv run assemble.py reviewparts --work W [--size 250]
     uv run assemble.py reviews     --work W
     uv run assemble.py deliver     --work W --dest FILM.srt --backups DIR [--force] [--video FILM.mkv]
+                                   [--no-credit] [--credit-name NAME]
     uv run assemble.py where       --work W --cues 12,340
     uv run assemble.py fixround    --work W --round r1
     uv run assemble.py listenparts --work W [--size 480]
@@ -23,13 +24,16 @@ has text, and writes W/checks.json. When a cue is missing or a file is malformed
 written and any older draft is removed. Hard fails block delivery; warnings do
 not, and nothing without a current draft is ever delivered.
 
-The checks go cue for cue with the timing file. The draft is the file as
-it will be delivered: laid out by layout.py (at most two lines of 42
-characters, a long two-speaker cue split into one cue per speaker),
-without the cues that hold only sounds, and numbered from 1. W/cue_map.json
-maps each draft number to the timing file's cue; `deliver` keeps it as
-W/delivered_map.json, and `where` answers from it which delivered cues and
-times a timing cue became.
+The checks go cue for cue with the timing file. The draft is the film's
+lines as they will be delivered: laid out by layout.py (at most two lines
+of 42 characters, a long two-speaker cue split into one cue per speaker),
+without the cues that hold only sounds, and numbered from 1. The delivered
+file is the draft plus, unless --no-credit, one credit cue before the
+first line (when the silence allows it) and one after the last.
+W/cue_map.json maps each draft number to the timing file's cue; `deliver`
+writes it as W/delivered_map.json, its numbers moved past the opening
+credit and the credit cues listed under "credits", and `where` answers
+from it which delivered cues and times a timing cue became.
 
 `reviewparts` cuts the film into parts of about 250 cues for the review,
 each in W/review/part_<NN>.tsv with a few cues of context on each side and
@@ -1422,37 +1426,33 @@ def earlier_beside(work: Path, dest: Path, video: Path) -> list[Path]:
     return out
 
 
-CREDIT_TOOL = "subtitle-it ile hazırlanmıştır"
-CREDIT_BY = "Çeviri: "
-CREDIT_NAME_MAX = layout.MAX_LINE - len(CREDIT_BY)
 CREDIT_HELLO = "İyi seyirler."
-CREDIT_BYE = "Tekrar görüşmek üzere."
-# Both ends show a greeting for 2 s, then the credit for 4 s, each on its
-# own screen so no screen has more than two lines. The opening starts at
-# 1 s and ends at least half a second before the first line: with less
-# room than both screens need (a first line before 7.5 s), only the credit
-# shows, for 3 s at least (a first line from 4.5 s); with less, nothing.
-# The closing screens follow the last line by 1 s.
+CREDIT_BYE = "Görüşmek üzere."
+CREDIT_NAME_MAX = layout.MAX_LINE
+# Each end shows one screen for 4 s: the greeting over the translator's
+# name. The opening starts at 1 s and ends at least half a second before
+# the first line: with a first line before 5.5 s it is cut short, but kept
+# for 3 s at least (a first line from 4.5 s); with less room, nothing. The
+# closing screen follows the last line by 1 s.
 CREDIT_START_AT = 1000
 CREDIT_GAP = 500
 CREDIT_END_AFTER = 1000
-CREDIT_GREET_MS = 2000
-CREDIT_NAME_MS = 4000
-CREDIT_NAME_MIN_MS = 3000
+CREDIT_MS = 4000
+CREDIT_MIN_MS = 3000
 
 
-def credit_lines(translator: str = "") -> list[str]:
-    """The credit screen: "Çeviri: <translator>" over the tool line, or the
-    tool line alone when no translator is named."""
+def credit_lines(greeting: str, translator: str = "") -> list[str]:
+    """One credit screen: the greeting over the translator's name, or the
+    greeting alone when no name is given."""
     translator = " ".join(translator.split())
     if len(translator) > CREDIT_NAME_MAX:
         raise SystemExit(f"the credit name is longer than {CREDIT_NAME_MAX} characters: {translator!r}")
-    return [CREDIT_BY + translator, CREDIT_TOOL] if translator else [CREDIT_TOOL]
+    return [greeting, translator] if translator else [greeting]
 
 
 def with_credit(cues: list[srt.Cue], translator: str = "") -> tuple[list[srt.Cue], int, list[int]]:
     """The delivered cues with the credit added, renumbered from 1; how many
-    cues were put before the film's own (0 to 2), and the numbers of the
+    cues were put before the film's own (0 or 1), and the numbers of the
     credit cues, which are no translation."""
     if not cues:
         return cues, 0, []
@@ -1460,23 +1460,15 @@ def with_credit(cues: list[srt.Cue], translator: str = "") -> tuple[list[srt.Cue
     def cue(start: int, end: int, lines: list[str]) -> srt.Cue:
         return srt.Cue(n=0, start=start, end=end, ts=f"{srt.fmt_ms(start)} --> {srt.fmt_ms(end)}", lines=lines)
 
-    name = credit_lines(translator)
     head: list[srt.Cue] = []
     room = cues[0].start - CREDIT_GAP
     at = CREDIT_START_AT
-    if room >= at + CREDIT_GREET_MS + CREDIT_NAME_MS:
-        head = [
-            cue(at, at + CREDIT_GREET_MS, [CREDIT_HELLO]),
-            cue(at + CREDIT_GREET_MS, at + CREDIT_GREET_MS + CREDIT_NAME_MS, name),
-        ]
-    elif room >= at + CREDIT_NAME_MIN_MS:
-        head = [cue(at, min(room, at + CREDIT_NAME_MS), name)]
-    last = max(c.end for c in cues)
-    bye_at = last + CREDIT_END_AFTER
-    name_at = bye_at + CREDIT_GREET_MS
-    tail = [cue(bye_at, name_at, [CREDIT_BYE]), cue(name_at, name_at + CREDIT_NAME_MS, name)]
+    if room >= at + CREDIT_MIN_MS:
+        head = [cue(at, min(room, at + CREDIT_MS), credit_lines(CREDIT_HELLO, translator))]
+    bye_at = max(c.end for c in cues) + CREDIT_END_AFTER
+    tail = [cue(bye_at, bye_at + CREDIT_MS, credit_lines(CREDIT_BYE, translator))]
     out = [srt.Cue(n=i, start=c.start, end=c.end, ts=c.ts, lines=c.lines) for i, c in enumerate(head + cues + tail, 1)]
-    credits = list(range(1, len(head) + 1)) + [len(out) - 1, len(out)]
+    credits = list(range(1, len(head) + 1)) + [len(out)]
     return out, len(head), credits
 
 
@@ -1505,7 +1497,7 @@ def deliver(
     naming `translator` when given; only the delivered file has them, never
     the draft."""
     if credit:
-        credit_lines(translator)  # a name too long stops before any file moves
+        credit_lines(CREDIT_HELLO, translator)  # a name too long stops before any file moves
     checks = json.loads((work / "checks.json").read_text(encoding="utf-8"))
     draft = work / "draft.tr.srt"
     if not checks.get("draft") or not draft.exists():
@@ -1618,7 +1610,7 @@ def main(argv: list[str] | None = None) -> None:
     d.add_argument("--video", type=result.path, help="the film; pass it only when --dest is the default name next to it")
     d.add_argument("--no-credit", dest="credit", action="store_false", help="add no opening and closing credit")
     d.add_argument(
-        "--credit-name", default="", help='the translator the credit names ("Çeviri: <name>"); none: only the tool line'
+        "--credit-name", default="", help="the translator the credit names under its greeting; none: the greeting alone"
     )
     wh = sub.add_parser("where")
     wh.add_argument("--work", type=result.path, required=True)

@@ -59,10 +59,10 @@ when no other command uses that name.)
   report also gives the run's time per step and its subagents' tokens.
 - **It learns from you.** Fix lines after watching, and it turns your edits
   into rules for the next film.
-- **A short credit.** "İyi seyirler." then "Çeviri: <your name>" over
-  "subtitle-it ile hazırlanmıştır" open the file in the silence before the
-  first line; "Tekrar görüşmek üzere." then the same credit close it. Put
-  your name under `Credit` in your preferences, or set it to `off`.
+- **A short credit.** "İyi seyirler." over your name opens the file in the
+  silence before the first line, and "Görüşmek üzere." over your name
+  closes it. Put your name under `Credit` in your preferences, or set it
+  to `off`.
 
 ## Languages
 

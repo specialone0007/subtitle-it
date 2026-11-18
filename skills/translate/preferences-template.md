@@ -56,14 +56,12 @@ Bay/Bayan + surname
 
 ## Credit
 
-A short credit added to the delivered file. At the start, in the silence
-before the first line: "İyi seyirler.", then "Çeviri: <your name>" over
-"subtitle-it ile hazırlanmıştır" (when the film speaks in its first 7.5
-seconds, only the credit; in its first 4.5 seconds, nothing). After the
-last line: "Tekrar görüşmek üzere.", then the same credit. Write `on`
-or `off` on the first line, and on the line below it the name to credit
-(34 characters at most). With no name, the credit is the
-"subtitle-it ile hazırlanmıştır" line alone.
+A short credit added to the delivered file: "İyi seyirler." over your
+name before the first line (shorter or left out when the film speaks in
+its first 5.5 seconds), and "Görüşmek üzere." over your name after the
+last line. Write `on` or `off` on the first line, and on the line below
+it the name to credit (42 characters at most). With no name, the
+greeting shows alone.
 
 on
 
