@@ -25,6 +25,9 @@ What the plugin keeps and sends:
   Face. A tampered checkpoint there or in your Hugging Face cache could run
   code on your machine.
 - Subtitle text is sent to Claude as part of your Claude Code session.
+- For a video input, at most 300 frames from the video (960x540 at most)
+  are sent to Claude the same way, to read on-screen text. They are saved
+  in the film's work folder. The video itself never leaves.
 - OpenSubtitles receives your OpenSubtitles username and password when the
   plugin logs in. A search sends the video's hash, the title or IMDb id,
   the year when it is known, and the subtitle languages wanted.

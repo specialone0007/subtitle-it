@@ -40,9 +40,12 @@ with two dash lines gets one name per line, `?` where it is unknown:
 `[? / Theo]`.
 
 `[on-screen text]` marks a line the timing file lacks: a title card, a
-sign or a dedication, found in tracks in other languages. Its `src:` may
-be French, Spanish or another language, and `also:` lines give the same
-text from the other tracks; between them they say what is on screen.
+sign or a dedication, found in tracks in other languages or read from
+the picture itself. Its `src:` may be French, Spanish or another
+language, and `also:` lines give the same text from the other tracks;
+between them they say what is on screen. A line read only from the
+picture has no `also:` lines: its `src:` is the text as the film shows
+it.
 Translate it as on-screen text: no speaker, short, capitals kept where
 the source is in capitals, and the film's own title as the bible gives
 it.
