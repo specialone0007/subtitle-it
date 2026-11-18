@@ -200,8 +200,10 @@ language but Turkish: `--track <language>=<path>` for each, the source
 and English files too, and the timing file never. List them with the
 original language first, then English, then the rest. A candidate whose
 `forced_only` is true goes as `--forced-track <language>=<path>` instead,
-and only when it is a track of the same video as the timing file (a
-built-in timing track, or a hash match); otherwise leave it out. `build`
+whatever its validation issues say (a forced track is short by nature, so
+"only N cues" is expected), and only when it is a track of the same video
+as the timing file (a built-in timing track, or a hash match); otherwise
+leave it out. `build`
 lines each track up itself. It adds a line as a cue of its own, marked
 `[on-screen text]` in the chunks, when tracks in two languages show it
 where the timing file shows nothing, or a forced track shows it. One
