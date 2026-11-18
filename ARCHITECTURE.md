@@ -86,6 +86,11 @@ Then it settles the timings:
 - `prepare.py build` writes the work folder: `cues.json` (every cue with its
   source and English text) and `chunks.json` (about 250 cues each, cut at
   the longest pause).
+- On-screen text: `build` also reads the film's other subtitle tracks
+  (`--track`, `--forced-track`). A line two languages show, or a forced
+  track shows, where the timing file shows nothing (a title card, a sign)
+  joins the timing file as a cue of its own, marked `on_screen`. One
+  language alone is only counted for the report.
 - Unless your preferences say `Hearing-impaired tags: keep`, `build` takes
   sound descriptions in square brackets (`[door slams]`) and bracketed
   names (`[Mara]`, `[1. Man]`) out of every text. From a file that is
