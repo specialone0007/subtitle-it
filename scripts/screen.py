@@ -8,10 +8,12 @@
 
 `ends` looks for the cut to black after the story: ffmpeg's blackdetect
 (`d=2:pic_th=1.0:pix_th=0.10`, on the full-size picture) from story end
-to 2.5 minutes after it. Story end is the end of the draft's last cue
-that is not on-screen text, as `assemble.py deliver` reads it, so run it
+to 2.5 minutes after it. ffmpeg counts the times from the seek point;
+without `-copyts` the seek itself counts from the video's start_time, as
+the tracks `sources.py` extracts do, so only the seek is added back.
+Story end is the end of the draft's last cue that is not on-screen text, as `assemble.py deliver` reads it, so run it
 after `check` has written the draft. It writes W/screen/ends.json with
-every black stretch of 2 s or more, in ms of the video's own clock;
+every black stretch of 2 s or more, in ms on the subtitles' clock;
 `deliver` starts the closing credit on the first one that begins within
 30 s after story end.
 
@@ -40,9 +42,6 @@ BLACK_FILTER = "blackdetect=d=2:pic_th=1.0:pix_th=0.10"
 BLACK_MIN_MS = 2000
 WINDOW_MS = 150_000
 TIMEOUT_S = 900
-# Transport streams keep their own clock: a picture's time is counted from
-# the format's start_time, which a seek before -i does not add back.
-OWN_CLOCK = {".ts", ".m2ts", ".mts"}
 BLACK_RE = re.compile(r"black_start:\s*([\d.]+)\s+black_end:\s*([\d.]+)")
 
 
@@ -64,20 +63,6 @@ def black_stretches(stderr: str, offset_ms: int) -> list[list[int]]:
     return sorted(out)
 
 
-def start_time_ms(video: Path) -> int:
-    """The format's start_time for a transport stream, 0 for anything else."""
-    if video.suffix.lower() not in OWN_CLOCK:
-        return 0
-    out = subprocess.run(
-        [shutil.which("ffprobe") or "ffprobe", "-v", "error", "-show_entries", "format=start_time", "-of", "json", str(video)],
-        capture_output=True,
-        text=True,
-        check=True,
-        timeout=60,
-    ).stdout
-    return round(float(json.loads(out).get("format", {}).get("start_time") or 0) * 1000)
-
-
 def ends(work: Path, video: Path) -> dict:
     """Write W/screen/ends.json (see the module docstring). Never raises for
     ffmpeg: a failure is returned in `error`, with no file left behind."""
@@ -95,7 +80,6 @@ def ends(work: Path, video: Path) -> dict:
     cmd += ["-map", "0:v:0", "-vf", BLACK_FILTER, "-an", "-sn", "-f", "null", "-"]
     began = time.monotonic()
     try:
-        offset = s + start_time_ms(video)
         run = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=TIMEOUT_S)
     except (OSError, ValueError, subprocess.SubprocessError) as e:
         return {"ends": None, "error": f"ffmpeg failed: {type(e).__name__}"}
@@ -108,7 +92,7 @@ def ends(work: Path, video: Path) -> dict:
         "story_end_ms": s,
         "from_ms": s,
         "to_ms": s + WINDOW_MS,
-        "black": black_stretches(run.stderr, offset),
+        "black": black_stretches(run.stderr, s),
         "seconds": took,
     }
     dest.parent.mkdir(parents=True, exist_ok=True)

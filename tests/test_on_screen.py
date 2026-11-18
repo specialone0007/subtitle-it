@@ -607,7 +607,10 @@ def test_deliver_stops_on_a_malformed_on_screen_file_before_any_file_moves(tmp_p
     prepare.build(w, _timing(tmp_path), None, None)
     _translate(w)
     assert assemble.run_checks(w)["hard_fail_count"] == 0
-    (w / prepare.ON_SCREEN_FILE).write_text(json.dumps([{"n": 1}]), encoding="utf-8")
-    with pytest.raises(SystemExit, match="is malformed"):
-        assemble.deliver(w, tmp_path / "Film.srt", tmp_path / "backups", force=False)
-    assert not (tmp_path / "Film.srt").exists() and not (w / "delivered.json").exists()
+    # A cue entry with no number: the report reads it after the file moves.
+    cue = {"state": "cue", "start": 1_000, "end": 2_000, "lines": ["FIN"]}
+    for bad in ([{"n": 1}], [cue]):
+        (w / prepare.ON_SCREEN_FILE).write_text(json.dumps(bad), encoding="utf-8")
+        with pytest.raises(SystemExit, match="is malformed"):
+            assemble.deliver(w, tmp_path / "Film.srt", tmp_path / "backups", force=True)
+        assert not (tmp_path / "Film.srt").exists() and not (w / "delivered.json").exists()

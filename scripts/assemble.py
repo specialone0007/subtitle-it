@@ -1743,7 +1743,10 @@ def deliver(
         raise SystemExit("translation files changed after the last check: run check again")
     # The report reads on_screen.json after the file is delivered: one it
     # cannot read stops here, before any file moves.
-    if any(not isinstance(e, dict) or not {"state", "start", "end", "lines"} <= e.keys() for e in on_screen_entries(work)):
+    if any(
+        not isinstance(e, dict) or not {"state", "start", "end", "lines"} <= e.keys() or (e["state"] == "cue" and "n" not in e)
+        for e in on_screen_entries(work)
+    ):
         raise SystemExit(f"{work / prepare.ON_SCREEN_FILE} is malformed: run prepare.py build again")
     backed_up = None
     old_file = None
