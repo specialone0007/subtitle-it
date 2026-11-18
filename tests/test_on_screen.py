@@ -225,3 +225,35 @@ def test_track_arg_reads_lang_and_path():
     for bad in ("a/b.srt", "french=a.srt", "fr=", "=a.srt", "pt-=a.srt", "pt_BR=a.srt"):
         with pytest.raises(argparse.ArgumentTypeError):
             prepare.track_arg(bad)
+
+
+def test_deliver_puts_the_goodbye_before_an_end_title(tmp_path: Path):
+    timing = _timing(tmp_path)
+    fr = _film(tmp_path, "fr.srt", "Ligne", [(*CREDIT, "L'HISTOIRE SANS FIN")])
+    es = _film(tmp_path, "es.srt", "Línea", [(*CREDIT, "LA HISTORIA INTERMINABLE")])
+    w = tmp_path / "work"
+    prepare.build(w, timing, None, None, tracks=[("fr", fr), ("es", es)])
+    prepare.chunks(w, target=250)
+    tr = "".join(f"{k + 1}\n{k + 1}. satır, burada.\n\n" for k in range(LINES)) + f"{LINES + 1}\nBİTMEYEN ÖYKÜ\n\n"
+    (w / "out" / "tr_01.txt").write_text(tr, encoding="utf-8")
+    assert assemble.run_checks(w)["hard_fail_count"] == 0
+    info = assemble.deliver(w, tmp_path / "Film.srt", tmp_path / "backups", force=False, translator="specialone0007")
+    # Opening credit, 80 lines, the goodbye 1 s after the last line, then the title.
+    assert info["credit_cues"] == [1, LINES + 2]
+    shown = _cues(tmp_path / "Film.srt")
+    bye, title = shown[LINES + 1], shown[LINES + 2]
+    assert bye.lines == [assemble.CREDIT_BYE, "specialone0007"] and title.lines == ["BİTMEYEN ÖYKÜ"]
+    last_line = 12_500 + (LINES - 1) * 4_000
+    assert (bye.start, bye.end) == (last_line + 1_000, last_line + 5_000) and title.start == CREDIT[0]
+    # The delivered map leads every number past the goodbye to its own cue.
+    assert [x["delivered"] for x in assemble.where(w, [LINES, LINES + 1])] == [[LINES + 1], [LINES + 3]]
+    delivered = json.loads((w / assemble.DELIVERED_MAP_FILE).read_text(encoding="utf-8"))
+    assert delivered["credits"] == [1, LINES + 2] and delivered["cues"][str(LINES + 3)] == {"cue": LINES + 1}
+
+
+def test_build_clears_the_picture_folder_of_an_earlier_run(tmp_path: Path):
+    w = tmp_path / "work"
+    (w / "screen").mkdir(parents=True)
+    (w / "screen" / "ends.json").write_text("{}", encoding="utf-8")
+    prepare.build(w, _timing(tmp_path), None, None)
+    assert not (w / "screen").exists()

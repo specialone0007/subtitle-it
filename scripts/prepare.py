@@ -233,6 +233,7 @@ def build(
     # fixes, draft, checks and speaker labels must never be read into this
     # one: the new timing file may number its cues differently.
     shutil.rmtree(work / "out", ignore_errors=True)
+    shutil.rmtree(work / "screen", ignore_errors=True)
     # The bible check's files belong to the earlier run's bible too, unless
     # this rebuild only shifts the times of the same cues.
     stale = ("draft.tr.srt", "checks.json", "speakers.json") + (() if keep_bible_check else BIBLE_CHECK_FILES)
