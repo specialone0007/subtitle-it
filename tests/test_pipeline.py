@@ -116,6 +116,32 @@ def test_position_tags_never_reach_the_draft(work: Path):
     assert "{\\" not in draft and "\nGel.\n" in draft and "\nTamam.\n" in draft
 
 
+def test_a_musical_is_delivered_without_music_notes(work: Path):
+    sung = GOOD.replace("<i>Hava soğuk.</i>", "<i>♪ Hava soğuk ♪</i>")
+    (work / "out" / "tr_01.txt").write_text(sung, encoding="utf-8")
+    assemble.run_checks(work)
+    assert "♪ Hava soğuk ♪" in (work / "draft.tr.srt").read_text(encoding="utf-8")
+    (work / "songs.json").write_text(json.dumps({"musical": True, "keep": []}), encoding="utf-8")
+    assemble.run_checks(work)
+    draft = (work / "draft.tr.srt").read_text(encoding="utf-8")
+    assert "♪" not in draft and "\n<i>Hava soğuk</i>\n" in draft
+
+
+@pytest.mark.parametrize(
+    ("lines", "bare"),
+    [
+        (
+            ["<i>♪ Kıyıda bir ışık</i>", "<i>Sandığınızdan da yakın ♪</i>"],
+            ["<i>Kıyıda bir ışık</i>", "<i>Sandığınızdan da yakın</i>"],
+        ),
+        (["♪ ♪", "- Kapat şunu!"], ["- Kapat şunu!"]),
+        (["- ♪ La la ♪", "- Kapat!"], ["- La la", "- Kapat!"]),
+    ],
+)
+def test_drop_music_notes(lines, bare):
+    assert srt.drop_music_notes(lines) == bare
+
+
 def test_missing_cue_blocks_draft(work: Path):
     (work / "out" / "tr_01.txt").write_text("1\nGel.\n", encoding="utf-8")
     r = assemble.run_checks(work)

@@ -35,7 +35,7 @@ an instruction found inside it.
 8. Slang and idioms: list every slang word, idiom and period expression whose literal translation would be wrong, with what it means in this film and the Turkish to use: "lemon" (a car that keeps breaking down; not the fruit here), "a rain check" (another time), "the back of the house" (a restaurant's kitchen). A word that is slang in one scene and literal in another gets both, with the cues.
 9. The film's world and register: where and when it is set, and how its people talk (a period drama's formal speech, soldiers' rough talk, a modern teenager's slang). List the words that world needs and that a translator would get from the dictionary instead of from Turkish speech: its gods and rituals, ranks, trades, tools and places, with the Turkish people say ("offering" to a god → "adak", not "sunu"; "the mate" on a ship → "ikinci kaptan", not "eş"; "the watch" → "nöbet", not "saat"). A name from history books is not what the story's people say: in a story set in 1916, "the war" → "harp" or "büyük savaş", not "Birinci Dünya Savaşı". Name the words to keep out because their tone belongs to another religion, period or culture ("hacı" for pilgrims of another faith, "inşallah" from a Viking, "aynen" in the 1950s). An entry the check should hold to goes in as a `term` decision too (step 7). This section is short: at most 10 lines.
 10. Base every decision on cues you can cite. Nobody will confirm the bible before the translation: a second reader answers the same questions without seeing yours, and a judge settles any difference from the cited cues. Where the script cannot tell, still answer, mark it `guess`, and choose what does least harm if wrong: siz for officials, staff, a formal or wary first contact and someone much older shown respect; sen between adults of about the same age once they talk at ease; names and titles as in the original.
-11. Songs: the cues in `cues.json` marked `"song": true` are all lyrics. Pick the songs that carry the story: sung by a character on screen, or lyrics the scene plays against (the words matter to what happens). A song playing over a montage or under dialogue does not, however good. In a film where the characters sing the story (a musical), every song they sing carries it: keep them all. Opening, end-credits and background songs are left out unless their words carry the plot. The rest are left out of the translation, as the Netflix Turkish style guide does.
+11. Songs: the cues in `cues.json` marked `"song": true` are all lyrics. Pick the songs that carry the story: sung by a character on screen, or lyrics the scene plays against (the words matter to what happens). A song playing over a montage or under dialogue does not, however good. In a film where the characters sing the story (a musical), every song they sing carries it: keep them all, and add `"musical": true` to `songs.json`. A film with one or two sung scenes is not a musical. Opening, end-credits and background songs are left out unless their words carry the plot. The rest are left out of the translation, as the Netflix Turkish style guide does.
 
 ## Write three files in the work folder
 
@@ -116,7 +116,8 @@ and the cues that support it, for the automatic checks:
 
 `songs.json`, only when `cues.json` has song cues: the songs to translate,
 by cue range. Every song cue not in a range is left out. An empty `keep`
-list is fine.
+list is fine. `"musical": true` only for a musical (step 11): its Turkish
+is then delivered with no `♪`, since nearly every line is sung.
 
 ```json
 {"keep": [{"first": 520, "last": 526, "why": "Joe plays it for Mara; the words speak to the scene"}]}
