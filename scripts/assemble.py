@@ -29,10 +29,11 @@ lines as they will be delivered: laid out by layout.py (at most two lines
 of 42 characters, a long two-speaker cue split into one cue per speaker),
 without the cues that hold only sounds, and numbered from 1. The delivered
 file is the draft plus, unless --no-credit, one credit cue before the
-first line (when the silence allows it) and one after the last.
+first line (when the silence allows it) and one after the story's last
+line, before any end title shown as on-screen text.
 W/cue_map.json maps each draft number to the timing file's cue; `deliver`
-writes it as W/delivered_map.json, its numbers moved past the opening
-credit and the credit cues listed under "credits", and `where` answers
+writes it as W/delivered_map.json, numbered around the credit cues,
+which are listed under "credits", and `where` answers
 from it which delivered cues and times a timing cue became.
 
 `reviewparts` cuts the film into parts of about 250 cues for the review,
@@ -1433,12 +1434,15 @@ CREDIT_NAME_MAX = layout.MAX_LINE
 # name. The opening starts at 1 s and ends at least half a second before
 # the first line: with a first line before 5.5 s it is cut short, but kept
 # for 3 s at least (a first line from 4.5 s); with less room, nothing. The
-# closing screen follows the last line by 1 s.
+# closing screen comes 1 s after the story's last line, in the first free
+# 2 s from there on, and ends 0.1 s before the next cue (an end title).
 CREDIT_START_AT = 1000
 CREDIT_GAP = 500
 CREDIT_END_AFTER = 1000
 CREDIT_MS = 4000
 CREDIT_MIN_MS = 3000
+CREDIT_FREE_MS = 2000
+CREDIT_BEFORE_NEXT = 100
 
 
 def credit_lines(greeting: str, translator: str = "") -> list[str]:
@@ -1450,10 +1454,38 @@ def credit_lines(greeting: str, translator: str = "") -> list[str]:
     return [greeting, translator] if translator else [greeting]
 
 
-def with_credit(cues: list[srt.Cue], translator: str = "") -> tuple[list[srt.Cue], int, list[int]]:
+def goodbye_at(cues: list[srt.Cue], on_screen: set[int]) -> tuple[int, int]:
+    """Start and end of the closing credit. It follows the story, not an end
+    title shown after the credits roll: from 1 s after the last cue that is
+    not on-screen text (a kept song counts as story), it takes the first
+    free 2 s, skipping any cue in its way, and ends 0.1 s before the next
+    cue. With no such free time, or no story cue at all, it follows the
+    last cue by 1 s."""
+    last = max(c.end for c in cues)
+    story = [c.end for c in cues if c.n not in on_screen]
+    if not story:
+        return last + CREDIT_END_AFTER, last + CREDIT_END_AFTER + CREDIT_MS
+    at = max(story) + CREDIT_END_AFTER
+    for c in sorted(cues, key=lambda c: c.start):
+        if c.end <= at:
+            continue
+        if c.start - at >= CREDIT_FREE_MS:
+            return at, min(at + CREDIT_MS, c.start - CREDIT_BEFORE_NEXT)
+        at = max(at, c.end)
+    if at == last:
+        # Cues in the way up to the end of the file: after the last one.
+        at = last + CREDIT_END_AFTER
+    return at, at + CREDIT_MS
+
+
+def with_credit(
+    cues: list[srt.Cue], translator: str = "", on_screen: set[int] | None = None
+) -> tuple[list[srt.Cue], int, list[int]]:
     """The delivered cues with the credit added, renumbered from 1; how many
     cues were put before the film's own (0 or 1), and the numbers of the
-    credit cues, which are no translation."""
+    credit cues, which are no translation. `on_screen` holds the numbers of
+    the cues that are on-screen text, not the story's lines
+    (`goodbye_at`)."""
     if not cues:
         return cues, 0, []
 
@@ -1465,18 +1497,33 @@ def with_credit(cues: list[srt.Cue], translator: str = "") -> tuple[list[srt.Cue
     at = CREDIT_START_AT
     if room >= at + CREDIT_MIN_MS:
         head = [cue(at, min(room, at + CREDIT_MS), credit_lines(CREDIT_HELLO, translator))]
-    bye_at = max(c.end for c in cues) + CREDIT_END_AFTER
-    tail = [cue(bye_at, bye_at + CREDIT_MS, credit_lines(CREDIT_BYE, translator))]
-    out = [srt.Cue(n=i, start=c.start, end=c.end, ts=c.ts, lines=c.lines) for i, c in enumerate(head + cues + tail, 1)]
-    credits = list(range(1, len(head) + 1)) + [len(out)]
+    start, end = goodbye_at(cues, on_screen or set())
+    before = sum(1 for c in cues if c.start < start)
+    body = head + cues[:before] + [cue(start, end, credit_lines(CREDIT_BYE, translator))] + cues[before:]
+    out = [srt.Cue(n=i, start=c.start, end=c.end, ts=c.ts, lines=c.lines) for i, c in enumerate(body, 1)]
+    credits = list(range(1, len(head) + 1)) + [len(head) + before + 1]
     return out, len(head), credits
 
 
-def credit_map(cue_map: dict, shift: int, credits: list[int]) -> dict:
-    """The draft's cue map moved down by the cues put before the film's own,
-    with the credit cues listed apart: they lead back to no timing cue."""
-    moved = {str(int(n) + shift): v for n, v in cue_map["cues"].items()}
+def credit_map(cue_map: dict, credits: list[int]) -> dict:
+    """The draft's cue map renumbered around the credit cues, which are
+    listed apart: they lead back to no timing cue. The draft's cues keep
+    their order; each takes the next delivered number that is no credit."""
+    taken = set(credits)
+    free = (n for n in range(1, len(cue_map["cues"]) + len(credits) + 1) if n not in taken)
+    moved = {str(d): cue_map["cues"][str(o)] for o, d in zip(sorted(int(n) for n in cue_map["cues"]), free)}
     return {**cue_map, "cues": moved, "credits": credits}
+
+
+def on_screen_draft_cues(work: Path) -> set[int]:
+    """The draft numbers whose cue is on-screen text (`prepare.py build`
+    marks the row `on_screen`), every part of a split cue included."""
+    rows = json.loads((work / "cues.json").read_text(encoding="utf-8"))
+    screen = {r["n"] for r in rows if r.get("on_screen")}
+    if not screen:
+        return set()
+    cue_map = json.loads((work / MAP_FILE).read_text(encoding="utf-8"))
+    return {int(d) for d, info in cue_map["cues"].items() if info["cue"] in screen}
 
 
 def deliver(
@@ -1539,7 +1586,7 @@ def deliver(
     data = draft.read_bytes()
     credits: list[int] = []
     if credit:
-        shown, shift, credits = with_credit(srt.parse_text(srt.decode(data)[0]), translator)
+        shown, _, credits = with_credit(srt.parse_text(srt.decode(data)[0]), translator, on_screen_draft_cues(work))
         data = srt.render(shown).replace("\n", "\r\n").encode("utf-8")
     if not data.startswith(UTF8_BOM):
         data = UTF8_BOM + data
@@ -1547,7 +1594,7 @@ def deliver(
     (work / "delivered.tr.srt").write_bytes(data)
     if credits:
         cue_map = json.loads((work / MAP_FILE).read_text(encoding="utf-8"))
-        (work / DELIVERED_MAP_FILE).write_text(json.dumps(credit_map(cue_map, shift, credits), indent=1), encoding="utf-8")
+        (work / DELIVERED_MAP_FILE).write_text(json.dumps(credit_map(cue_map, credits), indent=1), encoding="utf-8")
     else:
         shutil.copyfile(work / MAP_FILE, work / DELIVERED_MAP_FILE)
     info = {

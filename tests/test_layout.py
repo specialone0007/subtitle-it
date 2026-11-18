@@ -395,3 +395,61 @@ def test_deliver_cli_passes_the_credit_flags(tmp_path: Path):
     shown, _ = srt.parse(dest)
     assert all(assemble.CREDIT_HELLO not in c.lines and assemble.CREDIT_BYE not in c.lines for c in shown)
     assert json.loads((w / "delivered.json").read_text(encoding="utf-8"))["credit"] is False
+
+
+def test_goodbye_follows_the_story_not_an_end_title():
+    # The third cue is an end title from another track: the goodbye comes
+    # 1 s after the story's last line, before it.
+    shown, shift, credits = assemble.with_credit(
+        _cues((10_000, 12_000), (60_000, 62_500), (80_000, 83_000)), "specialone0007", {3}
+    )
+    assert shift == 1 and credits == [1, 4] and [c.n for c in shown] == [1, 2, 3, 4, 5]
+    assert shown[3].lines == BYE and shown[3].ts == "00:01:03,500 --> 00:01:07,500"
+    assert shown[4].lines == ["Satır 3."]
+
+
+def test_goodbye_ends_before_the_next_card_and_skips_cards_in_its_way():
+    # Two closing cards 2 s apart: the first is in the way, so the goodbye
+    # takes the 2 s between them and ends 0.1 s before the second.
+    cues = _cues((10_000, 12_000), (60_000, 62_500), (63_000, 66_000), (68_000, 70_000))
+    shown, _, credits = assemble.with_credit(cues, "specialone0007", {3, 4})
+    assert credits == [1, 5] and [c.lines for c in shown[3:]] == [["Satır 3."], BYE, ["Satır 4."]]
+    assert shown[4].ts == "00:01:06,000 --> 00:01:07,900"
+
+
+def test_goodbye_with_no_free_two_seconds_follows_the_last_cue():
+    cues = _cues((10_000, 12_000), (60_000, 62_500), (63_000, 66_000), (67_000, 70_000))
+    shown, _, credits = assemble.with_credit(cues, "specialone0007", {3, 4})
+    assert credits == [1, 6] and shown[-1].lines == BYE and shown[-1].ts == "00:01:11,000 --> 00:01:15,000"
+
+
+def test_goodbye_with_no_story_cue_follows_the_last_cue():
+    shown, _, credits = assemble.with_credit(_cues((10_000, 12_000), (60_000, 62_500)), "specialone0007", {1, 2})
+    assert credits == [1, 4] and shown[-1].ts == "00:01:03,500 --> 00:01:07,500"
+
+
+def test_goodbye_follows_kept_songs_after_the_last_line():
+    # A song still in the draft was kept because it carries the story.
+    cues = _cues((10_000, 12_000), (60_000, 62_500), (63_000, 66_000), (66_500, 69_000), (90_000, 93_000))
+    for c in cues[2:4]:
+        c.lines[:] = ["<i>♪ Şarkı sürüyor ♪</i>"]
+    shown, _, credits = assemble.with_credit(cues, "specialone0007", {5})
+    assert credits == [1, 6] and shown[5].ts == "00:01:10,000 --> 00:01:14,000"
+    assert shown[6].lines == ["Satır 5."]
+
+
+def test_credit_map_numbers_the_draft_around_a_goodbye_that_is_not_last():
+    cue_map = {"cues": {str(d): {"cue": d + 10} for d in range(1, 5)}, "sound_only": [7]}
+    moved = assemble.credit_map(cue_map, [1, 4])
+    assert moved["cues"] == {"2": {"cue": 11}, "3": {"cue": 12}, "5": {"cue": 13}, "6": {"cue": 14}}
+    assert moved["credits"] == [1, 4] and moved["sound_only"] == [7]
+    # No opening credit, goodbye last: the numbers stay.
+    assert assemble.credit_map(cue_map, [5])["cues"] == cue_map["cues"]
+
+
+def test_on_screen_draft_cues_include_every_part_of_a_split_cue(tmp_path: Path):
+    rows = [{"n": 1}, {"n": 2, "on_screen": {"fr": ["FIN"], "es": ["FIN"]}}, {"n": 3, "song": True}]
+    (tmp_path / "cues.json").write_text(json.dumps(rows), encoding="utf-8")
+    cues = {"1": {"cue": 1}, "2": {"cue": 2, "part": 1, "of": 2}, "3": {"cue": 2, "part": 2, "of": 2}, "4": {"cue": 3}}
+    (tmp_path / assemble.MAP_FILE).write_text(json.dumps({"cues": cues, "sound_only": []}), encoding="utf-8")
+    assert assemble.on_screen_draft_cues(tmp_path) == {2, 3}
