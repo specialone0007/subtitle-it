@@ -95,6 +95,18 @@ def test_check_hard_fails_and_warnings(work: Path):
     assert (1, "infinitive command") in warns and (4, "caps") in warns
 
 
+def test_a_listing_slash_in_the_turkish_is_a_hard_fail(work: Path):
+    # One test film: the listener wrote "var ya… / Oysa" back, the
+    # " / " its listing puts between a cue's lines.
+    leak = GOOD.replace("<i>Hava soğuk.</i>", "<i>Hava / soğuk.</i>").replace("Gel.", "Gel /")
+    (work / "out" / "tr_01.txt").write_text(leak, encoding="utf-8")
+    hard = {(x["cue"], x["check"]) for x in assemble.run_checks(work)["hard"]}
+    assert {(1, "line-join slash"), (2, "line-join slash")} <= hard
+    # A slash inside a word or a number is no listing slash.
+    (work / "out" / "tr_01.txt").write_text(GOOD.replace("Tamam.", "7/24 açık."), encoding="utf-8")
+    assert not [x for x in assemble.run_checks(work)["hard"] if x["check"] == "line-join slash"]
+
+
 def test_missing_cue_blocks_draft(work: Path):
     (work / "out" / "tr_01.txt").write_text("1\nGel.\n", encoding="utf-8")
     r = assemble.run_checks(work)
