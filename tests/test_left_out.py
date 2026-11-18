@@ -57,6 +57,9 @@ def test_answer_sound(lines, answer):
         (["<i>♪ I'll meet you", "in forever's parking lot...</i>"], True),
         (["♪ La la ♪", "Turn it off!"], False),
         (["- ♪ La la", "- Turn it off!"], False),
+        # A ♪ at the end of a line closes the lyric the cue before opened.
+        (["and everything you said ♪", "Who sang that?"], False),
+        (["<i>and everything you said ♪</i>", "<i>♪ All the things", "you do to me</i>"], True),
         (["Turn it off!"], False),
     ],
 )

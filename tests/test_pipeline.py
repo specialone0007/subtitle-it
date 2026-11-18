@@ -107,6 +107,20 @@ def test_a_listing_slash_in_the_turkish_is_a_hard_fail(work: Path):
     assert not [x for x in assemble.run_checks(work)["hard"] if x["check"] == "line-join slash"]
 
 
+@pytest.mark.parametrize("side", ["source", "en"])
+def test_a_slash_the_source_or_english_line_has_is_no_listing_slash(tmp_path: Path, side: str):
+    # A score written "1 / 2" on screen is kept as it is.
+    fr = FR.replace("D'accord.", "Score : 1 / 2.") if side == "source" else FR
+    en = EN.replace("Okay.", "Score: 1 / 2.") if side == "en" else EN
+    (tmp_path / "fr.srt").write_text(fr, encoding="utf-8")
+    (tmp_path / "en.srt").write_text(en, encoding="utf-8")
+    w = tmp_path / "work"
+    prepare.build(w, tmp_path / "fr.srt", None, tmp_path / "en.srt")
+    (w / "out").mkdir(exist_ok=True)
+    (w / "out" / "tr_01.txt").write_text(GOOD.replace("Tamam.", "Skor: 1 / 2."), encoding="utf-8")
+    assert not [x for x in assemble.run_checks(w)["hard"] if x["check"] == "line-join slash"]
+
+
 def test_position_tags_never_reach_the_draft(work: Path):
     tagged = GOOD.replace("Gel.", "{\\an8}Gel.").replace("4\nTamam.", "4\n{\\an8}\nTamam.")
     (work / "out" / "tr_01.txt").write_text(tagged, encoding="utf-8")

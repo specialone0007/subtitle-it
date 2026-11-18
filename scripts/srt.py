@@ -893,12 +893,13 @@ def is_sound(cue: Cue) -> bool:
 
 def is_lyric(lines: list[str]) -> bool:
     """Every line with words in it is a song lyric: marked with ♪ or ♫,
-    or in older files with a # opening or closing it. A ♪ that opens a
-    lyric and is not closed on its line marks the lines after it too, up
-    to the closing ♪ or the end of the cue: a lyric cut off by speech
+    or in older files with a # opening or closing it. A line that opens
+    with ♪ and does not close it marks the lines after it too, up to a
+    line with a ♪ or the end of the cue: a lyric cut off by speech
     ("♪ All the things you do to me / and everything you said...") has no
-    closing ♪. A dialogue dash starts a new turn and ends the lyric. A cue
-    that mixes a lyric with speech is not one."""
+    closing ♪. A ♪ at the end of a line closes the lyric, and a dialogue
+    dash starts a new turn and ends it too. A cue that mixes a lyric with
+    speech is not one ("and everything you said ♪ / Who sang that?")."""
     said = [strip_tags(ln).strip() for ln in lines]
     said = [ln for ln in said if re.search(r"\w", ln)]
     if not said:
@@ -910,8 +911,9 @@ def is_lyric(lines: list[str]) -> bool:
         marks = ln.count("♪") + ln.count("♫")
         if not (marks or open_lyric or LYRIC_HASH_RE.search(ln)):
             return False
-        if marks % 2:
-            open_lyric = not open_lyric
+        if marks:
+            words = ln.lstrip("- ")
+            open_lyric = words[0] in "♪♫" and ln[-1] not in "♪♫"
     return True
 
 
