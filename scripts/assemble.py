@@ -30,7 +30,8 @@ of 42 characters, a long two-speaker cue split into one cue per speaker),
 without the cues that hold only sounds, and numbered from 1. The delivered
 file is the draft plus, unless --no-credit, one credit cue before the
 first line (when the silence allows it) and one after the story's last
-line, before any end title shown as on-screen text.
+line, before any end title shown as on-screen text (inside the video's
+length when --video gives a video ffprobe can read).
 W/cue_map.json maps each draft number to the timing file's cue; `deliver`
 writes it as W/delivered_map.json, numbered around the credit cues,
 which are listed under "credits", and `where` answers
@@ -67,6 +68,7 @@ import hashlib
 import json
 import re
 import shutil
+import subprocess
 import sys
 from collections import Counter
 from datetime import datetime
@@ -77,6 +79,7 @@ import bible  # noqa: E402
 import layout  # noqa: E402
 import prepare  # noqa: E402
 import result  # noqa: E402
+import sources  # noqa: E402
 import srt  # noqa: E402
 import turkish  # noqa: E402
 
@@ -1431,14 +1434,18 @@ CREDIT_HELLO = "İyi seyirler."
 CREDIT_BYE = "Görüşmek üzere."
 CREDIT_NAME_MAX = layout.MAX_LINE
 # Each end shows one screen for 4 s: the greeting over the translator's
-# name. The opening starts at 1 s and ends at least half a second before
-# the first line: with a first line before 5.5 s it is cut short, but kept
-# for 3 s at least (a first line from 4.5 s); with less room, nothing. The
-# closing screen comes 1 s after the story's last line, in the first free
-# 2 s from there on, and ends 0.1 s before the next cue (an end title).
-CREDIT_START_AT = 1000
+# name. The opening starts at 3 s and ends at least half a second before
+# the first line: with a first line before 7.5 s it is cut short, but kept
+# for 3 s at least (a first line from 6.5 s); with less room, nothing. The
+# closing screen starts 3 s after the story's last line, so it does not
+# run into it, in the first free 2 s from there on, and ends 0.1 s before
+# the next cue (an end title). When the video's end is known, the closing
+# screen stays inside it: it moves earlier, to half a second after the cue
+# before it at most, to keep its 4 s; with less room it ends with the
+# video, kept for 3 s at least; with under 3.5 s, nothing.
+CREDIT_START_AT = 3000
 CREDIT_GAP = 500
-CREDIT_END_AFTER = 1000
+CREDIT_END_AFTER = 3000
 CREDIT_MS = 4000
 CREDIT_MIN_MS = 3000
 CREDIT_FREE_MS = 2000
@@ -1454,37 +1461,47 @@ def credit_lines(greeting: str, translator: str = "") -> list[str]:
     return [greeting, translator] if translator else [greeting]
 
 
-def goodbye_at(cues: list[srt.Cue], on_screen: set[int]) -> tuple[int, int]:
-    """Start and end of the closing credit. It follows the story, not an end
-    title shown after the credits roll: from 1 s after the last cue that is
-    not on-screen text (a kept song counts as story), it takes the first
-    free 2 s, skipping any cue in its way, and ends 0.1 s before the next
-    cue. With no such free time, or no story cue at all, it follows the
-    last cue by 1 s."""
+def goodbye_at(cues: list[srt.Cue], on_screen: set[int], video_end: int | None = None) -> tuple[int, int] | None:
+    """Start and end of the closing credit, or None when the video leaves
+    no room for it. It follows the story, not an end title shown after the
+    credits roll: from 3 s after the last cue that is not on-screen text (a
+    kept song counts as story), it takes the first free 2 s, skipping any
+    cue in its way, and ends 0.1 s before the next cue. With no such free
+    time, or no story cue at all, it starts 3 s after the last cue.
+    `video_end` (ms), when known, keeps it inside the video."""
     last = max(c.end for c in cues)
     story = [c.end for c in cues if c.n not in on_screen]
-    if not story:
-        return last + CREDIT_END_AFTER, last + CREDIT_END_AFTER + CREDIT_MS
-    at = max(story) + CREDIT_END_AFTER
-    for c in sorted(cues, key=lambda c: c.start):
-        if c.end <= at:
-            continue
-        if c.start - at >= CREDIT_FREE_MS:
-            return at, min(at + CREDIT_MS, c.start - CREDIT_BEFORE_NEXT)
-        at = max(at, c.end)
-    if at == last:
-        # Cues in the way up to the end of the file: after the last one.
-        at = last + CREDIT_END_AFTER
-    return at, at + CREDIT_MS
+    at, end = last + CREDIT_END_AFTER, None
+    if story:
+        at = max(story) + CREDIT_END_AFTER
+        for c in sorted(cues, key=lambda c: c.start):
+            if c.end <= at:
+                continue
+            if c.start - at >= CREDIT_FREE_MS:
+                end = min(at + CREDIT_MS, c.start - CREDIT_BEFORE_NEXT)
+                break
+            at = max(at, c.end)
+        if end is None and at == last:
+            # Cues in the way up to the end of the file: after the last one.
+            at = last + CREDIT_END_AFTER
+    end = at + CREDIT_MS if end is None else end
+    if video_end is not None and end > video_end:
+        before = max((c.end for c in cues if c.end <= at), default=0)
+        end = video_end
+        at = max(before + CREDIT_GAP, end - CREDIT_MS)
+        if end - at < CREDIT_MIN_MS:
+            return None
+    return at, end
 
 
 def with_credit(
-    cues: list[srt.Cue], translator: str = "", on_screen: set[int] | None = None
+    cues: list[srt.Cue], translator: str = "", video_end: int | None = None, on_screen: set[int] | None = None
 ) -> tuple[list[srt.Cue], int, list[int]]:
     """The delivered cues with the credit added, renumbered from 1; how many
     cues were put before the film's own (0 or 1), and the numbers of the
-    credit cues, which are no translation. `on_screen` holds the numbers of
-    the cues that are on-screen text, not the story's lines
+    credit cues, which are no translation. `video_end` (ms), when known,
+    keeps the closing credit inside the video; `on_screen` holds the numbers
+    of the cues that are on-screen text, not the story's lines
     (`goodbye_at`)."""
     if not cues:
         return cues, 0, []
@@ -1497,12 +1514,26 @@ def with_credit(
     at = CREDIT_START_AT
     if room >= at + CREDIT_MIN_MS:
         head = [cue(at, min(room, at + CREDIT_MS), credit_lines(CREDIT_HELLO, translator))]
-    start, end = goodbye_at(cues, on_screen or set())
-    before = sum(1 for c in cues if c.start < start)
-    body = head + cues[:before] + [cue(start, end, credit_lines(CREDIT_BYE, translator))] + cues[before:]
+    bye = goodbye_at(cues, on_screen or set(), video_end)
+    if bye is None:
+        tail, before = [], len(cues)
+    else:
+        tail, before = [cue(*bye, credit_lines(CREDIT_BYE, translator))], sum(1 for c in cues if c.start < bye[0])
+    body = head + cues[:before] + tail + cues[before:]
     out = [srt.Cue(n=i, start=c.start, end=c.end, ts=c.ts, lines=c.lines) for i, c in enumerate(body, 1)]
-    credits = list(range(1, len(head) + 1)) + [len(head) + before + 1]
+    credits = list(range(1, len(head) + 1)) + ([len(head) + before + 1] if tail else [])
     return out, len(head), credits
+
+
+def video_end_ms(video: Path) -> int | None:
+    """The video's length in ms from ffprobe, or None when it cannot be
+    read (no ffprobe, not a video): the closing credit is then not held to
+    it."""
+    try:
+        ms = sources.probe(video)["duration_ms"]
+    except (SystemExit, OSError, ValueError, subprocess.SubprocessError):
+        return None
+    return ms or None
 
 
 def credit_map(cue_map: dict, credits: list[int]) -> dict:
@@ -1586,7 +1617,12 @@ def deliver(
     data = draft.read_bytes()
     credits: list[int] = []
     if credit:
-        shown, _, credits = with_credit(srt.parse_text(srt.decode(data)[0]), translator, on_screen_draft_cues(work))
+        shown, _, credits = with_credit(
+            srt.parse_text(srt.decode(data)[0]),
+            translator,
+            video_end_ms(video) if video is not None else None,
+            on_screen_draft_cues(work),
+        )
         data = srt.render(shown).replace("\n", "\r\n").encode("utf-8")
     if not data.startswith(UTF8_BOM):
         data = UTF8_BOM + data
