@@ -52,6 +52,14 @@ def test_answer_sound(lines, answer):
         (["# Old song line #"], True),
         (["♪ ♪"], False),
         (["- ♪ La la ♪", "- Turn it off!"], False),
+        # A lyric cut off by speech has no closing ♪ (Love Of Your Life).
+        (["<i>♪ All the things you do to me", "and everything you said...</i>"], True),
+        (["<i>♪ I'll meet you", "in forever's parking lot...</i>"], True),
+        (["♪ La la ♪", "Turn it off!"], False),
+        (["- ♪ La la", "- Turn it off!"], False),
+        # A ♪ at the end of a line closes the lyric the cue before opened.
+        (["and everything you said ♪", "Who sang that?"], False),
+        (["<i>and everything you said ♪</i>", "<i>♪ All the things", "you do to me</i>"], True),
         (["Turn it off!"], False),
     ],
 )
