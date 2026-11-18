@@ -135,7 +135,7 @@ def test_build_adds_the_cue_and_the_run_delivers_it(tmp_path: Path):
 
 def test_build_reads_past_a_sound_only_timing_cue(tmp_path: Path):
     # A hearing-impaired timing file shows "[somber music]" over the card.
-    # Build drops that cue, so the card is added in its place.
+    # Build would drop that cue, so the card takes its place.
     timing = _film(tmp_path, "en.srt", "Line", [(*CARD, "[somber music]")])
     fr = _film(tmp_path, "fr.srt", "Ligne", [(*CARD, "À une époque lointaine...")])
     es = _film(tmp_path, "es.srt", "Línea", [(*CARD, "UNA ERA LEJANA...")])
@@ -143,7 +143,21 @@ def test_build_reads_past_a_sound_only_timing_cue(tmp_path: Path):
     summary = prepare.build(w, timing, None, None, tracks=[("fr", fr), ("es", es)])
     assert [c["ts"] for c in summary["on_screen"]["cues"]] == [srt.fmt_ms(CARD[0])]
     rows = json.loads((w / "cues.json").read_text(encoding="utf-8"))
-    assert rows[0].get("sound_only") is True and rows[1]["on_screen"]["fr"] == ["À une époque lointaine..."]
+    assert summary["cues"] == LINES + 1 and rows[0]["on_screen"]["fr"] == ["À une époque lointaine..."]
+
+
+def test_a_sound_only_cue_under_a_card_is_not_delivered_with_it(tmp_path: Path):
+    # The source file has the card too. Paired with "[somber music]", it
+    # would keep that cue alive and deliver the card twice.
+    timing = _film(tmp_path, "en.srt", "Line", [(*CARD, "[somber music]")])
+    source = _film(tmp_path, "source.srt", "Ligne", [(*CARD, "À une époque lointaine...")])
+    fr = _film(tmp_path, "fr.srt", "Ligne", [(*CARD, "À une époque lointaine...")])
+    es = _film(tmp_path, "es.srt", "Línea", [(*CARD, "UNA ERA LEJANA...")])
+    w = tmp_path / "work"
+    summary = prepare.build(w, timing, source, None, tracks=[("fr", fr), ("es", es)])
+    rows = json.loads((w / "cues.json").read_text(encoding="utf-8"))
+    with_card = [r["n"] for r in rows if r["source"] == ["À une époque lointaine..."]]
+    assert with_card == [1] and "on_screen" in rows[0] and summary["cues"] == LINES + 1
 
 
 def test_build_with_other_source_and_english_files_keeps_the_card(tmp_path: Path):
@@ -181,6 +195,23 @@ def test_a_card_inside_an_italic_song_neither_splits_it_nor_joins_it(tmp_path: P
     tail = rows[LINES:]
     assert [r.get("song", False) for r in tail] == [True, True, True, False, True, True, True]
     assert "on_screen" in tail[3]
+
+
+def test_an_italic_card_the_source_file_sings_along_is_no_song(tmp_path: Path):
+    # The source file has the card too, in italics inside its own song,
+    # so its italics would make the card a song line.
+    song = [(340_000 + k * 3_000 + (3_000 if k > 2 else 0), 342_000 + k * 3_000 + (3_000 if k > 2 else 0)) for k in range(6)]
+    card = (348_500, 350_500)
+    sung = [(a, b, f"<i>Down the river {k}</i>") for k, (a, b) in enumerate(song)]
+    timing = _film(tmp_path, "en.srt", "Line", sung)
+    source = _film(tmp_path, "source.srt", "Ligne", [*sung, (*card, "<i>Quelque part au nord</i>")])
+    fr = _film(tmp_path, "fr.srt", "Ligne", [(*card, "<i>Quelque part au nord</i>")])
+    es = _film(tmp_path, "es.srt", "Línea", [(*card, "<i>En algún lugar del norte</i>")])
+    w = tmp_path / "work"
+    prepare.build(w, timing, source, None, tracks=[("fr", fr), ("es", es)])
+    tail = json.loads((w / "cues.json").read_text(encoding="utf-8"))[LINES:]
+    assert tail[3]["source"] == ["<i>Quelque part au nord</i>"] and "on_screen" in tail[3]
+    assert [r.get("song", False) for r in tail] == [True, True, True, False, True, True, True]
 
 
 def test_build_without_tracks_reports_no_on_screen_step(tmp_path: Path):

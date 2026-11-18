@@ -257,6 +257,12 @@ def build(
         kept = [c for c in timing if srt.strip_hi(c.lines, hearing_impaired["timing"])[0]] if remove else timing
         extra, screen_summary = on_screen(kept, tracks or [], forced or [])
         if extra:
+            # A sound-only cue under an added one goes: paired with the
+            # source file's copy of the card, it would deliver it twice.
+            kept_n = {c.n for c in kept}
+            timing = [
+                c for c in timing if c.n in kept_n or not any(min(c.end, e["end"]) > max(c.start, e["start"]) for e in extra)
+            ]
             merged = [(c.start, 0, c, None) for c in timing] + [(e["start"], 1, None, e) for e in extra]
             merged.sort(key=lambda x: (x[0], x[1]))
             timing = []
@@ -353,7 +359,10 @@ def build(
             row["sound_only"] = True
             dropped += 1
         elif srt.is_lyric(said) or (
-            srt.whole_italic(said)
+            # Italics say nothing about songs on an on-screen cue, whichever
+            # file its text comes from.
+            c.n not in screen
+            and srt.whole_italic(said)
             and (
                 all(o.n in italic_source for o in src_pairs[c.n]) if src_pairs is not None and src_lines else c.n in italic_timing
             )
