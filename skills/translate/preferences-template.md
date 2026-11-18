@@ -58,10 +58,10 @@ Bay/Bayan + surname
 
 A short credit added to the delivered file: "İyi seyirler." over your
 name before the first line (shorter or left out when the film speaks in
-its first 5.5 seconds), and "Görüşmek üzere." over your name after the
-last line. Write `on` or `off` on the first line, and on the line below
-it the name to credit (42 characters at most). With no name, the
-greeting shows alone.
+its first 7.5 seconds), and "Görüşmek üzere." over your name 3 seconds
+after the last line. Write `on` or `off` on the first line, and on the
+line below it the name to credit (42 characters at most). With no name,
+the greeting shows alone.
 
 on
 
