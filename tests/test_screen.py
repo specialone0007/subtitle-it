@@ -104,13 +104,11 @@ def test_black_after_story_reads_only_a_file_for_this_story_end(tmp_path: Path):
         assert assemble.black_after_story(w, 62_500) is None
 
 
-def _ffmpeg(monkeypatch, stderr: str = "", code: int = 0, start_time: str = "0") -> list[list[str]]:
+def _ffmpeg(monkeypatch, stderr: str = "", code: int = 0) -> list[list[str]]:
     ran = []
 
     def run(cmd, **kw):
         ran.append(cmd)
-        if "ffprobe" in Path(cmd[0]).name:
-            return subprocess.CompletedProcess(cmd, 0, json.dumps({"format": {"start_time": start_time}}), "")
         return subprocess.CompletedProcess(cmd, code, "", stderr)
 
     monkeypatch.setattr(screen.shutil, "which", lambda name: f"/bin/{name}")
@@ -139,11 +137,13 @@ def test_ends_writes_the_black_stretches_on_the_video_clock(tmp_path: Path, monk
     assert assemble.black_after_story(w, 62_500) == [(74_846, 77_557)]
 
 
-def test_ends_adds_a_transport_streams_own_start_time(tmp_path: Path, monkeypatch):
+def test_ends_adds_only_the_seek_for_a_transport_stream(tmp_path: Path, monkeypatch):
+    # ffmpeg already counts from the stream's start_time, as the extracted
+    # tracks do: no ffprobe call, and the same times as for an .mkv.
     w = _work(tmp_path)
-    _ffmpeg(monkeypatch, LOG, start_time="1.4")
+    ran = _ffmpeg(monkeypatch, LOG)
     screen.ends(w, tmp_path / "Film.m2ts")
-    assert json.loads((w / assemble.ENDS_FILE).read_text(encoding="utf-8"))["black"] == [[76_246, 78_957]]
+    assert len(ran) == 1 and json.loads((w / assemble.ENDS_FILE).read_text(encoding="utf-8"))["black"] == [[74_846, 77_557]]
 
 
 def test_ends_never_fails_a_run(tmp_path: Path, monkeypatch):

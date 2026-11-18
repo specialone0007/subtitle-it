@@ -79,10 +79,16 @@ def test_local_reads_a_real_text_track(tmp_path: Path):
     assert cues[2].lines == ["- Coming?", "- In a minute."]
 
 
-def test_screen_ends_finds_a_real_cut_to_black(tmp_path: Path):
+@pytest.mark.parametrize(
+    "name, out",
+    [("Film.mkv", ["-c:v", "mpeg4"]), ("Film.ts", ["-c:v", "mpeg2video", "-output_ts_offset", "10", "-f", "mpegts"])],
+)
+def test_screen_ends_finds_a_real_cut_to_black(tmp_path: Path, name: str, out: list[str]):
     # White to 6 s, black from 6 s to 9 s, white again to 12 s. The story
     # ends at 3 s, so ffmpeg seeks there and the times must be moved back.
-    video = tmp_path / "Film.mkv"
+    # The .ts starts its own clock at 10 s; its tracks are extracted from
+    # 0 s, so the black must be found at 6 s there too.
+    video = tmp_path / name
     subprocess.run(
         [
             "ffmpeg", "-v", "error", "-y",
@@ -90,7 +96,7 @@ def test_screen_ends_finds_a_real_cut_to_black(tmp_path: Path):
             "-f", "lavfi", "-i", "color=c=black:s=160x90:r=25:d=3",
             "-f", "lavfi", "-i", "color=c=white:s=160x90:r=25:d=3",
             "-filter_complex", "[0:v][1:v][2:v]concat=n=3:v=1:a=0",
-            "-c:v", "mpeg4", str(video),
+            *out, str(video),
         ],
         check=True,
     )  # fmt: skip
@@ -98,6 +104,6 @@ def test_screen_ends_finds_a_real_cut_to_black(tmp_path: Path):
     w.mkdir()
     (w / "draft.tr.srt").write_text("1\n00:00:00,500 --> 00:00:03,000\nMerhaba.\n", encoding="utf-8")
     (w / "cues.json").write_text("[]", encoding="utf-8")
-    out = screen.ends(w, video)
-    [(start, end)] = out["black"]
-    assert out["story_end_ms"] == 3_000 and abs(start - 6_000) <= 80 and abs(end - 9_000) <= 80
+    found = screen.ends(w, video)
+    [(start, end)] = found["black"]
+    assert found["story_end_ms"] == 3_000 and abs(start - 6_000) <= 80 and abs(end - 9_000) <= 80
