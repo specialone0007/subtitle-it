@@ -174,7 +174,7 @@ When nothing is found or none fits, say why in one line and translate as
 usual.
 
 Then: `prepare.py build --work WORK --timing T [--source S] [--en E] --hi <remove|keep>` and
-`prepare.py chunks --work WORK`. `--hi` is the preferences' "Hearing-impaired
+`prepare.py chunks --work WORK` (for a video input, `chunks` waits for the picture, below). `--hi` is the preferences' "Hearing-impaired
 tags"; `remove` when the section is missing. With `remove`, `build` takes
 sound descriptions and speaker labels out of every text the agents see
 (the labels stay as speaker hints): square brackets from every file,
@@ -215,6 +215,50 @@ a song line, shown during a song or a sound). From its `on_screen`, keep
 only the tracks that did not fit for the report: the report's on-screen
 section comes from `deliver` at step 12 alone, so no entry is reported
 twice. With one candidate in all, pass no `--track`.
+
+The picture. For a video input, the on-screen text is also read from the
+frames at the two ends of the film and around the lines one language
+alone leaves unsure. An `.srt` input skips all of this: say in one line
+of the report that the picture was not read, since the input is a
+subtitle file. In this order:
+
+1. The one extra download, before `build`: run
+   `sources.py others --local '${CLAUDE_PLUGIN_DATA}/results/sources-local.json' --timing-language <the timing file's language>`,
+   with one `--also <language>` for each file from `opensubtitles.py` that
+   passed validation. It counts the other languages the candidates hold.
+   When its `download` names a language (fewer than two others), make
+   one search and one download for it, never a second try:
+   `opensubtitles.py search --config 'CONFIG' --video V --imdb <IMDb id> --languages <download>`,
+   then download its first result (a hash match comes first) as
+   `WORK/sources/os_<download>.srt` and run `sources.py validate` on it.
+   With no `issues`, pair it with `srt.py fit` like any other file; when
+   it fits it joins `build` as one more `--track`. Any failure
+   (credentials missing, the daily allowance used up, no result, a file
+   that fails validation or does not fit) skips it: no setup flow, one
+   line in the report. A `download` of null needs nothing.
+2. `prepare.py build` as above, with `--timing-language <the timing file's language>` added.
+3. `screen.py frames --work WORK --video V`. It saves the frames (about
+   2.5 minutes from each end, one every 1.5 s, 300 at most) and the batch
+   files the readers read. With an `error`, say it in one line of the
+   report and go on to `chunks`: the entries stay as `build` found them.
+   Its `notes` go in the report.
+4. Start one `subtitle-it:screen-reader` subagent per item of its
+   `readers`, all in one message. Each prompt: that item's `batches`
+   paths, one per line, and nothing else.
+5. When they are done, run `screen.py collect --work WORK`. When its
+   `redo` is set, start one more `subtitle-it:screen-reader` with that
+   batch file, then run `collect` again; never a third time. Frames still
+   in `missing` were not read: name the count in the report.
+6. `prepare.py build` again with exactly the same options plus
+   `--screen 'WORK/screen/readings.json'`, then `prepare.py chunks --work WORK`,
+   in one Bash call. It joins what the picture showed to the entries:
+   an unsure entry the picture shows is added, and a story text that no
+   track and no timing cue holds becomes a cue of its own. Keep its
+   `on_screen.picture` counts for the report.
+
+The readers' usage goes with the `hints_bible` mark, as
+`--agent screen-reader:<tokens>:<ms>`, so the report counts them in the
+`find` group.
 
 ## 3–5. Speaker hints, film bible and bible check, side by side
 
@@ -261,7 +305,8 @@ Mark `hints_bible` with this step's first command.
      with the same `--track` and `--forced-track` options (shift the forced tracks too; `build` lines the others up itself).
      `--shift-ms` is the same number the files were shifted by: `build` moves the on-screen entries by it instead of
      finding them again, so every cue keeps its number. It always counts from the files of the first build, so
-     running the same rebuild again moves nothing twice. Then run `speakers.py run` once
+     running the same rebuild again moves nothing twice. Never pass `--screen` here: an entry read from the picture
+     keeps its video times, and one the shift leaves no room is kept out under its number. Then run `speakers.py run` once
      more (in the foreground), since the voices were matched on the old
      times. The bible stays: a shift moves times, not cue numbers. Do not
      shift a second time; note the shift and the second verdict for the
@@ -529,7 +574,7 @@ many cues lost tags or labels and how many sound-only cues were left
 out, how many bare sounds were left out, where the goodbye went
 (`deliver`'s `goodbye`: on the `cut to black` or `after the story`, and
 `screen.py ends`'s `error` when it had one), the songs (song cues found,
-translated, left out, and the `Songs` mode), the on-screen text from `deliver`'s `on_screen` (each entry in `delivered` with its time and text; each in `left_out_at_ends` with its time, text and reason; the counts in `left_out` with the path in `file`; in a polish run each line in `unplaced_human_lines` with its time and text; then its two `limits` lines as they are), any file `build` warned was malformed, the voices dropped as mixed, the bible check (decisions, agreed,
+translated, left out, and the `Songs` mode), the on-screen text from `deliver`'s `on_screen` (each entry in `delivered` with its time and text; each in `left_out_at_ends` with its time, text and reason; the counts in `left_out` with the path in `file`; in a polish run each line in `unplaced_human_lines` with its time and text; when `picture` is set, each entry in its `looked_at` with its time, text, state, reason and what the picture showed, how many `frames` were saved, the count of `frames_not_read`, and its `notes`; then its two `limits` lines as they are; and, for a video, the extra download of step 2 when it was skipped, or that the picture was not read and why), any file `build` warned was malformed, the voices dropped as mixed, the bible check (decisions, agreed,
 judged, ties, questions the second reader never answered), in a polish
 run the lines whose sen or siz differs from the human file
 (`address_changes` in `WORK/checks.json`, each with its reason, and those

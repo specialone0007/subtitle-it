@@ -99,6 +99,39 @@ Then it settles the timings:
   recorded, not added). A line the timing file covers is its own line: it
   is only counted. The list is empty when no track is given, so no
   earlier run's entries survive.
+- The picture, for a video input. Before `build`, `sources.py others`
+  counts the other languages among the usable full tracks (Turkish,
+  `und`, forced tracks and the timing file's own language left out; `pt`
+  and `pt-br` are one). With fewer than two, the skill makes one
+  OpenSubtitles search and one download, French then Spanish, and adds
+  the file as one more `--track` when it validates; any failure skips
+  it. `build --timing-language L` records the count. Then
+  `screen.py frames` saves frames with ffmpeg, one every 1.5 s at
+  960x540 at most (HDR tone-mapped when ffmpeg has zscale): from the
+  start to the first spoken line (2.5 minutes at most) and from the
+  story's end for 2.5 minutes. With exactly one other language, a text
+  only it shows is `unsure`, and one outside those ends gets 5 frames
+  across its time widened by 2 s each side. 300 frames at most: the
+  unsure frames are thinned first, down to one each, then the latest are
+  dropped; the ends are never thinned. `W/screen/frames.json` lists each
+  frame with its time, why it was picked and the entries within 3 s.
+  One `screen-reader` agent reads each 150 frames, 20 to a batch file,
+  and writes one line per frame: the text word for word, its kind
+  (title card, caption, sign, text message, letter, dedication, closing
+  text, credits, logo, background), whether the film wants it read, and
+  the entry it shows, if any. `screen.py collect` checks one line per
+  frame, sends missing ones back once, and joins neighbouring frames
+  with the same text into one reading (`W/screen/readings.json`).
+  `build --screen W/screen/readings.json` then decides: a reading joins
+  an entry only when it names it. An unsure entry a story reading names
+  is added; one whose frames were all read and never named is left out
+  as `not confirmed by the picture`, one with frames not read as `not
+  checked by the picture`. A left-out entry (one language only, a
+  subtitle credit, a song line) is added when a story reading names it.
+  A story reading no entry holds becomes an entry of its own,
+  `picture:<first ms>`, added under the same coverage and room rules.
+  Credits, logos, background text and text the film does not want read
+  are never added. The report lists every entry the picture looked at.
 - Unless your preferences say `Hearing-impaired tags: keep`, `build` takes
   sound descriptions in square brackets (`[door slams]`) and bracketed
   names (`[Sandra]`, `[1. Man]`) out of every text. From a file that is
@@ -147,7 +180,11 @@ film.
   than finding them again, and drops the same timing cues under them, so
   every cue keeps its number and the bible's citations stay true. The
   amount counts from the times the first build found, so running the
-  same rebuild twice moves the entries once.
+  same rebuild twice moves the entries once. An entry read from the
+  picture keeps its video times. When the shifted lines leave it less
+  than 0.7 s, it keeps its cue number, clipped into its slot and marked
+  `left_out: no room after the timing shift`, so `check` skips it with a
+  note.
 - A voice can gather several characters. When a voice has at least six
   cues with a speaker label and no character holds two thirds of them, its
   cues get no voice hint, and the address-form check leaves them alone.

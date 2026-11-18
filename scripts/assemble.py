@@ -301,7 +301,12 @@ def hi_mode(work: Path) -> str:
     return _build_info(work).get("hearing_impaired_tags", "keep")
 
 
-LEFT_OUT_NOTES = {"sound": "a bare sound, left out", "song": "a song left out"}
+# Every `left_out` value a row of cues.json can hold, as said in checks.
+LEFT_OUT_NOTES = {
+    "sound": "a bare sound, left out",
+    "song": "a song left out",
+    prepare.NO_ROOM_SHIFT: "on-screen text read from the picture, left out: no room after the timing shift",
+}
 ON_SCREEN_MARK = prepare.ON_SCREEN_MARK
 
 
@@ -1666,8 +1671,10 @@ def on_screen_report(work: Path) -> dict | None:
     the count per reason of the other entries left out; `file` holds them
     all. `unplaced_human_lines`, in a polish run: the human Turkish lines
     that landed on no cue and lie under no entry delivered. `limits`: what
-    no run finds. None for a work folder with no on_screen.json, outside a
-    polish run."""
+    no run finds. `picture`, when the picture was read (`screen.py frames`):
+    every entry it looked at (time, text, state, reason and what the picture
+    showed), the frames saved and not read, and its notes. None for a work
+    folder with no on_screen.json, outside a polish run."""
     entries_file = work / prepare.ON_SCREEN_FILE
     polish = polish_seed(work) is not None
     if not entries_file.exists() and not polish:
@@ -1701,12 +1708,33 @@ def on_screen_report(work: Path) -> dict | None:
             if a is not None and any(min(b, y) > max(a, x) for x, y in cards):
                 continue
             unplaced.append({"at": srt.fmt_ms(a) if a is not None else None, "text": item["text"]})
+    picture = None
+    info = (_build_info(work).get("on_screen") or {}).get("picture")
+    if info is not None:
+        picture = {
+            "frames": info.get("frames"),
+            "frames_not_read": info.get("frames_not_read", []),
+            "readings_already_in_timing": info.get("readings_already_in_timing", 0),
+            "notes": info.get("notes", []),
+            "looked_at": [
+                {
+                    "at": srt.fmt_ms(e["start"]),
+                    "text": srt.strip_tags(prepare._one_line(e["lines"])),
+                    "state": e["state"],
+                    "reason": e.get("reason"),
+                    "picture": e["picture"],
+                }
+                for e in entries
+                if e.get("picture")
+            ],
+        }
     return {
         "delivered": delivered,
         "left_out_at_ends": at_ends,
         "left_out": dict(rest),
         "file": str(entries_file) if entries_file.exists() else None,
         "unplaced_human_lines": unplaced,
+        "picture": picture,
         "limits": list(ON_SCREEN_LIMITS),
     }
 
