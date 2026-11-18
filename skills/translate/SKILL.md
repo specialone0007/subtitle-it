@@ -465,7 +465,10 @@ exactly the video's name, since many TVs only load a subtitle named like
 the video (for an `.srt` input: the same folder, with the language part of
 the name replaced by `tr`, so the input is not written over). Run
 `assemble.py deliver --work 'WORK' --dest '<destination>' --backups 'CONFIG/backups'`
-(add `--force` when hard fails are left after the fix rounds), joined
+(add `--force` when hard fails are left after the fix rounds; add
+`--no-credit` when the preferences' "Credit" says `off`, and
+`--credit-name '<name>'` when it gives a name under `on`; a preferences
+file from an older version with no "Credit" means `on` with no name), joined
 after the `deliver` mark with the agents of steps 10–11. When the destination
 is this default one next to a video, add `--video '<video>'`; leave it out
 when the user named another destination or the input was an `.srt`.

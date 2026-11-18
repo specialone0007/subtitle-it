@@ -59,6 +59,10 @@ when no other command uses that name.)
   report also gives the run's time per step and its subagents' tokens.
 - **It learns from you.** Fix lines after watching, and it turns your edits
   into rules for the next film.
+- **A short credit.** "İyi seyirler." then "Çeviri: <your name>" over
+  "subtitle-it ile hazırlanmıştır" open the file in the silence before the
+  first line; "Tekrar görüşmek üzere." then the same credit close it. Put
+  your name under `Credit` in your preferences, or set it to `off`.
 
 ## Languages
 
@@ -200,7 +204,7 @@ long as the film, or more for speech-to-text.
 | Place | What is there |
 | --- | --- |
 | Next to the video | `<film>.srt`, with exactly the video's name and saved as UTF-8 with a BOM, so TVs find it and show ş, ğ and ı. A file already there under that name, such as an English `<film>.srt`, is moved to `backups/` first. Nothing else is written into your film folders. |
-| `~/.config/subtitle-it/`<br>(on Windows `C:\Users\<you>\.config\subtitle-it\`) | `preferences.md` (media folders, translator model, audio hints, hearing-impaired tags, songs, swearing, titles, learned rules), `credentials.json` (OpenSubtitles and Hugging Face; only the scripts read it), and `backups/` (files a new subtitle replaced). Kept when the plugin is uninstalled. A settings folder from before the plugin was renamed is moved here, once, the first time it is needed. |
+| `~/.config/subtitle-it/`<br>(on Windows `C:\Users\<you>\.config\subtitle-it\`) | `preferences.md` (media folders, translator model, audio hints, hearing-impaired tags, songs, swearing, titles, credit, learned rules), `credentials.json` (OpenSubtitles and Hugging Face; only the scripts read it), and `backups/` (files a new subtitle replaced). Kept when the plugin is uninstalled. A settings folder from before the plugin was renamed is moved here, once, the first time it is needed. |
 | The plugin's data folder<br>(`~/.claude/plugins/data/subtitle-it-.../`) | One work folder per film with the bible, the delivered copy and a report, plus the download cache and `results/`, where each script saves its last JSON result. **Uninstalling the plugin deletes it.** |
 
 The skill reads the files in `results/` rather than the scripts' printed
