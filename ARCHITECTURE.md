@@ -107,7 +107,10 @@ Then it settles the timings:
   it. A yes or no said as a sound ("Uh-huh.") right after a question stays,
   and the translator writes it as a word. A cue whose words are all song
   lyrics is marked `song`; step 6–7 decides which songs are translated.
-  Lyrics are lines marked with `♪`, `♫` or `#`. A file that marks none
+  Lyrics are lines marked with `♪`, `♫` or `#`. A line that opens with
+  `♪` and does not close it carries the lyric to the lines after it, up
+  to a line with a `♪` or a dialogue dash: a lyric cut off by speech has
+  no closing note. A file that marks none
   that way may mark its songs with italics alone: there a run of at least
   four whole-italic cues that end no sentence counts as a song, while
   italic narration and phone voices, which end their sentences, stay
@@ -154,6 +157,8 @@ translator must share:
   support it and how sure it is.
 - `songs.json`, when the film has song cues: the songs that carry the
   story (sung on screen, or lyrics the scene plays against), by cue range.
+  `"musical": true` marks a film whose characters sing the story: its
+  Turkish is delivered with no `♪` or `♫` on any line.
 
 sen/siz is read from the tone of each scene, not only the relationship on
 paper: people at ease say sen, and a pair can shift for one scene (a cold
@@ -236,12 +241,17 @@ also runs at medium effort.
 
 ### 8–9. Assemble and check
 
-`assemble.py check` joins the chunks and checks every cue.
+`assemble.py check` joins the chunks and checks every cue. It first
+removes `{\an8}`-style position tags from every Turkish line, so every
+line stays at the bottom of the screen.
 
 - **Hard fails** are missing, extra or empty cues, italics or dialogue
   dashes that differ from the source, a cue that cannot be laid out (see
   below), and square brackets in the Turkish, or a speaker label or a
-  description in parentheses where the source cue had tags removed.
+  description in parentheses where the source cue had tags removed, and
+  a standing ` / ` (`line-join slash`) that the source and English lines
+  lack: the agents' listings join a cue's lines with it, and copied back
+  it means a line break.
   Italics on single words beside plain ones (`<i>To</i> all the harbour
   crews`) are mostly a slip in the source file: the Turkish may leave
   them out, and a Turkish cue that keeps italics there only gets a `stray

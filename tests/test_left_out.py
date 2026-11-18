@@ -57,6 +57,9 @@ def test_answer_sound(lines, answer):
         (["<i>♪ I'll wait here", "where the harbour ends...</i>"], True),
         (["♪ La la ♪", "Turn it off!"], False),
         (["- ♪ La la", "- Turn it off!"], False),
+        # A ♪ at the end of a line closes the lyric the cue before opened.
+        (["and every boat at rest ♪", "Who sang that?"], False),
+        (["<i>and every boat at rest ♪</i>", "<i>♪ Every lamp", "along the pier</i>"], True),
         (["Turn it off!"], False),
     ],
 )
