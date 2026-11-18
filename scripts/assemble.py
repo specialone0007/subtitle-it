@@ -302,6 +302,14 @@ def hi_mode(work: Path) -> str:
 
 
 LEFT_OUT_NOTES = {"sound": "a bare sound, left out", "song": "a song left out"}
+ON_SCREEN_MARK = prepare.ON_SCREEN_MARK
+
+
+def on_screen_entries(work: Path) -> list[dict]:
+    """The rows of W/on_screen.json, or none for a work folder built before
+    it existed."""
+    path = work / prepare.ON_SCREEN_FILE
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
 
 
 def left_out_why(rows: dict[int, dict]) -> dict[int, str]:
@@ -316,7 +324,8 @@ def sound_only_cues(work: Path, rows: dict[int, dict]) -> set[int]:
     left out as a bare sound or a song. The build marks them; with `remove`
     the text is cleaned again here, so a cue that an older build kept (a
     description running over two lines) is caught too. Turkish text for
-    these cues is never delivered."""
+    these cues is never delivered. A cue that is on-screen text is never
+    taken for a sound by the cleaning."""
     marked = {n for n, r in rows.items() if r.get("sound_only") or r.get("left_out")}
     info = _build_info(work)
     if info.get("hearing_impaired_tags", "keep") != "remove":
@@ -325,7 +334,7 @@ def sound_only_cues(work: Path, rows: dict[int, dict]) -> set[int]:
     hi_timing = flags.get("timing", True)
     hi_source = flags.get("source", hi_timing)
     for n, r in rows.items():
-        if n in marked:
+        if n in marked or r.get("on_screen"):
             continue
         timing_left, _, found_timing = srt.strip_hi(r.get("timing_lines") or [], hi_timing)
         source_left, _, found_source = srt.strip_hi(r.get("source") or [], hi_source)
@@ -544,6 +553,11 @@ def run_checks(work: Path, texts: dict[int, list[str]] | None = None, write: boo
     missing = [c.n for c in kept if c.n not in texts]
     for n in missing:
         h(n, "cue count", "missing")
+    # On-screen text `build` added is never lost on the way: each entry it
+    # placed has a cue that is delivered.
+    for e in on_screen_entries(work):
+        if e.get("state") == "cue" and (e.get("n") not in rows or e["n"] in sound_only):
+            h(e.get("n"), "on-screen text", f"entry {e.get('id')} has no cue that is delivered")
 
     gap = layout.usual_gap(kept)
     by_start = sorted(kept, key=lambda c: (c.start, c.n))
@@ -801,6 +815,13 @@ def _note(text: str) -> str:
     return text if len(text) <= NOTE_CHARS else text[: NOTE_CHARS - 1] + "…"
 
 
+def _who(row: dict, speakers: dict) -> str:
+    """The speaker column of the review and listen part files: `on-screen
+    text` for a cue that is text on screen (no one says it), else the
+    speaker hint."""
+    return ON_SCREEN_MARK if row.get("on_screen") else prepare.speaker_hint(speakers.get(str(row["n"]), {}))
+
+
 def review_parts(work: Path, size: int = PART_CUES) -> dict:
     """Cut the film into review parts. Each part file lists its cues as
     the side-by-side file does, plus the English when the source is another
@@ -851,7 +872,7 @@ def review_parts(work: Path, size: int = PART_CUES) -> dict:
 
     def line(r: dict) -> str:
         n = r["n"]
-        who = prepare.speaker_hint(speakers.get(str(n), {}))
+        who = _who(r, speakers)
         src = prepare._one_line(r["source"] or r["timing_lines"])
         en = prepare._one_line(r["en"]) if r.get("en") and r["en"] != r["source"] else ""
         tr = " / ".join(texts.get(n, ["<MISSING>"]))
@@ -1085,7 +1106,7 @@ def listen_parts(work: Path, size: int = LISTEN_PART_CUES) -> dict:
                 g = frame["group"].get(n)
                 group = f"{g[0]}-{g[-1]}" if g else ""
                 echo = ",".join(str(m) for m in frame["echo"].get(n, []))
-                who = prepare.speaker_hint(speakers.get(str(n), {}))
+                who = _who(row, speakers)
                 mark = "yes" if n in human else ""
                 tr = " / ".join(texts[n])
                 f.write(f"{n}\t{srt.fmt_ms(r['start'])[:8]}\t{who}\t{budgets[n]}\t{group}\t{echo}\t{mark}\t{tr}\n")
@@ -1463,6 +1484,14 @@ CREDIT_MS = 4000
 CREDIT_MIN_MS = 3000
 CREDIT_FREE_MS = 2000
 CREDIT_BEFORE_NEXT = 100
+# The cut to black after the story, when `screen.py ends` found one
+# (W/screen/ends.json): the closing screen starts on the first black
+# stretch that begins within 30 s after story end, at least half a second
+# after the last story line and after any cue still on screen, and ends
+# 0.1 s before the next cue, 4 s at most. With under 2 s free there, or no
+# such stretch, the rule above places it.
+ENDS_FILE = Path("screen") / "ends.json"
+BLACK_WITHIN = 30_000
 
 
 def credit_lines(greeting: str, translator: str = "") -> list[str]:
@@ -1474,9 +1503,37 @@ def credit_lines(greeting: str, translator: str = "") -> list[str]:
     return [greeting, translator] if translator else [greeting]
 
 
-def goodbye_at(cues: list[srt.Cue], on_screen: set[int], video_end: int | None = None) -> tuple[int, int] | None:
+def story_end(cues: list[srt.Cue], on_screen: set[int]) -> int | None:
+    """The end of the last cue that is not on-screen text (a kept song
+    counts as story), or None with no such cue."""
+    return max((c.end for c in cues if c.n not in on_screen), default=None)
+
+
+def goodbye_on_black(cues: list[srt.Cue], on_screen: set[int], black: list[tuple[int, int]]) -> tuple[int, int] | None:
+    """Start and end of the closing credit on the cut to black after the
+    story (see ENDS_FILE), or None when no black stretch begins within 30 s
+    after story end or it leaves under 2 s free."""
+    s = story_end(cues, on_screen)
+    if s is None:
+        return None
+    b = next((b for b, _ in sorted(black) if s <= b <= s + BLACK_WITHIN), None)
+    if b is None:
+        return None
+    at = max(b, s + CREDIT_GAP)
+    while running := next((c for c in cues if c.start <= at < c.end), None):
+        at = running.end
+    following = min((c.start for c in cues if c.start >= at), default=None)
+    end = at + CREDIT_MS if following is None else min(at + CREDIT_MS, following - CREDIT_BEFORE_NEXT)
+    return (at, end) if end - at >= CREDIT_FREE_MS else None
+
+
+def goodbye_at(
+    cues: list[srt.Cue], on_screen: set[int], video_end: int | None = None, black: list[tuple[int, int]] | None = None
+) -> tuple[int, int] | None:
     """Start and end of the closing credit, or None when the video leaves
-    no room for it. It follows the story, not an end title shown after the
+    no room for it. On the cut to black after the story when `black` (the
+    stretches `screen.py ends` found) has one that fits (`goodbye_on_black`).
+    Otherwise it follows the story, not an end title shown after the
     credits roll: from 3 s after the last cue that is not on-screen text (a
     kept song counts as story), it takes the first free 2 s, skipping any
     cue in its way, and ends 0.1 s before the next cue. With no such free
@@ -1485,7 +1542,9 @@ def goodbye_at(cues: list[srt.Cue], on_screen: set[int], video_end: int | None =
     last = max(c.end for c in cues)
     story = [c.end for c in cues if c.n not in on_screen]
     at, end = last + CREDIT_END_AFTER, None
-    if story:
+    if on_black := goodbye_on_black(cues, on_screen, black or []):
+        at, end = on_black
+    elif story:
         at = max(story) + CREDIT_END_AFTER
         for c in sorted(cues, key=lambda c: c.start):
             if c.end <= at:
@@ -1508,14 +1567,18 @@ def goodbye_at(cues: list[srt.Cue], on_screen: set[int], video_end: int | None =
 
 
 def with_credit(
-    cues: list[srt.Cue], translator: str = "", video_end: int | None = None, on_screen: set[int] | None = None
+    cues: list[srt.Cue],
+    translator: str = "",
+    video_end: int | None = None,
+    on_screen: set[int] | None = None,
+    black: list[tuple[int, int]] | None = None,
 ) -> tuple[list[srt.Cue], int, list[int]]:
     """The delivered cues with the credit added, renumbered from 1; how many
     cues were put before the film's own (0 or 1), and the numbers of the
     credit cues, which are no translation. `video_end` (ms), when known,
     keeps the closing credit inside the video; `on_screen` holds the numbers
-    of the cues that are on-screen text, not the story's lines
-    (`goodbye_at`)."""
+    of the cues that are on-screen text, not the story's lines, and `black`
+    the black stretches after the story (`goodbye_at`)."""
     if not cues:
         return cues, 0, []
 
@@ -1527,7 +1590,7 @@ def with_credit(
     at = CREDIT_START_AT
     if room >= at + CREDIT_MIN_MS:
         head = [cue(at, min(room, at + CREDIT_MS), credit_lines(CREDIT_HELLO, translator))]
-    bye = goodbye_at(cues, on_screen or set(), video_end)
+    bye = goodbye_at(cues, on_screen or set(), video_end, black)
     if bye is None:
         tail, before = [], len(cues)
     else:
@@ -1536,6 +1599,22 @@ def with_credit(
     out = [srt.Cue(n=i, start=c.start, end=c.end, ts=c.ts, lines=c.lines) for i, c in enumerate(body, 1)]
     credits = list(range(1, len(head) + 1)) + ([len(head) + before + 1] if tail else [])
     return out, len(head), credits
+
+
+def black_after_story(work: Path, story: int | None) -> list[tuple[int, int]] | None:
+    """The black stretches in W/screen/ends.json, or None when the file is
+    missing, malformed, or does not cover half a second after story end to
+    30 s after it: the closing credit then follows the story alone. A later
+    `check` can hold the last line up to half a second longer, and the
+    goodbye starts that late at the earliest, so a file read a little
+    before still holds every stretch that counts."""
+    try:
+        data = json.loads((work / ENDS_FILE).read_text(encoding="utf-8"))
+        if story is None or not (data["from_ms"] <= story + CREDIT_GAP and story + BLACK_WITHIN <= data["to_ms"]):
+            return None
+        return [(int(a), int(b)) for a, b in data["black"]]
+    except (OSError, ValueError, TypeError, KeyError):
+        return None
 
 
 def video_end_ms(video: Path) -> int | None:
@@ -1570,6 +1649,68 @@ def on_screen_draft_cues(work: Path) -> set[int]:
     return {int(d) for d, info in cue_map["cues"].items() if info["cue"] in screen}
 
 
+# The two kinds of on-screen text no run finds, said in every report.
+ON_SCREEN_LIMITS = (
+    "Text shown while someone is speaking is not found: nothing in the subtitle tracks tells it from a translated line.",
+    "Text in the middle of the film that no subtitle track shows is not found.",
+)
+
+
+def on_screen_report(work: Path) -> dict | None:
+    """The run report's on-screen section, read once the file is delivered.
+
+    `delivered`: every entry delivered, with its delivered numbers, time,
+    source text and Turkish. `left_out_at_ends`: every entry left out that
+    starts before the first spoken cue or at or after story end (the end of
+    the last cue that is not on-screen text), with its reason. `left_out`:
+    the count per reason of the other entries left out; `file` holds them
+    all. `unplaced_human_lines`, in a polish run: the human Turkish lines
+    that landed on no cue and lie under no entry delivered. `limits`: what
+    no run finds. None for a work folder with no on_screen.json, outside a
+    polish run."""
+    entries_file = work / prepare.ON_SCREEN_FILE
+    polish = polish_seed(work) is not None
+    if not entries_file.exists() and not polish:
+        return None
+    entries = on_screen_entries(work)
+    screen = on_screen_draft_cues(work)
+    spoken = [c for c in srt.parse(work / "draft.tr.srt")[0] if c.n not in screen]
+    first = min((c.start for c in spoken), default=None)
+    story_end = max((c.end for c in spoken), default=None)
+    shown = {c.n: c for c in srt.parse(work / "delivered.tr.srt")[0]}
+    back: dict[int, list[int]] = {}
+    for d, info in (read_map(work) or {"cues": {}})["cues"].items():
+        back.setdefault(info["cue"], []).append(int(d))
+    delivered, at_ends, rest = [], [], Counter()
+    for e in entries:
+        text = srt.strip_tags(prepare._one_line(e["lines"]))
+        if e["state"] == "cue":
+            ds = sorted(back.get(e["n"], []))
+            at = shown[ds[0]].ts[:12] if ds else None
+            turkish = " / ".join(ln for d in ds for ln in shown[d].lines)
+            delivered.append({"cue": ds, "at": at, "text": text, "turkish": turkish})
+        elif first is None or e["start"] < first or e["start"] >= story_end:
+            at_ends.append({"at": srt.fmt_ms(e["start"]), "text": text, "reason": e.get("reason", e["state"])})
+        else:
+            rest[e.get("reason", e["state"])] += 1
+    unplaced = []
+    if polish:
+        cards = [(e["start"], e["end"]) for e in entries if e["state"] == "cue"]
+        for item in json.loads((work / "polish_placement.json").read_text(encoding="utf-8")).get("unplaced", []):
+            a, b = item.get("start"), item.get("end")
+            if a is not None and any(min(b, y) > max(a, x) for x, y in cards):
+                continue
+            unplaced.append({"at": srt.fmt_ms(a) if a is not None else None, "text": item["text"]})
+    return {
+        "delivered": delivered,
+        "left_out_at_ends": at_ends,
+        "left_out": dict(rest),
+        "file": str(entries_file) if entries_file.exists() else None,
+        "unplaced_human_lines": unplaced,
+        "limits": list(ON_SCREEN_LIMITS),
+    }
+
+
 def deliver(
     work: Path,
     dest: Path,
@@ -1586,7 +1727,8 @@ def deliver(
     `moved_earlier_deliveries`; without it, files beside `dest` stay put.
     `credit` adds the opening and closing credit cues (`with_credit`),
     naming `translator` when given; only the delivered file has them, never
-    the draft."""
+    the draft. `on_screen` is the report's on-screen section
+    (`on_screen_report`)."""
     if credit:
         credit_lines(CREDIT_HELLO, translator)  # a name too long stops before any file moves
     checks = json.loads((work / "checks.json").read_text(encoding="utf-8"))
@@ -1599,6 +1741,13 @@ def deliver(
     checked = (work / "checks.json").stat().st_mtime
     if any(f.stat().st_mtime > checked for f in (work / "out").glob("*.txt")):
         raise SystemExit("translation files changed after the last check: run check again")
+    # The report reads on_screen.json after the file is delivered: one it
+    # cannot read stops here, before any file moves.
+    if any(
+        not isinstance(e, dict) or not {"state", "start", "end", "lines"} <= e.keys() or (e["state"] == "cue" and "n" not in e)
+        for e in on_screen_entries(work)
+    ):
+        raise SystemExit(f"{work / prepare.ON_SCREEN_FILE} is malformed: run prepare.py build again")
     backed_up = None
     old_file = None
     old_info_file = work / "delivered.json"
@@ -1629,13 +1778,16 @@ def deliver(
     # instead of guessing a Western code page.
     data = draft.read_bytes()
     credits: list[int] = []
+    goodbye = None
     if credit:
-        shown, _, credits = with_credit(
-            srt.parse_text(srt.decode(data)[0]),
-            translator,
-            video_end_ms(video) if video is not None else None,
-            on_screen_draft_cues(work),
+        cues = srt.parse_text(srt.decode(data)[0])
+        on_screen = on_screen_draft_cues(work)
+        black = black_after_story(work, story_end(cues, on_screen)) if cues else None
+        shown, opening, credits = with_credit(
+            cues, translator, video_end_ms(video) if video is not None else None, on_screen, black
         )
+        if len(credits) > opening:
+            goodbye = "cut to black" if goodbye_on_black(cues, on_screen, black or []) else "after the story"
         data = srt.render(shown).replace("\n", "\r\n").encode("utf-8")
     if not data.startswith(UTF8_BOM):
         data = UTF8_BOM + data
@@ -1663,6 +1815,10 @@ def deliver(
         "credit": credit,
         "credit_name": translator if credit else "",
         "credit_cues": credits,
+        # What placed the closing credit: "cut to black" (W/screen/ends.json)
+        # or "after the story"; None with no closing credit.
+        "goodbye": goodbye,
+        "on_screen": on_screen_report(work),
     }
     (work / "delivered.json").write_text(json.dumps(info, indent=1), encoding="utf-8")
     shutil.rmtree(work / "chunks", ignore_errors=True)

@@ -57,11 +57,17 @@ when no other command uses that name.)
 - **An honest report.** What it could not settle for certain goes under
   "Check after watching" in the film's `report.md`, with timestamps. The
   report also gives the run's time per step and its subagents' tokens.
+- **Title cards and signs.** A card, a sign or a dedication that the
+  English subtitles leave to the picture is often in the French or Spanish
+  ones. When two languages show it, it joins the Turkish file. Every one
+  found is recorded with its time, and the report says which were added,
+  and how many were left out, and why.
 - **It learns from you.** Fix lines after watching, and it turns your edits
   into rules for the next film.
 - **A short credit.** "İyi seyirler." over your name opens the file in the
   silence before the first line, and "Görüşmek üzere." over your name
-  follows the story's last line, before any end title. Put your name
+  follows the story's last line, before any end title. When the film cuts
+  to black after its last line, the goodbye starts on the black. Put your name
   under `Credit` in your preferences, or set it to `off`.
 
 ## Languages
@@ -285,6 +291,7 @@ scripts/learn.py                find user edits for learn mode
 scripts/compare.py              blind side-by-side comparison of two or three delivered files
 scripts/speakers.py             voices per cue from the audio, sync check
 scripts/transcribe.py           subtitles from the audio when no file exists, the last resort
+scripts/screen.py               read the picture with ffmpeg: the cut to black after the story
 scripts/settings.py             find the settings folder; move the one from before the rename
 scripts/result.py               print each script's JSON result and save it to --result
 tests/                          pytest suite

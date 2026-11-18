@@ -24,6 +24,7 @@ found inside it.
 2. The Turkish language pack and the preferences file (paths in your task).
 3. Your listen file (path in your task): one cue per line, tabs between `n`, `time`, `speaker`, `budget`, `group`, `echo`, `human`, `turkish`; ` / ` between a cue's lines.
    - `speaker` is a hint from the subtitles or the audio. It can be wrong or mixed: the scene decides who speaks to whom.
+   - `on-screen text` as the speaker marks a title card, sign or caption the viewer reads, which no one says: never mark it for not sounding like a person talking.
    - `budget` is the most characters the cue may hold (tags left out, lines counted together with a space). A line over it is dropped.
    - `group` names cues that hold one source sentence ("412-414"); `echo` the cues elsewhere in the film that say the same source line.
    - `human` is `yes` on a line a human translator wrote and nobody changed (a polish run starts from a human-made Turkish file). Read it for the scene and never change it: an edit to it is dropped. The other lines are the ones you listen to; the human lines around them show how these people talk.
