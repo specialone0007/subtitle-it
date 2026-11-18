@@ -238,7 +238,7 @@ def test_flags_lists_toned_down_and_misplaced_cues(tmp_path: Path):
     polish.seed(w, tmp_path / "tr.srt")
     placement = json.loads((w / polish.PLACEMENT_FILE).read_text(encoding="utf-8"))
     assert placement["joined"] == [2]
-    assert placement["unplaced"] == [{"near": [2, 3], "text": "ŞEHİR MERKEZİ"}]
+    assert placement["unplaced"] == [{"near": [2, 3], "start": 9_000, "end": 10_500, "text": "ŞEHİR MERKEZİ"}]
     out = polish.flags(w)
     assert out["by_check"]["toned down"] == 1
     assert out["by_check"]["placement"] == 2
