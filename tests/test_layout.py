@@ -309,6 +309,9 @@ def _cues(*spans: tuple[int, int]) -> list[srt.Cue]:
     ]
 
 
+# FR with every cue 7 s later: the first line at 8 s leaves room for the
+# full opening credit.
+FR_LATE = srt.render(srt.shift(srt.parse_text(FR), 7_000))
 HELLO = [assemble.CREDIT_HELLO, "specialone0007"]
 BYE = [assemble.CREDIT_BYE, "specialone0007"]
 
@@ -316,20 +319,45 @@ BYE = [assemble.CREDIT_BYE, "specialone0007"]
 def test_credit_opens_in_the_silence_and_closes_after_the_last_line():
     shown, shift, credits = assemble.with_credit(_cues((10_000, 12_000), (60_000, 62_500)), "specialone0007")
     assert shift == 1 and credits == [1, 4] and [c.n for c in shown] == [1, 2, 3, 4]
-    assert shown[0].ts == "00:00:01,000 --> 00:00:05,000" and shown[0].lines == HELLO
+    assert shown[0].ts == "00:00:03,000 --> 00:00:07,000" and shown[0].lines == HELLO
     assert shown[1].lines == ["Satır 1."] and shown[1].ts == "00:00:10,000 --> 00:00:12,000"
-    assert shown[3].ts == "00:01:03,500 --> 00:01:07,500" and shown[3].lines == BYE
+    assert shown[3].ts == "00:01:05,500 --> 00:01:09,500" and shown[3].lines == BYE
+
+
+def test_credit_closing_stays_inside_the_video():
+    spans = ((10_000, 12_000), (60_000, 62_500))
+    # Room for the 3 s gap and the full 4 s: the video's end changes nothing.
+    shown, _, credits = assemble.with_credit(_cues(*spans), video_end=69_500)
+    assert credits == [1, 4] and shown[3].ts == "00:01:05,500 --> 00:01:09,500"
+    # Less room: it moves earlier to keep its 4 s, ending with the video.
+    shown, _, _ = assemble.with_credit(_cues(*spans), video_end=68_000)
+    assert shown[3].ts == "00:01:04,000 --> 00:01:08,000"
+    # Half a second after the last line at most, then cut short, 3 s at least.
+    shown, _, _ = assemble.with_credit(_cues(*spans), video_end=66_000)
+    assert shown[3].ts == "00:01:03,000 --> 00:01:06,000"
+    # Under 3.5 s between the last line and the video's end: no closing credit.
+    shown, shift, credits = assemble.with_credit(_cues(*spans), video_end=65_900)
+    assert shift == 1 and credits == [1] and shown[-1].lines == ["Satır 2."]
+
+
+def test_video_end_ms_is_none_when_the_video_cannot_be_read(tmp_path: Path, monkeypatch):
+    fake = tmp_path / "Film.mkv"
+    fake.write_bytes(b"not a video")
+    monkeypatch.setattr(assemble.sources, "_run", lambda cmd: (_ for _ in ()).throw(SystemExit("ffprobe not found")))
+    assert assemble.video_end_ms(fake) is None
+    monkeypatch.setattr(assemble.sources, "_run", lambda cmd: '{"format": {"duration": "5400.25"}, "streams": []}')
+    assert assemble.video_end_ms(fake) == 5_400_250
 
 
 def test_credit_opening_shortens_or_drops_when_the_film_speaks_early():
-    # First line at 5.5 s: just room for the full 4 s.
-    shown, shift, _ = assemble.with_credit(_cues((5_500, 9_000)), "specialone0007")
-    assert shift == 1 and shown[0].ts == "00:00:01,000 --> 00:00:05,000"
-    # First line at 4.5 s: cut to 3 s, ending half a second before it.
-    shown, shift, _ = assemble.with_credit(_cues((4_500, 6_000)))
-    assert shift == 1 and shown[0].ts == "00:00:01,000 --> 00:00:04,000"
-    # First line at 4.4 s: under 3 s of room, so no opening credit.
-    shown, shift, credits = assemble.with_credit(_cues((4_400, 6_000)))
+    # First line at 7.5 s: just room for the full 4 s.
+    shown, shift, _ = assemble.with_credit(_cues((7_500, 9_000)), "specialone0007")
+    assert shift == 1 and shown[0].ts == "00:00:03,000 --> 00:00:07,000"
+    # First line at 6.5 s: cut to 3 s, ending half a second before it.
+    shown, shift, _ = assemble.with_credit(_cues((6_500, 8_000)))
+    assert shift == 1 and shown[0].ts == "00:00:03,000 --> 00:00:06,000"
+    # First line at 6.4 s: under 3 s of room, so no opening credit.
+    shown, shift, credits = assemble.with_credit(_cues((6_400, 8_000)))
     assert shift == 0 and credits == [2] and shown[0].lines == ["Satır 1."]
 
 
@@ -345,12 +373,7 @@ def test_credit_name_too_long_stops():
 
 
 def test_deliver_with_credit_moves_the_map_and_keeps_the_draft(tmp_path: Path):
-    (tmp_path / "fr.srt").write_text(
-        FR.replace("00:00:01,000 --> 00:00:03,000", "00:00:06,000 --> 00:00:08,000", 1).replace(
-            "00:00:03,500 --> 00:00:04,000", "00:00:08,500 --> 00:00:09,000"
-        ),
-        encoding="utf-8",
-    )
+    (tmp_path / "fr.srt").write_text(FR_LATE, encoding="utf-8")
     w = tmp_path / "work"
     prepare.build(w, tmp_path / "fr.srt", None, None)
     prepare.chunks(w, target=250)
@@ -373,12 +396,7 @@ def test_deliver_with_credit_moves_the_map_and_keeps_the_draft(tmp_path: Path):
 
 
 def test_deliver_cli_passes_the_credit_flags(tmp_path: Path):
-    (tmp_path / "fr.srt").write_text(
-        FR.replace("00:00:01,000 --> 00:00:03,000", "00:00:06,000 --> 00:00:08,000", 1).replace(
-            "00:00:03,500 --> 00:00:04,000", "00:00:08,500 --> 00:00:09,000"
-        ),
-        encoding="utf-8",
-    )
+    (tmp_path / "fr.srt").write_text(FR_LATE, encoding="utf-8")
     w = tmp_path / "work"
     prepare.build(w, tmp_path / "fr.srt", None, None)
     prepare.chunks(w, target=250)
@@ -395,3 +413,36 @@ def test_deliver_cli_passes_the_credit_flags(tmp_path: Path):
     shown, _ = srt.parse(dest)
     assert all(assemble.CREDIT_HELLO not in c.lines and assemble.CREDIT_BYE not in c.lines for c in shown)
     assert json.loads((w / "delivered.json").read_text(encoding="utf-8"))["credit"] is False
+
+
+def test_deliver_holds_the_closing_credit_to_the_video(tmp_path: Path, monkeypatch):
+    (tmp_path / "fr.srt").write_text(FR_LATE, encoding="utf-8")
+    w = tmp_path / "work"
+    prepare.build(w, tmp_path / "fr.srt", None, None)
+    prepare.chunks(w, target=250)
+    (w / "out" / "tr_01.txt").write_text(TR, encoding="utf-8")
+    assemble.run_checks(w)
+    draft, _ = srt.parse(w / "draft.tr.srt")
+    last = max(c.end for c in draft)
+    asked = []
+
+    def video_end(video: Path) -> int:
+        asked.append(video)
+        return last + 3_600
+
+    monkeypatch.setattr(assemble, "video_end_ms", video_end)
+    # Without --video the length is never read: the closing credit keeps its 3 s gap.
+    dest = tmp_path / "elsewhere.srt"
+    assemble.deliver(w, dest, tmp_path / "b", force=False)
+    shown, _ = srt.parse(dest)
+    assert asked == [] and (shown[-1].start, shown[-1].end) == (last + 3_000, last + 7_000)
+    # With it, the closing credit moves earlier and ends with the video.
+    film = tmp_path / "Film"
+    film.mkdir()
+    video = film / "Film.mkv"
+    video.write_bytes(b"x")
+    dest = film / "Film.srt"
+    assemble.deliver(w, dest, tmp_path / "b", force=False, video=video)
+    shown, _ = srt.parse(dest)
+    assert asked == [video] and shown[-1].lines == [assemble.CREDIT_BYE]
+    assert (shown[-1].start, shown[-1].end) == (last + 500, last + 3_600)
