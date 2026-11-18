@@ -2,14 +2,13 @@
 
 ## Unreleased
 
-- The delivered file carries a short credit at both ends, each line on a
-  screen of at most two lines. From 1 s: "İyi seyirler." for 2 s, then
-  "Çeviri: <name>" over "subtitle-it ile hazırlanmıştır" for 4 s (the tool
-  line alone when no name is set); a film that speaks before 7.5 s gets only the credit, and one
-  that speaks before 4.5 s gets no opening. 1 s after the last line:
-  "Tekrar görüşmek üzere." for 2 s, then the same credit for 4 s. Only the
-  delivered file has it; the draft, the checks and the reviewers never
-  see it.
+- The delivered file carries a short credit at both ends, one screen of
+  4 s each: "İyi seyirler." over the translator's name from 1 s, and
+  "Görüşmek üzere." over the name 1 s after the last line (the greeting
+  alone when no name is set). A film that speaks before 5.5 s gets a
+  shorter opening, 3 s at least, and one that speaks before 4.5 s none.
+  Only the delivered file has it; the draft, the checks and the reviewers
+  never see it.
 - `assemble.py deliver --credit-name NAME` and `--no-credit`, set by the
   new `Credit` preference (`on` or `off`, with the name on the line below).
   The file holds no web address, since some subtitle sites remove files
