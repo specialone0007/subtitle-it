@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.13.2 (2026-11-20)
+
+The goodbye waits for the film's real end, and a text the picture shows
+once becomes one cue.
+
+- "Görüşmek üzere." now comes after every translated line, and starts on
+  the cut to black that leads into the end cards the frames showed
+  (credits, a title card, closing text or a logo). With no such black it
+  starts on the first end card, and with no end cards 3 s after the last
+  line. A card counts only when a card with other text follows within
+  10 s, or it is still up in the last frame saved from the tail, so a
+  stray logo inside the story does not count. A fade to black inside the
+  last scene no longer takes it: on a test film it had come a minute
+  before the credits. This reverses 0.13.1's rule that put the goodbye
+  before an end title; the title is translated, so it now comes first.
+- `deliver`'s `goodbye` names the rule that placed it: `cut to black
+  before the end cards`, `first end card`, `after the last line` or `no
+  room`. The report lists the last two under "Check after watching" for
+  a video input.
+- `screen.py collect` joins neighbouring frames whose text differs only
+  in case, punctuation or line breaks, and a sign read once as a caption,
+  so one sign no longer becomes two cues. A text read from the picture
+  stays up until the next saved frame (1.5 s at least, at most 1.5 s
+  past its last frame), never into the next cue.
+
 ## 0.13.1 (2026-11-19)
 
 Fewer background signs become subtitles, and the goodbye lands on the
