@@ -30,10 +30,11 @@ the first spoken cue (2.5 minutes at most), the tail from story end (the
 end of the last spoken cue) to 2.5 minutes after it: one frame every
 1.5 s in both, fitted into 960x540, none skipped as black or as a repeat.
 HDR video is tone-mapped when this ffmpeg has zscale; otherwise the frames
-are saved as they are and `notes` says so. When the tracks hold exactly
-one other language (build.json `other_languages`), that language's
-one-language entries become `unsure` in on_screen.json, and each one
-outside the head and the tail gets 5 frames across its time widened by
+are saved as they are and `notes` says so. The entries left out as shown
+in too few languages become `unsure` in on_screen.json, and so do, when
+the tracks hold exactly one other language (build.json
+`other_languages`), that language's one-language entries; each unsure
+entry outside the head and the tail gets 5 frames across its time widened by
 2 s on each side, since the sync shift is not known yet. At most 300
 frames: the unsure entries' frames are thinned first, down to 1 each,
 then dropped latest first; the head and the tail never are. It writes
@@ -171,16 +172,20 @@ def spoken_spans(rows: list[dict]) -> list[tuple[int, int]]:
 
 
 def unsure_ids(entries: list[dict], other_languages: list[str]) -> list[str]:
-    """With exactly one other language, its one-language entries."""
-    if len(other_languages) != 1:
-        return []
-    lang = other_languages[0]
+    """The entries the picture decides: those left out as shown in too few
+    languages, whatever the count, and with exactly one other language its
+    one-language entries. An entry an earlier run marked unsure stays so."""
+    one = other_languages[0] if len(other_languages) == 1 else None
     out = []
     for e in entries:
-        if e.get("state") == "unsure" or (e.get("state") == "left_out" and e.get("reason") == prepare.ONE_LANGUAGE):
-            langs = srt.other_languages(e.get("texts", {}), None)
-            if langs == [lang]:
-                out.append(e["id"])
+        state, reason = e.get("state"), e.get("reason")
+        if state not in ("unsure", "left_out"):
+            continue
+        langs = srt.other_languages(e.get("texts", {}), None)
+        if reason == prepare.FEW_LANGUAGES or (state == "unsure" and len(langs) >= 2):
+            out.append(e["id"])
+        elif one and (state == "unsure" or reason == prepare.ONE_LANGUAGE) and langs == [one]:
+            out.append(e["id"])
     return out
 
 

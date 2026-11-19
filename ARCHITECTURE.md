@@ -96,7 +96,13 @@ Then it settles the timings:
   subtitles shouts), no room between two lines, a subtitle credit, a song
   line marked with `#`, or a sign two languages show during a song or a
   sound (a track also translates lyrics marked by italics alone, so it is
-  recorded, not added). A line the timing file covers is its own line: it
+  recorded, not added). With six or more other languages among the
+  tracks that fit (the timing file's own language and `und` left out),
+  two are not enough: a line needs three quarters of them, since some
+  tracks also subtitle shop signs in the background. In one test film
+  with 31 other languages the story texts were shown by 27 to 31 and the
+  background signs by 5 to 21. A line shown by fewer is left out as `too
+  few languages`. A line the timing file covers is its own line: it
   is only counted. The list is empty when no track is given, so no
   earlier run's entries survive.
 - The picture, for a video input. Before `build`, `sources.py others`
@@ -109,8 +115,9 @@ Then it settles the timings:
   `screen.py frames` saves frames with ffmpeg, one every 1.5 s at
   960x540 at most (HDR tone-mapped when ffmpeg has zscale): from the
   start to the first spoken line (2.5 minutes at most) and from the
-  story's end for 2.5 minutes. With exactly one other language, a text
-  only it shows is `unsure`, and one outside those ends gets 5 frames
+  story's end for 2.5 minutes. An entry left out as too few languages is
+  `unsure`, and so, with exactly one other language, is a text only it
+  shows; each unsure entry outside those ends gets 5 frames
   across its time widened by 2 s each side. 300 frames at most: the
   unsure frames are thinned first, down to one each, then the latest are
   dropped; the ends are never thinned. `W/screen/frames.json` lists each
@@ -126,8 +133,8 @@ Then it settles the timings:
   an entry only when it names it. An unsure entry a story reading names
   is added; one whose frames were all read and never named is left out
   as `not confirmed by the picture`, one with frames not read as `not
-  checked by the picture`. A left-out entry (one language only, a
-  subtitle credit, a song line) is added when a story reading names it.
+  checked by the picture`. A left-out entry (one language only, too few
+  languages, a subtitle credit, a song line) is added when a story reading names it.
   A story reading no entry holds becomes an entry of its own,
   `picture:<first ms>`, added under the same coverage and room rules.
   One a timing line covers or with no room still gets a cue number, as

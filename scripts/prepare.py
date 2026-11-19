@@ -50,6 +50,9 @@ is. A line that falls where the timing file shows nothing becomes a new cue,
 marked `on_screen` in cues.json, when tracks in two languages show it at the
 same time, or a forced track shows it. One language alone is recorded, not
 added: a French track also subtitles shouts the English one leaves out.
+With six or more other languages two are not enough: a line needs three
+quarters of them (SHARE), since some tracks also subtitle shop signs in the
+background; one shown by fewer is left out as too few languages.
 Subtitle credits ("Subtítulos: ...") are never added.
 
 Every text found is a row of W/on_screen.json (empty when no track is
@@ -61,13 +64,14 @@ so build.json can say which other languages the tracks hold
 (`other_languages`); `screen.py frames` reads it.
 
 The picture. For a video, `screen.py frames` saves frames from the two ends
-of the film and around the entries one language alone leaves unsure, a
-reader agent reads them, and `screen.py collect` writes
-W/screen/readings.json. `build --screen` that file is the same build again,
-with what the picture showed: an entry a story reading names (the reader
-gives its id; time alone never joins them) is added when it was unsure or
-left out as one language only, a subtitle credit or a song line; an unsure
-entry the picture did not show is left out, `not confirmed by the picture`
+of the film and around the entries the tracks leave unsure (one language
+alone, or too few languages), a reader agent reads them, and `screen.py
+collect` writes W/screen/readings.json. `build --screen` that file is the
+same build again, with what the picture showed: an entry a story reading
+names (the reader gives its id; time alone never joins them) is added when
+it was unsure or left out as one language only, too few languages, a
+subtitle credit or a song line; an unsure entry the picture did not show
+is left out, `not confirmed by the picture`
 when its frames were read, `not checked by the picture` otherwise; a story
 text no entry holds is a new entry (`evidence: picture`), added when no
 timing cue covers it and there is room. Every picture entry gets a cue
@@ -87,6 +91,7 @@ from __future__ import annotations
 import argparse
 import bisect
 import json
+import math
 import os
 import re
 import shutil
@@ -116,14 +121,23 @@ SAME_LINE_SHARE = 0.5
 ON_SCREEN_MIN_MS = 700
 # A subtitler's own credit or a site's advert, in the languages tracks come in.
 CREDIT_RE = re.compile(
-    r"subt[ií]t|sous-titr|untertitel|sottotitol|legendas|altyaz|napisy|traduc|translat|übersetz"
+    r"subt[ií]t|sous-titr|untertitel|sottotitol|legendas|altyaz|napisy|traduc|translat|übersetz|azpititul|ikuskatzaile"
     r"|\bsync|opensubtitles|www\.|https?:|\.(?:com|org|net)\b",
     re.IGNORECASE,
 )
+# With many other languages, a line counts as story text only when most of
+# them show it: text the film wants read is subtitled by nearly every track,
+# a shop sign in the background by some. In Love of Your Life (31 other
+# languages) the 18 story texts were shown by 27 to 31 of them and the 19
+# background signs and credits by 5 to 21, so three quarters splits them.
+# Below SHARE_FROM other languages a share says little and two still prove.
+SHARE_FROM = 6
+SHARE = 0.75
 # Every on-screen text found is a row of this file in the work folder.
 ON_SCREEN_FILE = "on_screen.json"
 # Why an entry is left out, in on_screen.json.
 ONE_LANGUAGE = "one language only"
+FEW_LANGUAGES = "too few languages"
 NO_ROOM = "no room"
 CREDIT = "looks like a subtitle credit"
 SONG_LINE = "looks like a song line"
@@ -138,6 +152,7 @@ NO_ROOM_SHIFT = "no room after the timing shift"
 UNDER_TIMING = "under a line of the timing file"
 ON_SCREEN_REASONS = (
     ONE_LANGUAGE,
+    FEW_LANGUAGES,
     NO_ROOM,
     CREDIT,
     SONG_LINE,
@@ -206,11 +221,21 @@ def _lead(g: list[Found]) -> Found:
     return min(g, key=lambda x: (not x[2], x[0]))
 
 
-def _proved(g: list[Found]) -> bool:
-    """Two languages show the line, or a forced track does. pt and pt-br
-    are one language here: two of them prove nothing."""
-    langs = {lang.split("-")[0] for _, lang, _, _ in g if lang != "und"}
-    return any(f for _, _, f, _ in g) or len(langs) >= 2
+def _proved(g: list[Found], need: int = 2, timing_language: str | None = None) -> bool:
+    """A forced track shows the line, or `need` languages do. pt and pt-br
+    are one language here: two of them prove nothing. With a share to
+    meet (need_languages), the timing file's own language does not count."""
+    if any(f for _, _, f, _ in g):
+        return True
+    if need > 2:
+        return len(srt.other_languages([lang for _, lang, _, _ in g], timing_language)) >= need
+    return len({lang.split("-")[0] for _, lang, _, _ in g if lang != "und"}) >= 2
+
+
+def need_languages(n: int) -> int:
+    """How many languages prove a line when the fitting tracks hold n other
+    languages: three quarters of them from SHARE_FROM on, two below."""
+    return max(2, math.ceil(SHARE * n)) if n >= SHARE_FROM else 2
 
 
 def is_story(kind: str | None, wants_read: bool) -> bool:
@@ -299,6 +324,7 @@ def on_screen(
     tracks: list[tuple[str, Path]],
     forced: list[tuple[str, Path]],
     picture: dict | None = None,
+    timing_language: str | None = None,
 ) -> tuple[list[dict], dict]:
     """Lines the other tracks show where the timing file shows nothing.
 
@@ -316,10 +342,16 @@ def on_screen(
     italics alone).
 
     `picture` (read_picture) is what the frames showed: `unsure` the ids
-    one language alone left unsure, `story` the ids a story reading named,
+    the tracks left unsure (one language alone, or too few languages), `story` the ids a story reading named,
     `named` those any reading named, `looked` those a frame listed,
     `checked` those whose frames were all read, and `readings` the story
-    readings that named no entry."""
+    readings that named no entry.
+
+    With SHARE_FROM or more other languages among the tracks that fit
+    (the timing file's own language and `und` left out), a line needs
+    three quarters of them (need_languages); one shown by two or more but
+    fewer is left out as too few languages, and the picture can still
+    bring it back."""
     sung = srt.italic_songs(timing) | {
         c.n for c in timing if srt.is_sound(c) or srt.is_bare_sound(srt.strip_hi(c.lines, True)[0])
     }
@@ -359,30 +391,40 @@ def on_screen(
                     continue
             found[kind].append((k, lang, is_forced, c))
 
+    used = [t["language"] for t in summary_tracks if not t["forced"] and t.get("fits")]
+    need = need_languages(len(srt.other_languages(used, timing_language)))
     pic = picture or {}
     story = set(pic.get("story", ()))
     entries = []
     # What is to be placed, in time order: (start, order, group or reading).
     place: list[tuple[int, int, list[Found] | dict]] = []
-    for kind in (CREDIT, SONG_LINE):
-        for g in _group(found[kind]):
-            if _id(g) in story:
-                place.append((g[0][3].start, len(place), g))
-            else:
-                entries.append(_entry(g, "left_out", kind))
+    for g in _group(found[SONG_LINE]):
+        if _id(g) in story:
+            place.append((g[0][3].start, len(place), g))
+        else:
+            entries.append(_entry(g, "left_out", SONG_LINE))
     for g in _group(found[DURING_SONG]):
         if _proved(g):
             entries.append(_entry(g, "left_out", DURING_SONG))
         else:
             covered_lines += len(g)
-    for g in _group(found[None]):
+    # A subtitle credit reads as one in some languages only ("Tekstitys:",
+    # "Creative supervisor" do not), so the lines are grouped together and
+    # a group is a credit when any of its lines reads as one.
+    credit_lines = {(k, c.n) for k, _, _, c in found[CREDIT]}
+    for g in _group(found[None] + found[CREDIT]):
         eid = _id(g)
-        if _proved(g) or eid in story:
+        if any((k, c.n) in credit_lines for k, _, _, c in g):
+            if eid in story:
+                place.append((g[0][3].start, len(place), g))
+            else:
+                entries.append(_entry(g, "left_out", CREDIT))
+        elif _proved(g, need, timing_language) or eid in story:
             place.append((g[0][3].start, len(place), g))
         elif eid in pic.get("unsure", ()):
             entries.append(_entry(g, "left_out", NOT_CONFIRMED if eid in pic.get("checked", ()) else NOT_CHECKED))
         else:
-            entries.append(_entry(g, "left_out", ONE_LANGUAGE))
+            entries.append(_entry(g, "left_out", FEW_LANGUAGES if _proved(g) else ONE_LANGUAGE))
     # A story text only the picture shows: speech wins, so one the timing
     # file covers is its own line, as for a track's line. It is kept, left
     # out, so a sync rebuild can look at it again.
@@ -411,7 +453,7 @@ def on_screen(
         entries.append(make("cue", start=start, end=end))
         last_end = end
     entries.sort(key=lambda e: (e["start"], e["id"]))
-    summary = {"tracks": summary_tracks, **on_screen_counts(entries), "covered_lines": covered_lines}
+    summary = {"tracks": summary_tracks, **on_screen_counts(entries), "covered_lines": covered_lines, "languages_needed": need}
     if picture is not None:
         for e in entries:
             word = "found" if e.get("evidence") == PICTURE else picture_outcome(e["id"], pic)
@@ -637,7 +679,7 @@ def build(
             screen_summary["shift_ms"] = shift_ms
             dropped_under = list(screen_summary.get("dropped_timing_cues", []))
     elif tracks or forced or picture is not None:
-        entries, screen_summary = on_screen(kept, tracks or [], forced or [], picture)
+        entries, screen_summary = on_screen(kept, tracks or [], forced or [], picture, timing_language)
         if timing_language:
             # Which other languages the tracks hold, as `sources.py others`
             # counts them: `screen.py frames` reads this.
