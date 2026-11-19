@@ -791,3 +791,49 @@ def test_deliver_reports_what_the_picture_looked_at(tmp_path: Path):
         ("THE END", "cue", None, "found"),
     ]
     assert [x["text"] for x in report["delivered"]] == ["UN JOUR", "THE END"]
+
+
+# --- too few languages: the picture decides ----------------------------------
+
+
+def test_entries_shown_in_too_few_languages_are_unsure_whatever_the_count():
+    few = {**_unsure_entry(0), "texts": {"fr": ["x"], "es": ["x"]}, "reason": prepare.FEW_LANGUAGES}
+    one = _unsure_entry(1)
+    many = ["de", "es", "fr", "it", "nl", "pl"]
+    assert screen.unsure_ids([few, one], many) == [few["id"]]
+    assert screen.unsure_ids([few, one], ["fr"]) == [few["id"], one["id"]]
+    # Marked unsure by an earlier run, it stays unsure.
+    again = {k: v for k, v in few.items() if k != "reason"} | {"state": "unsure"}
+    assert screen.unsure_ids([again], many) == [few["id"]]
+
+
+MANY = ["fr", "es", "de", "it", "nl", "pl", "sv", "fi"]
+
+
+def _many_build(tmp: Path, picture: Path | None = None) -> Path:
+    """Eight other languages, five of which show a sign mid-film."""
+    w = tmp / "work"
+    tracks = [(lang, _film(tmp, f"{lang}.srt", "Ligne", [(*SIGN, "FARMACIA")] if k < 5 else [])) for k, lang in enumerate(MANY)]
+    prepare.build(w, _film(tmp, "en.srt", "Line"), None, None, tracks=tracks, timing_language="en", screen_path=picture)
+    return w
+
+
+@pytest.mark.parametrize(
+    "kind, wants, state",
+    [("sign", True, "cue"), ("background", False, "left_out")],
+)
+def test_the_picture_brings_back_a_story_sign_too_few_languages_show(tmp_path: Path, kind: str, wants: bool, state: str):
+    w = _many_build(tmp_path)
+    (sign,) = _entries(w).values()
+    assert sign["reason"] == prepare.FEW_LANGUAGES
+    rows = _json(w / "cues.json")
+    plan = screen.plan_frames(rows, [sign], _json(w / "build.json")["on_screen"]["other_languages"], 600_000)
+    assert plan["unsure"] == [sign["id"]]
+    path = _picture(
+        w,
+        [(201_000, [sign["id"]])],
+        [sign["id"]],
+        [_reading("PHARMACY", 201_000, 201_000, kind=kind, wants=wants, shows=[sign["id"]])],
+    )
+    _many_build(tmp_path, path)
+    assert _entries(w)[sign["id"]]["state"] == state
