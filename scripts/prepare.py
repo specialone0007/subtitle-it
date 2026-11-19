@@ -383,11 +383,9 @@ def on_screen(
     # A story text only the picture shows: speech wins, so one the timing
     # file covers is its own line, as for a track's line. It is kept, left
     # out, so a sync rebuild can look at it again.
-    covered_readings = 0
     for r in pic.get("readings", ()):
         a, b = picture_span(r)
         if _under_timing(a, b, timing):
-            covered_readings += 1
             entries.append(_picture_entry(r, "left_out", UNDER_TIMING))
             continue
         place.append((a, len(place), r))
@@ -418,11 +416,18 @@ def on_screen(
                 e["picture"] = word
         summary["picture"] = {
             **pic.get("info", {}),
-            "readings_already_in_timing": covered_readings,
-            "found": sum(1 for e in entries if e.get("evidence") == PICTURE and e.get("reason") != UNDER_TIMING),
+            **picture_counts(entries),
             "looked_at": sum(1 for e in entries if e.get("picture")),
         }
     return entries, summary
+
+
+def picture_counts(entries: list[dict]) -> dict:
+    """The story texts only the picture shows: `found` those not under a
+    timing line, `readings_already_in_timing` those under one."""
+    pictures = [e for e in entries if e.get("evidence") == PICTURE]
+    under = sum(1 for e in pictures if e.get("reason") == UNDER_TIMING)
+    return {"readings_already_in_timing": under, "found": len(pictures) - under}
 
 
 def _under_timing(start: int, end: int, timing: list[srt.Cue]) -> bool:
@@ -673,6 +678,9 @@ def build(
         _fit_picture_entries(merged, refit=before is not None)
         if screen_summary is not None:
             screen_summary.update(on_screen_counts(entries))
+            if screen_summary.get("picture") is not None:
+                # A sync rebuild judged each picture entry again.
+                screen_summary["picture"] = {**screen_summary["picture"], **picture_counts(entries)}
         timing = []
         for i, (c, e) in enumerate(merged, 1):
             if c is not None:

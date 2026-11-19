@@ -595,12 +595,52 @@ def test_a_reading_under_the_unshifted_timing_is_placed_by_the_shift_rebuild(tmp
         assert [r["n"] for r in rows] == before
         e = _entries(w)[f"picture:{card[0]}"]
         assert e["state"] == state and e["n"] == 2 and e["found"] == list(card)
+        # The report's counts follow the rebuild.
+        info = _json(w / "build.json")["on_screen"]["picture"]
+        under = int(state == "left_out")
+        assert (info["readings_already_in_timing"], info["found"]) == (under, 1 - under)
         if state == "cue":
             # Shifted, the first line ends at 10.5 s and the second starts
             # at 12.0 s: the card fits between them at its own times.
             assert (e["start"], e["end"]) == card and "left_out" not in rows[1]
         else:
             assert e["reason"] == prepare.UNDER_TIMING and rows[1]["left_out"] == prepare.UNDER_TIMING
+
+
+def test_an_early_timing_file_leaves_a_card_out_under_its_number_and_the_report_lists_it(tmp_path: Path):
+    # The timing file is 2 s early. Before the shift, line A (11.5-13.5 s)
+    # covers a card shown at 12.0-13.0 s on the video, so the card's number
+    # comes after A's. After the +2 s shift A is at 13.5-15.5 s: the card's
+    # slot opens after it has ended. It stays left out under its number, and
+    # the report lists it at its video time.
+    w = tmp_path / "work"
+    lines = [(11_500, 13_500, "Line A.")] + [(20_000 + k * 4_000, 22_500 + k * 4_000, f"Line {k + 2}.") for k in range(40)]
+    timing = tmp_path / "en.srt"
+    timing.write_text(
+        "".join(f"{i}\n{srt.fmt_ms(a)} --> {srt.fmt_ms(b)}\n{t}\n\n" for i, (a, b, t) in enumerate(lines, 1)), encoding="utf-8"
+    )
+    (w / "screen").mkdir(parents=True)
+    card = (12_000, 13_000)
+    path = _picture(w, [(card[0], [])], [], [_reading("THREE YEARS LATER", *card, kind="caption")])
+    prepare.build(w, timing, None, None, timing_language="en", screen_path=path)
+    e = _entries(w)[f"picture:{card[0]}"]
+    assert (e["state"], e["reason"], e["n"]) == ("left_out", prepare.UNDER_TIMING, 2)
+    before = [(r["n"], r["source"]) for r in _json(w / "cues.json")]
+    prepare.build(w, _shifted(tmp_path, timing, 2_000), None, None, keep_bible_check=True, shift_ms=2_000)
+    rows = _json(w / "cues.json")
+    assert [(r["n"], r["source"]) for r in rows] == before
+    assert (rows[0]["start"], rows[0]["end"]) == (13_500, 15_500)
+    e = _entries(w)[f"picture:{card[0]}"]
+    assert (e["state"], e["reason"], e["n"], e["found"]) == ("left_out", prepare.NO_ROOM_SHIFT, 2, list(card))
+    assert rows[1]["left_out"] == prepare.NO_ROOM_SHIFT and rows[1]["start"] >= rows[0]["start"]
+    (w / "out").mkdir(exist_ok=True)
+    tr = "".join(f"{r['n']}\n{r['n']}. satır.\n\n" for r in rows if not prepare.left_out(r))
+    (w / "out" / "tr_01.txt").write_text(tr, encoding="utf-8")
+    assert assemble.run_checks(w)["hard_fail_count"] == 0
+    report = assemble.deliver(w, tmp_path / "Film.srt", tmp_path / "backups", force=False)["on_screen"]
+    assert report["no_room_after_shift"] == [{"at": "00:00:12,000", "text": "THREE YEARS LATER"}]
+    assert prepare.NO_ROOM_SHIFT not in report["left_out"]
+    assert all(x["text"] != "THREE YEARS LATER" for x in report["left_out_at_ends"])
 
 
 def test_every_left_out_value_a_row_can_hold_has_a_note(tmp_path: Path):

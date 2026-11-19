@@ -188,7 +188,10 @@ film.
   `under a line of the timing file`, one they leave less than 0.7 s is
   left out as `no room after the timing shift`, and the rest are added.
   Each keeps its cue number, a row left out clipped into its slot, so
-  `check` skips it with a note.
+  `check` skips it with a note. Its number was given before the shift,
+  so when the subtitles were early and the shift carries a neighbouring
+  line past it, it stays left out though the video has room: the report
+  lists each such text with its video time, to be added by hand.
 - A voice can gather several characters. When a voice has at least six
   cues with a speaker label and no character holds two thirds of them, its
   cues get no voice hint, and the address-form check leaves them alone.
