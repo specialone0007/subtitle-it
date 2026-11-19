@@ -185,7 +185,8 @@ film.
   same rebuild twice moves the entries once. An entry read from the
   picture keeps its video times (`found`, the reading's own time) and its
   cue number, and is judged again against the shifted cues next to it in
-  time, whatever their numbers: one they cover is left out as `under a
+  time, whatever their numbers (a cue that holds only sounds is never
+  shown, so it takes no room): one they cover is left out as `under a
   line of the timing file`, one they leave less than 0.7 s at its own
   time is left out as `no room after the timing shift` (a row clipped
   into its slot, which `check` skips with a note, and the report lists
@@ -193,9 +194,10 @@ film.
   the subtitles were early, that can be before a cue with a lower number,
   so the draft and the delivered file are written in time order, and
   whatever measures time (gaps, reading speed, sentences over several
-  cues, the credits, pairing with another file, the voices) reads the
-  cues in time order (`prepare.time_order`). Cue numbers never change: the
-  cue maps lead each delivered cue back to its number. Chunks and review
+  cues in `check` and in the listen parts, the credits, pairing with
+  another file, the voices) reads the cues in time order
+  (`prepare.time_order`). Cue numbers never change: the cue maps lead
+  each delivered cue back to its number. Chunks and review
   parts still go by number, so such a card can sit one line away from
   its time there. Two other ways were turned down: renumbering would
   break the bible's cue citations, and reading the picture after the

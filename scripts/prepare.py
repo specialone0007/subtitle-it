@@ -679,7 +679,7 @@ def build(
         else:
             merged = [(c, None) for c in rest] + [(None, e) for e in extra]
             merged.sort(key=lambda x: (x[0].start, 0) if x[0] is not None else (x[1]["start"], 1))
-        _fit_picture_entries(merged, refit=before is not None)
+        _fit_picture_entries(merged, refit=before is not None, spoken={c.n for c in kept})
         if screen_summary is not None:
             screen_summary.update(on_screen_counts(entries))
             if screen_summary.get("picture") is not None:
@@ -866,14 +866,15 @@ def build(
     return summary
 
 
-def _fit_picture_entries(merged: list[tuple[srt.Cue | None, dict | None]], refit: bool) -> None:
+def _fit_picture_entries(merged: list[tuple[srt.Cue | None, dict | None]], refit: bool, spoken: set[int]) -> None:
     """In a sync rebuild (`refit`) the cues around a picture entry moved and
     it did not. Each keeps its place in `merged`, its number, but its room
     is looked for at its own time, between the cues shown just before and
     just after it there, whatever their numbers: one left under
-    ON_SCREEN_MIN_MS is left out (NO_ROOM_SHIFT). A picture entry left out,
-    in any build, has its times clipped into its numbered slot; it is never
-    delivered."""
+    ON_SCREEN_MIN_MS is left out (NO_ROOM_SHIFT). A timing cue not in
+    `spoken` holds only sounds and is never shown, so it takes no room, as
+    in the first build. A picture entry left out, in any build, has its
+    times clipped into its numbered slot; it is never delivered."""
 
     def span(item: tuple[srt.Cue | None, dict | None]) -> tuple[int, int]:
         c, e = item
@@ -882,9 +883,10 @@ def _fit_picture_entries(merged: list[tuple[srt.Cue | None, dict | None]], refit
     def picture(e: dict | None) -> bool:
         return e is not None and e.get("evidence") == PICTURE
 
-    # What is shown whatever the picture entries do: the timing cues and the
-    # tracks' entries. Picture entries shown join it one by one, in time.
-    shown = [span(x) for x in merged if not picture(x[1])]
+    # What is shown whatever the picture entries do: the spoken timing cues
+    # and the tracks' entries. Picture entries shown join it one by one, in
+    # time.
+    shown = [span(x) for x in merged if (x[0] is not None and x[0].n in spoken) or (x[1] is not None and not picture(x[1]))]
     for i in sorted((i for i, x in enumerate(merged) if picture(x[1])), key=lambda i: (merged[i][1]["start"], i)):
         e = merged[i][1]
         if e["state"] == "cue":
