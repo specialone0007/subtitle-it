@@ -21,6 +21,7 @@ import json
 import os
 import re
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -328,6 +329,18 @@ def looks_turkish(path: str | Path) -> bool:
         return False
     hits = sum(1 for c in spoken if TURKISH_LETTERS & set(c.text))
     return hits * 5 >= len(spoken)
+
+
+def other_languages(languages: Iterable[str], timing_language: str | None) -> list[str]:
+    """The languages that count for on-screen text, sorted: Turkish, `und`
+    and the timing file's own language left out (a second track in the
+    film's language rarely subtitles text its viewers can read), and a
+    region dropped, so pt and pt-br are one."""
+
+    def base(code: str | None) -> str:
+        return (code or "").strip().lower().split("-")[0]
+
+    return sorted({base(x) for x in languages} - {"", "tr", "und", base(timing_language)})
 
 
 # --- writing -------------------------------------------------------------

@@ -5,7 +5,8 @@
 """Build a film's work folder and cut it into chunks for the translators.
 
     uv run prepare.py build  --work W --timing T [--source S] [--en E] [--keep-bible-check] [--hi remove|keep]
-                             [--track LANG=PATH ...] [--forced-track LANG=PATH ...] [--shift-ms N]
+                             [--track LANG=PATH ...] [--forced-track LANG=PATH ...] [--timing-language L]
+                             [--shift-ms N | --screen W/screen/readings.json]
     uv run prepare.py songs  --work W [--mode story|skip|all]
     uv run prepare.py chunks --work W [--target 250]
 
@@ -55,7 +56,30 @@ Every text found is a row of W/on_screen.json (empty when no track is
 given): its time, its text per language, which tracks show it, and its
 state: `cue` (added; `n` is its cue number) or `left_out`, with a reason
 (ON_SCREEN_REASONS). A cue that is on-screen text is never marked a song, a
-sound or a bare sound.
+sound or a bare sound. `--timing-language` names the timing file's language,
+so build.json can say which other languages the tracks hold
+(`other_languages`); `screen.py frames` reads it.
+
+The picture. For a video, `screen.py frames` saves frames from the two ends
+of the film and around the entries one language alone leaves unsure, a
+reader agent reads them, and `screen.py collect` writes
+W/screen/readings.json. `build --screen` that file is the same build again,
+with what the picture showed: an entry a story reading names (the reader
+gives its id; time alone never joins them) is added when it was unsure or
+left out as one language only, a subtitle credit or a song line; an unsure
+entry the picture did not show is left out, `not confirmed by the picture`
+when its frames were read, `not checked by the picture` otherwise; a story
+text no entry holds is a new entry (`evidence: picture`), added when no
+timing cue covers it and there is room. Every picture entry gets a cue
+number, the ones left out (no room, or under a timing line) too: their rows
+are left out and not delivered. `--screen` keeps W/screen/. In a
+`--shift-ms` rebuild a picture entry keeps its times, which are the video's
+(`found`), and its number, and each is judged again against the shifted
+cues next to it in time, whatever their numbers: one they cover is left
+out, one with room is shown at its own time, even before a cue with a lower
+number, and one with no room at its own time is left out (NO_ROOM_SHIFT).
+So its number can sit out of time order; whatever is shown or measured in
+time reads the cues in `time_order`.
 """
 
 from __future__ import annotations
@@ -68,6 +92,7 @@ import re
 import shutil
 import sys
 import time
+from functools import partial
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -103,7 +128,42 @@ NO_ROOM = "no room"
 CREDIT = "looks like a subtitle credit"
 SONG_LINE = "looks like a song line"
 DURING_SONG = "shown during a song or a sound"
-ON_SCREEN_REASONS = (ONE_LANGUAGE, NO_ROOM, CREDIT, SONG_LINE, DURING_SONG)
+# Unsure entries (see `screen.py frames`) once the picture was read.
+NOT_CONFIRMED = "not confirmed by the picture"
+NOT_CHECKED = "not checked by the picture"
+# A picture entry a sync rebuild left with no room. Its row in cues.json is
+# left out with this reason, so `assemble.py` knows it (LEFT_OUT_NOTES).
+NO_ROOM_SHIFT = "no room after the timing shift"
+# A story text only the picture shows, under a line of the timing file.
+UNDER_TIMING = "under a line of the timing file"
+ON_SCREEN_REASONS = (
+    ONE_LANGUAGE,
+    NO_ROOM,
+    CREDIT,
+    SONG_LINE,
+    DURING_SONG,
+    NOT_CONFIRMED,
+    NOT_CHECKED,
+    NO_ROOM_SHIFT,
+    UNDER_TIMING,
+)
+# What the reader agent says a frame shows. A story reading is one the film
+# wants read, of a kind that is not credits, a logo or the background.
+READER_KINDS = (
+    "title card",
+    "caption",
+    "sign",
+    "text message",
+    "letter",
+    "dedication",
+    "closing text",
+    "credits",
+    "logo",
+    "background",
+)
+NOT_STORY_KINDS = ("credits", "logo", "background")
+PICTURE = "picture"
+FRAMES_FILE = Path("screen") / "frames.json"
 # The speaker hint of a cue that is text on screen, in the chunks and in the
 # review and listen part files.
 ON_SCREEN_MARK = "on-screen text"
@@ -153,18 +213,28 @@ def _proved(g: list[Found]) -> bool:
     return any(f for _, _, f, _ in g) or len(langs) >= 2
 
 
+def is_story(kind: str | None, wants_read: bool) -> bool:
+    """A reading the film wants read, of a kind that is story text."""
+    return bool(wants_read) and kind in READER_KINDS and kind not in NOT_STORY_KINDS
+
+
+def _id(g: list[Found]) -> str:
+    """The track's place in the list (from 1, tracks before forced tracks)
+    and the cue's number in that file, of the first track that shows it."""
+    k, _, _, first = min(g, key=lambda x: x[0])
+    return f"{k + 1}:{first.n}"
+
+
 def _entry(g: list[Found], state: str, reason: str | None = None, start: int | None = None, end: int | None = None) -> dict:
     """One row of on_screen.json. `id` names the line in the first track
-    that shows it: the track's place in the list (from 1, tracks before
-    forced tracks) and the cue's number in that file. Text and times come
-    from _lead, a forced track first."""
+    that shows it (_id). Text and times come from _lead, a forced track
+    first."""
     _, _, _, lead = _lead(g)
-    k, _, _, first = min(g, key=lambda x: x[0])
     texts: dict[str, list[str]] = {}
     for _k, lang, _, c in sorted(g, key=lambda x: (not x[2], x[0])):
         texts.setdefault(lang, []).extend(c.lines)
     entry = {
-        "id": f"{k + 1}:{first.n}",
+        "id": _id(g),
         "n": None,
         "start": lead.start if start is None else start,
         "end": lead.end if end is None else end,
@@ -178,7 +248,58 @@ def _entry(g: list[Found], state: str, reason: str | None = None, start: int | N
     return entry
 
 
-def on_screen(timing: list[srt.Cue], tracks: list[tuple[str, Path]], forced: list[tuple[str, Path]]) -> tuple[list[dict], dict]:
+def picture_span(r: dict) -> tuple[int, int]:
+    """A reading's time: first seen to last seen, ON_SCREEN_MIN_MS at least."""
+    return r["first_ms"], max(r["last_ms"], r["first_ms"] + ON_SCREEN_MIN_MS)
+
+
+def _picture_entry(r: dict, state: str, reason: str | None = None, start: int | None = None, end: int | None = None) -> dict:
+    """An entry for a story text only the picture shows: the reader's text,
+    the reading's times. Its `texts` hold one key, `picture`, equal to its
+    lines, so the chunks show no `also:` line for it."""
+    a, b = picture_span(r)
+    lines = [x.strip() for x in r["text"].split(" / ") if x.strip()]
+    entry = {
+        "id": f"{PICTURE}:{r['first_ms']}",
+        "n": None,
+        "start": a if start is None else start,
+        "end": b if end is None else end,
+        "lines": lines,
+        "texts": {PICTURE: list(lines)},
+        "evidence": PICTURE,
+        "kind": r.get("kind"),
+        "frames": list(r.get("frames", [])),
+        "state": state,
+        # The reading's own time, which a sync rebuild starts from.
+        "found": [a, b],
+    }
+    if reason:
+        entry["reason"] = reason
+    return entry
+
+
+def picture_outcome(eid: str, picture: dict) -> str | None:
+    """What the picture said of an entry, for the report: `shown` (a story
+    reading named it), `shown, not story text`, `not shown` (its frames were
+    all read and none named it), `not read` (frames thinned away or not
+    read), or None when no frame looked at it."""
+    if eid in picture.get("story", ()):
+        return "shown"
+    if eid in picture.get("named", ()):
+        return "shown, not story text"
+    if eid in picture.get("checked", ()):
+        return "not shown"
+    if eid in picture.get("looked", ()) or eid in picture.get("unsure", ()):
+        return "not read"
+    return None
+
+
+def on_screen(
+    timing: list[srt.Cue],
+    tracks: list[tuple[str, Path]],
+    forced: list[tuple[str, Path]],
+    picture: dict | None = None,
+) -> tuple[list[dict], dict]:
     """Lines the other tracks show where the timing file shows nothing.
 
     Returns every entry found, in time order, and a summary for
@@ -192,7 +313,13 @@ def on_screen(timing: list[srt.Cue], tracks: list[tuple[str, Path]], forced: lis
     stays out and is only counted, except when two languages show it over
     cues that are only songs or sounds: a sign shown during a song is
     recorded, though not added (a track also translates lyrics marked by
-    italics alone)."""
+    italics alone).
+
+    `picture` (read_picture) is what the frames showed: `unsure` the ids
+    one language alone left unsure, `story` the ids a story reading named,
+    `named` those any reading named, `looked` those a frame listed,
+    `checked` those whose frames were all read, and `readings` the story
+    readings that named no entry."""
     sung = srt.italic_songs(timing) | {
         c.n for c in timing if srt.is_sound(c) or srt.is_bare_sound(srt.strip_hi(c.lines, True)[0])
     }
@@ -232,31 +359,84 @@ def on_screen(timing: list[srt.Cue], tracks: list[tuple[str, Path]], forced: lis
                     continue
             found[kind].append((k, lang, is_forced, c))
 
+    pic = picture or {}
+    story = set(pic.get("story", ()))
     entries = []
+    # What is to be placed, in time order: (start, order, group or reading).
+    place: list[tuple[int, int, list[Found] | dict]] = []
     for kind in (CREDIT, SONG_LINE):
-        entries += [_entry(g, "left_out", kind) for g in _group(found[kind])]
+        for g in _group(found[kind]):
+            if _id(g) in story:
+                place.append((g[0][3].start, len(place), g))
+            else:
+                entries.append(_entry(g, "left_out", kind))
     for g in _group(found[DURING_SONG]):
         if _proved(g):
             entries.append(_entry(g, "left_out", DURING_SONG))
         else:
             covered_lines += len(g)
-    last_end = 0
     for g in _group(found[None]):
-        if not _proved(g):
+        eid = _id(g)
+        if _proved(g) or eid in story:
+            place.append((g[0][3].start, len(place), g))
+        elif eid in pic.get("unsure", ()):
+            entries.append(_entry(g, "left_out", NOT_CONFIRMED if eid in pic.get("checked", ()) else NOT_CHECKED))
+        else:
             entries.append(_entry(g, "left_out", ONE_LANGUAGE))
+    # A story text only the picture shows: speech wins, so one the timing
+    # file covers is its own line, as for a track's line. It is kept, left
+    # out, so a sync rebuild can look at it again.
+    for r in pic.get("readings", ()):
+        a, b = picture_span(r)
+        if _under_timing(a, b, timing):
+            entries.append(_picture_entry(r, "left_out", UNDER_TIMING))
             continue
-        lead = _lead(g)[3]
-        i = bisect.bisect_left(starts, lead.start)
-        start = max(lead.start, timing[i - 1].end if i else 0, last_end)
-        end = min(lead.end, timing[i].start if i < len(timing) else lead.end)
+        place.append((a, len(place), r))
+    place.sort(key=lambda x: (x[0], x[1]))
+    last_end = 0
+    for _, _, item in place:
+        if isinstance(item, dict):
+            lead_start, lead_end = picture_span(item)
+            make = partial(_picture_entry, item)
+        else:
+            lead = _lead(item)[3]
+            lead_start, lead_end = lead.start, lead.end
+            make = partial(_entry, item)
+        i = bisect.bisect_left(starts, lead_start)
+        start = max(lead_start, timing[i - 1].end if i else 0, last_end)
+        end = min(lead_end, timing[i].start if i < len(timing) else lead_end)
         if end - start < ON_SCREEN_MIN_MS:
-            entries.append(_entry(g, "left_out", NO_ROOM))
+            entries.append(make("left_out", NO_ROOM))
             continue
-        entries.append(_entry(g, "cue", start=start, end=end))
+        entries.append(make("cue", start=start, end=end))
         last_end = end
     entries.sort(key=lambda e: (e["start"], e["id"]))
     summary = {"tracks": summary_tracks, **on_screen_counts(entries), "covered_lines": covered_lines}
+    if picture is not None:
+        for e in entries:
+            word = "found" if e.get("evidence") == PICTURE else picture_outcome(e["id"], pic)
+            if word:
+                e["picture"] = word
+        summary["picture"] = {
+            **pic.get("info", {}),
+            **picture_counts(entries),
+            "looked_at": sum(1 for e in entries if e.get("picture")),
+        }
     return entries, summary
+
+
+def picture_counts(entries: list[dict]) -> dict:
+    """The story texts only the picture shows: `found` those not under a
+    timing line, `readings_already_in_timing` those under one."""
+    pictures = [e for e in entries if e.get("evidence") == PICTURE]
+    under = sum(1 for e in pictures if e.get("reason") == UNDER_TIMING)
+    return {"readings_already_in_timing": under, "found": len(pictures) - under}
+
+
+def _under_timing(start: int, end: int, timing: list[srt.Cue]) -> bool:
+    """Timing cues cover at least GAP_MAX_COVERED of this time span."""
+    span = srt.Cue(n=0, start=start, end=end, ts="", lines=[])
+    return bool(timing) and srt._coverage([span], timing)[0] >= GAP_MAX_COVERED
 
 
 def on_screen_counts(entries: list[dict]) -> dict:
@@ -268,6 +448,49 @@ def on_screen_counts(entries: list[dict]) -> dict:
         if e.get("reason"):
             reasons[e["reason"]] = reasons.get(e["reason"], 0) + 1
     return {"added": states.get("cue", 0), "states": states, "reasons": reasons}
+
+
+def read_picture(work: Path, readings_path: Path) -> dict:
+    """What the frames showed, for on_screen(): W/screen/frames.json (which
+    entries were unsure, which frames listed which entry) and the readings
+    `screen.py collect` wrote. A frame named in `missing` was not read."""
+    frames_path = work / FRAMES_FILE
+    try:
+        frames = json.loads(frames_path.read_text(encoding="utf-8"))
+        readings = json.loads(readings_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        raise SystemExit(f"--screen needs {frames_path} and the readings file: {e}") from e
+    missing = set(readings.get("missing", []))
+    listing: dict[str, list[str]] = {}
+    for f in frames.get("frames", []):
+        for item in f.get("entries", []):
+            listing.setdefault(item["id"], []).append(f["file"])
+    story: set[str] = set()
+    named: set[str] = set()
+    new = []
+    for r in readings.get("readings", []):
+        ids = set(r.get("shows_entry") or [])
+        named |= ids
+        if is_story(r.get("kind"), r.get("wants_read")):
+            story |= ids
+            if not ids:
+                new.append(r)
+    info = {
+        "frames": len(frames.get("frames", [])),
+        "frames_not_read": sorted(missing),
+        "readings": len(readings.get("readings", [])),
+        "unsure": len(frames.get("unsure", [])),
+        "notes": list(frames.get("notes", [])),
+    }
+    return {
+        "unsure": set(frames.get("unsure", [])),
+        "looked": set(listing),
+        "checked": {i for i, files in listing.items() if not missing & set(files)},
+        "story": story,
+        "named": named,
+        "readings": new,
+        "info": info,
+    }
 
 
 def labels_in(lines: list[str], hi: bool = True) -> list[str]:
@@ -323,14 +546,23 @@ def build(
     tracks: list[tuple[str, Path]] | None = None,
     forced: list[tuple[str, Path]] | None = None,
     shift_ms: int | None = None,
+    timing_language: str | None = None,
+    screen_path: Path | None = None,
 ) -> dict:
     """Write the work folder. `shift_ms` is for the sync rebuild: the same
     files moved by that many ms. The on-screen entries of the build before
     are then moved too, not found again, and the timing cues it dropped
     under them are dropped again, so every cue keeps its number. A work
-    folder with no on_screen.json finds them again."""
+    folder with no on_screen.json finds them again. A picture entry keeps
+    its times, which are the video's, and its number, and is shown at its
+    own time when it has room there. `screen_path` is the readings file
+    of `screen.py collect`: the entries are found again with what the
+    picture showed (read_picture)."""
     if hi not in HI_MODES:
         raise SystemExit(f"--hi is one of {', '.join(HI_MODES)}")
+    if shift_ms is not None and screen_path is not None:
+        raise SystemExit("--screen is for the build of step 2; a --shift-ms rebuild keeps what it found")
+    picture = read_picture(work, screen_path) if screen_path is not None else None
     remove = hi == "remove"
     work.mkdir(parents=True, exist_ok=True)
     # Read before anything is deleted: the rebuild repeats this build's
@@ -345,12 +577,13 @@ def build(
     # fixes, draft, checks and speaker labels must never be read into this
     # one: the new timing file may number its cues differently.
     shutil.rmtree(work / "out", ignore_errors=True)
-    if shift_ms is None:
+    if shift_ms is None and screen_path is None:
         # W/screen/ holds what is read from the video's picture
         # (`screen.py`), for this build's cues. Clearing it here means no
         # step can read files an earlier run left for other cues. A sync
         # rebuild keeps the numbers, and the folder; `deliver` reads its
-        # ends.json only when it still fits the draft's story end.
+        # ends.json only when it still fits the draft's story end. The
+        # build with --screen reads the folder.
         shutil.rmtree(work / "screen", ignore_errors=True)
     # The bible check's files belong to the earlier run's bible too, unless
     # this rebuild only shifts the times of the same cues.
@@ -372,6 +605,9 @@ def build(
     screen: dict[int, dict] = {}
     entries: list[dict] = []
     dropped_under: list[int] = []
+    # Timing cues that `build` drops as sound only ("[somber music]")
+    # leave the screen empty: they neither cover a line nor bound it.
+    kept = [c for c in timing if srt.strip_hi(c.lines, hearing_impaired["timing"])[0]] if remove else timing
     if before is not None:
         entries, screen_summary = before
         screen_summary = dict(screen_summary) if screen_summary else None
@@ -380,6 +616,19 @@ def build(
         # rebuild twice moves the entries once.
         was = (screen_summary or {}).get("shift_ms", 0)
         for e in entries:
+            if e.get("evidence") == PICTURE:
+                # Video times: the shift moves the subtitles onto them.
+                e["start"], e["end"] = e.get("found") or (e["start"], e["end"])
+                e["found"] = [e["start"], e["end"]]
+                # The timing cues moved, so each is judged again from its
+                # own times: speech covers it, or its room is looked at
+                # again (_fit_picture_entries).
+                if _under_timing(e["start"], e["end"], kept):
+                    e["state"], e["reason"] = "left_out", UNDER_TIMING
+                else:
+                    e["state"] = "cue"
+                    e.pop("reason", None)
+                continue
             start, end = e.get("found") or (e["start"] - was, e["end"] - was)
             e["found"] = [start, end]
             # Never before 0:00, as `srt.py shift` moves the files.
@@ -387,11 +636,15 @@ def build(
         if screen_summary is not None:
             screen_summary["shift_ms"] = shift_ms
             dropped_under = list(screen_summary.get("dropped_timing_cues", []))
-    elif tracks or forced:
-        # Timing cues that `build` drops as sound only ("[somber music]")
-        # leave the screen empty: they neither cover a line nor bound it.
-        kept = [c for c in timing if srt.strip_hi(c.lines, hearing_impaired["timing"])[0]] if remove else timing
-        entries, screen_summary = on_screen(kept, tracks or [], forced or [])
+    elif tracks or forced or picture is not None:
+        entries, screen_summary = on_screen(kept, tracks or [], forced or [], picture)
+        if timing_language:
+            # Which other languages the tracks hold, as `sources.py others`
+            # counts them: `screen.py frames` reads this.
+            screen_summary["timing_language"] = timing_language
+            # A track that does not fit was never used, so it does not count.
+            used = [t["language"] for t in screen_summary["tracks"] if not t["forced"] and t.get("fits")]
+            screen_summary["other_languages"] = srt.other_languages(used, timing_language)
         extra = [e for e in entries if e["state"] == "cue"]
         # A sound-only cue under an added one goes: paired with the source
         # file's copy of the card, it would deliver it twice. The numbers
@@ -402,12 +655,16 @@ def build(
         ]
         screen_summary["dropped_timing_cues"] = dropped_under
         # Times as the build without --shift-ms found them, so a later
-        # sync rebuild moves each entry from there, never twice.
+        # sync rebuild moves each entry from there, never twice. A picture
+        # entry holds its reading's own time already.
         for e in entries:
-            e["found"] = [e["start"] - (shift_ms or 0), e["end"] - (shift_ms or 0)]
+            if e.get("evidence") != PICTURE:
+                e["found"] = [e["start"] - (shift_ms or 0), e["end"] - (shift_ms or 0)]
         if shift_ms is not None:
             screen_summary["shift_ms"] = shift_ms
-    extra = [e for e in entries if e["state"] == "cue"]
+    # Every picture entry has a number, left out or not, so a sync rebuild
+    # can place it again without moving any other cue's number.
+    extra = [e for e in entries if e["state"] == "cue" or e.get("evidence") == PICTURE]
     if extra:
         gone = set(dropped_under)
         rest = [c for c in timing if c.n not in gone]
@@ -422,6 +679,12 @@ def build(
         else:
             merged = [(c, None) for c in rest] + [(None, e) for e in extra]
             merged.sort(key=lambda x: (x[0].start, 0) if x[0] is not None else (x[1]["start"], 1))
+        _fit_picture_entries(merged, refit=before is not None, spoken={c.n for c in kept})
+        if screen_summary is not None:
+            screen_summary.update(on_screen_counts(entries))
+            if screen_summary.get("picture") is not None:
+                # A sync rebuild judged each picture entry again.
+                screen_summary["picture"] = {**screen_summary["picture"], **picture_counts(entries)}
         timing = []
         for i, (c, e) in enumerate(merged, 1):
             if c is not None:
@@ -436,13 +699,14 @@ def build(
         screen_summary["cues"] = [
             {"n": n, "ts": srt.fmt_ms(e["start"]), "texts": {k: _one_line(v) for k, v in e["texts"].items()}}
             for n, e in screen.items()
+            if e["state"] == "cue"
         ]
 
     src_pairs = None
     if source_path and source_path.resolve() != timing_path.resolve():
         repairs["source"] = []
         source, _ = srt.parse(source_path, repairs["source"])
-        src_pairs = srt.pair(timing, source)
+        src_pairs = srt.pair(by_start(timing), source)
         hearing_impaired["source"] = srt.hearing_impaired(source)["hearing_impaired"]
     # Songs marked only with italics, found in the file the source text
     # comes from (srt.italic_songs). The on-screen cues are not the timing
@@ -454,7 +718,7 @@ def build(
     if en_path and en_path.resolve() != timing_path.resolve():
         repairs["en"] = []
         en, _ = srt.parse(en_path, repairs["en"])
-        en_pairs = srt.pair(timing, en)
+        en_pairs = srt.pair(by_start(timing), en)
         hearing_impaired["en"] = srt.hearing_impaired(en)["hearing_impaired"]
 
     # Each file is cleaned by its own flag: parentheses and labels in
@@ -510,6 +774,10 @@ def build(
             # The other tracks' text stands in where the source file has
             # none here; `chunks` shows the rest of the languages.
             row["on_screen"] = {k: list(v) for k, v in screen[c.n]["texts"].items()}
+            if screen[c.n]["state"] == "left_out":
+                # A picture entry left out (no room, or under a timing
+                # line): it keeps its number and is not delivered.
+                row["left_out"] = screen[c.n]["reason"]
             if not src_lines:
                 row["source"] = timing_lines
             if not en_lines:
@@ -596,6 +864,72 @@ def build(
     }
     (work / "build.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
     return summary
+
+
+def _fit_picture_entries(merged: list[tuple[srt.Cue | None, dict | None]], refit: bool, spoken: set[int]) -> None:
+    """In a sync rebuild (`refit`) the cues around a picture entry moved and
+    it did not. Each keeps its place in `merged`, its number, but its room
+    is looked for at its own time, between the cues shown just before and
+    just after it there, whatever their numbers: one left under
+    ON_SCREEN_MIN_MS is left out (NO_ROOM_SHIFT). A timing cue not in
+    `spoken` holds only sounds and is never shown, so it takes no room, as
+    in the first build. A picture entry left out, in any build, has its
+    times clipped into its numbered slot; it is never delivered."""
+
+    def span(item: tuple[srt.Cue | None, dict | None]) -> tuple[int, int]:
+        c, e = item
+        return (c.start, c.end) if c is not None else (e["start"], e["end"])
+
+    def picture(e: dict | None) -> bool:
+        return e is not None and e.get("evidence") == PICTURE
+
+    # What is shown whatever the picture entries do: the spoken timing cues
+    # and the tracks' entries. Picture entries shown join it one by one, in
+    # time.
+    shown = [span(x) for x in merged if (x[0] is not None and x[0].n in spoken) or (x[1] is not None and not picture(x[1]))]
+    for i in sorted((i for i, x in enumerate(merged) if picture(x[1])), key=lambda i: (merged[i][1]["start"], i)):
+        e = merged[i][1]
+        if e["state"] == "cue":
+            if not refit:
+                continue
+            lo = max((b for a, b in shown if a <= e["start"]), default=0)
+            hi = min((a for a, _ in shown if a > e["start"]), default=max(e["end"], lo))
+            start, end = max(e["start"], lo), min(e["end"], hi)
+            if end - start >= ON_SCREEN_MIN_MS:
+                e["start"], e["end"] = start, end
+                shown.append((start, end))
+                continue
+            e["state"], e["reason"] = "left_out", NO_ROOM_SHIFT
+        lo = span(merged[i - 1])[1] if i else 0
+        hi = span(merged[i + 1])[0] if i + 1 < len(merged) else max(e["end"], lo)
+        if lo > hi:
+            e["start"] = e["end"] = hi
+        else:
+            e["start"] = min(max(e["start"], lo), hi)
+            e["end"] = max(min(e["end"], hi), e["start"])
+
+
+def time_order(cues: list[srt.Cue], loose: set[int]) -> list[srt.Cue]:
+    """The cues in the order they are shown. A sync rebuild keeps every
+    number and shows a picture entry at its own time (`_fit_picture_entries`),
+    so its number can sit out of time order: each cue in `loose` is placed
+    by its start among the others, which keep their order."""
+    fixed = [c for c in cues if c.n not in loose]
+    extra = sorted((c for c in cues if c.n in loose), key=lambda c: (c.start, c.n))
+    out: list[srt.Cue] = []
+    k = 0
+    for c in fixed:
+        while k < len(extra) and extra[k].start < c.start:
+            out.append(extra[k])
+            k += 1
+        out.append(c)
+    return out + extra[k:]
+
+
+def by_start(cues: list[srt.Cue]) -> list[srt.Cue]:
+    """The cues sorted by start, as `srt.pair` reads them: a picture entry a
+    sync rebuild showed at its own time can sit out of time order."""
+    return sorted(cues, key=lambda c: (c.start, c.n))
 
 
 def _one_line(lines: list[str] | None) -> str:
@@ -705,7 +1039,8 @@ def chunks(work: Path, target: int) -> list[dict]:
             f.write(f"# chunk {k:02d} of {total:02d}, cues {first}-{last}\n")
             f.write("# src = text to translate; en = English cross-check; [..] = speaker hint\n")
             f.write("# ' / ' separates the source's own lines\n")
-            f.write("# [on-screen text] = only other-language tracks have it; 'also' = the same line in them\n\n")
+            f.write("# [on-screen text] = text on screen the timing file lacks, from other tracks or the picture;")
+            f.write(" 'also' = the same line in other tracks\n\n")
             for r in rows[first - 1 : last]:
                 if left_out(r):
                     continue
@@ -777,6 +1112,12 @@ def main(argv: list[str] | None = None) -> None:
         type=int,
         help="the sync rebuild: the files are the earlier build's moved by N ms; on-screen entries move with them",
     )
+    b.add_argument("--timing-language", help="the timing file's language, to count the other languages the tracks hold")
+    b.add_argument(
+        "--screen",
+        type=result.path,
+        help="W/screen/readings.json from `screen.py collect`: build again with what the picture showed",
+    )
     g = sub.add_parser("songs")
     g.add_argument("--work", type=result.path, required=True)
     g.add_argument("--mode", choices=SONG_MODES, default="story")
@@ -786,7 +1127,19 @@ def main(argv: list[str] | None = None) -> None:
     result.add_argument(p)
     a = result.parse(p, argv)
     if a.cmd == "build":
-        summary = build(a.work, a.timing, a.source, a.en, a.keep_bible_check, a.hi, a.track, a.forced_track, a.shift_ms)
+        summary = build(
+            a.work,
+            a.timing,
+            a.source,
+            a.en,
+            a.keep_bible_check,
+            a.hi,
+            a.track,
+            a.forced_track,
+            a.shift_ms,
+            a.timing_language,
+            a.screen,
+        )
         result.emit(summary, a.result)
     elif a.cmd == "songs":
         result.emit(songs(a.work, a.mode), a.result)

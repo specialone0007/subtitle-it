@@ -6,6 +6,7 @@ the tools behave the same on Linux, macOS and Windows. Skipped when ffmpeg is
 not installed, except in CI, which installs it on every system.
 """
 
+import json
 import os
 import shutil
 import subprocess
@@ -13,6 +14,7 @@ from pathlib import Path
 
 import pytest
 
+import prepare
 import screen
 import sources
 import srt
@@ -107,3 +109,32 @@ def test_screen_ends_finds_a_real_cut_to_black(tmp_path: Path, name: str, out: l
     found = screen.ends(w, video)
     [(start, end)] = found["black"]
     assert found["story_end_ms"] == 3_000 and abs(start - 6_000) <= 80 and abs(end - 9_000) <= 80
+
+
+def test_screen_frames_saves_real_frames_fitted_into_960x540(tmp_path: Path):
+    # 12 s of 1280x720. One spoken line from 6 s to 7 s: the head is 0-6 s
+    # (4 frames, one every 1.5 s) and the tail 7-12 s (4 frames).
+    video = tmp_path / "Film.mkv"
+    subprocess.run(
+        [
+            "ffmpeg", "-v", "error", "-y",
+            "-f", "lavfi", "-i", "testsrc=s=1280x720:r=5:d=12",
+            "-c:v", "mpeg4", str(video),
+        ],
+        check=True,
+    )  # fmt: skip
+    timing = tmp_path / "en.srt"
+    timing.write_text("1\n00:00:06,000 --> 00:00:07,000\nGood morning.\n", encoding="utf-8")
+    w = tmp_path / "work"
+    prepare.build(w, timing, None, None)
+    out = screen.frames(w, video)
+    assert "error" not in out, out
+    assert (out["frames"], out["head"], out["tail"], out["notes"]) == (8, 4, 4, [])
+    listed = json.loads((w / prepare.FRAMES_FILE).read_text(encoding="utf-8"))["frames"]
+    assert [f["ms"] for f in listed] == [0, 1_500, 3_000, 4_500, 7_000, 8_500, 10_000, 11_500]
+    for f in listed:
+        probe = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "stream=width,height", "-of", "csv=p=0", f["path"]],
+            capture_output=True, text=True, check=True,
+        )  # fmt: skip
+        assert probe.stdout.strip() == "960,540"

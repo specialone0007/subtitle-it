@@ -59,9 +59,15 @@ when no other command uses that name.)
   report also gives the run's time per step and its subagents' tokens.
 - **Title cards and signs.** A card, a sign or a dedication that the
   English subtitles leave to the picture is often in the French or Spanish
-  ones. When two languages show it, it joins the Turkish file. Every one
-  found is recorded with its time, and the report says which were added,
-  and how many were left out, and why.
+  ones. When two languages show it, it joins the Turkish file. For a
+  video, the picture is read too: frames from the opening and the last
+  minutes, and around a text only one language shows, so a card no track
+  holds, or one only French shows, is still added when the film shows it.
+  When fewer than two other languages are at hand, one French or Spanish
+  file is downloaded from OpenSubtitles for this. Every text found is
+  recorded with its time, and the report says which were added, and how
+  many were left out, and why. Cast and crew credits and logos are never
+  added.
 - **It learns from you.** Fix lines after watching, and it turns your edits
   into rules for the next film.
 - **A short credit.** "İyi seyirler." over your name opens the file in the
@@ -219,6 +225,10 @@ output, so a shell or tool that shortens command output does not get in the way.
 ## What leaves your machine
 
 - **Subtitle text** goes to Claude as part of your Claude Code session.
+- **Frames** from the video go to Claude the same way, for a video input:
+  at most 300 still pictures, 960x540 at most, from the film's opening, its
+  last minutes and around a few on-screen texts. They are saved in the
+  film's work folder; the video itself never leaves.
 - **OpenSubtitles** receives your OpenSubtitles username and password when
   the plugin logs in. A search sends the video's hash, the title or IMDb
   id, the year when it is known, and the subtitle languages wanted.
@@ -279,7 +289,8 @@ skills/translate/preferences-template.md
                                 the first preferences file, shared with learn
 skills/learn/SKILL.md           /subtitle-it:learn, rules from your fixes
 agents/                         subagent types: bible writer, second reader, judge, voice mapper,
-                                translator, polish fixer, reviewer, listener (instructions and allowed tools)
+                                translator, polish fixer, reviewer, listener, screen reader
+                                (instructions and allowed tools)
 scripts/srt.py                  parse, encodings, pairing by time, chunking
 scripts/sources.py              find films, extract tracks, validate sources
 scripts/opensubtitles.py        OpenSubtitles login, search, download
@@ -291,7 +302,8 @@ scripts/learn.py                find user edits for learn mode
 scripts/compare.py              blind side-by-side comparison of two or three delivered files
 scripts/speakers.py             voices per cue from the audio, sync check
 scripts/transcribe.py           subtitles from the audio when no file exists, the last resort
-scripts/screen.py               read the picture with ffmpeg: the cut to black after the story
+scripts/screen.py               read the picture with ffmpeg: the cut to black after the story,
+                                the frames for on-screen text and the readers' lines
 scripts/settings.py             find the settings folder; move the one from before the rename
 scripts/result.py               print each script's JSON result and save it to --result
 tests/                          pytest suite

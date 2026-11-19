@@ -3,6 +3,7 @@ from pathlib import Path
 
 import assemble
 import prepare
+import srt
 
 
 def test_cue_label_one_speaker_takes_the_first_label():
@@ -64,3 +65,15 @@ def test_chunks_and_review_file_show_label_and_voice(tmp_path: Path):
     (w / "out" / "tr_01.txt").write_text("1\n- Kim o?\n- Benim.\n\n2\nGir.\n", encoding="utf-8")
     lines = Path(assemble.review_parts(w)["parts"][0]["file"]).read_text(encoding="utf-8").splitlines()[2:]
     assert lines[0].split("\t")[1] == "? / Ivy · V2" and lines[1].split("\t")[1] == "V1"
+
+
+def test_time_order_places_only_the_loose_cues_by_their_start():
+    def cue(n: int, start: int) -> srt.Cue:
+        return srt.Cue(n=n, start=start, end=start + 500, ts="", lines=["x"])
+
+    # Cue 3 starts before cue 2 in the file and stays there; cue 4, a
+    # picture card shown at its own time, goes before cue 2.
+    cues = [cue(1, 1_000), cue(2, 9_000), cue(3, 8_000), cue(4, 5_000), cue(5, 12_000)]
+    assert [c.n for c in prepare.time_order(cues, {4})] == [1, 4, 2, 3, 5]
+    assert [c.n for c in prepare.time_order(cues, set())] == [1, 2, 3, 4, 5]
+    assert [c.n for c in prepare.by_start(cues)] == [1, 4, 3, 2, 5]

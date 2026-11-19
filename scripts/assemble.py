@@ -235,8 +235,9 @@ def lay_out(
     sound_only: list[int],
     why: dict[int, str] | None = None,
 ) -> tuple[list[srt.Cue], dict]:
-    """The cues as delivered, numbered from 1, and the map from each
-    delivered number to the timing file's cue. A cue the layout split
+    """The cues as delivered, numbered from 1 in the order of `kept`, the
+    order they are shown in, and the map from each delivered number to the
+    timing file's cue. A cue the layout split
     becomes several delivered cues, each with its part number; a cue left
     whole keeps its timestamp line exactly as written, unless it stays on
     screen longer (`layout.available_end`): then its start stays as written
@@ -301,7 +302,14 @@ def hi_mode(work: Path) -> str:
     return _build_info(work).get("hearing_impaired_tags", "keep")
 
 
-LEFT_OUT_NOTES = {"sound": "a bare sound, left out", "song": "a song left out"}
+# Every `left_out` value a row of cues.json can hold, as said in checks.
+LEFT_OUT_NOTES = {
+    "sound": "a bare sound, left out",
+    "song": "a song left out",
+    prepare.NO_ROOM_SHIFT: "on-screen text read from the picture, left out: no room after the timing shift",
+    prepare.NO_ROOM: "on-screen text read from the picture, left out: no room between the lines",
+    prepare.UNDER_TIMING: "on-screen text read from the picture, left out: under a line of the timing file",
+}
 ON_SCREEN_MARK = prepare.ON_SCREEN_MARK
 
 
@@ -310,6 +318,12 @@ def on_screen_entries(work: Path) -> list[dict]:
     it existed."""
     path = work / prepare.ON_SCREEN_FILE
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+
+
+def picture_cues(work: Path) -> set[int]:
+    """The cue numbers of the picture entries, which a sync rebuild can
+    show out of number order (`prepare.time_order`)."""
+    return {e["n"] for e in on_screen_entries(work) if e.get("evidence") == prepare.PICTURE and isinstance(e.get("n"), int)}
 
 
 def left_out_why(rows: dict[int, dict]) -> dict[int, str]:
@@ -538,7 +552,9 @@ def run_checks(work: Path, texts: dict[int, list[str]] | None = None, write: boo
     for p in problems:
         h(None, "file format", p)
     sound_only = sound_only_cues(work, rows)
-    kept = [c for c in timing if c.n not in sound_only]
+    # In the order they are shown: the draft, its gaps and the sentences
+    # that run over several cues follow time, not numbers.
+    kept = prepare.time_order([c for c in timing if c.n not in sound_only], picture_cues(work))
     valid = {c.n for c in kept}
     for n in sorted(set(texts) - valid - sound_only):
         h(n, "cue count", "cue number not in the timing file")
@@ -974,7 +990,8 @@ def _listen_frame(work: Path) -> dict:
     timing, _ = srt.parse(work / "timing.srt")
     rows = {r["n"]: r for r in json.loads((work / "cues.json").read_text(encoding="utf-8"))}
     sound_only = sound_only_cues(work, rows)
-    kept = [c for c in timing if c.n not in sound_only]
+    # In time order, as `run_checks` reads them: the same sentence groups.
+    kept = prepare.time_order([c for c in timing if c.n not in sound_only], picture_cues(work))
     by_start = sorted(kept, key=lambda c: (c.start, c.n))
     gap = layout.usual_gap(kept)
     next_start = {a.n: b.start for a, b in zip(by_start, by_start[1:])}
@@ -1656,6 +1673,14 @@ ON_SCREEN_LIMITS = (
 )
 
 
+def _video_at(e: dict) -> int:
+    """When an entry shows: a picture entry left out has its row clipped
+    into its numbered slot, so its own time is the reading's (`found`)."""
+    if e.get("evidence") == prepare.PICTURE and e["state"] == "left_out" and e.get("found"):
+        return e["found"][0]
+    return e["start"]
+
+
 def on_screen_report(work: Path) -> dict | None:
     """The run report's on-screen section, read once the file is delivered.
 
@@ -1664,10 +1689,14 @@ def on_screen_report(work: Path) -> dict | None:
     starts before the first spoken cue or at or after story end (the end of
     the last cue that is not on-screen text), with its reason. `left_out`:
     the count per reason of the other entries left out; `file` holds them
-    all. `unplaced_human_lines`, in a polish run: the human Turkish lines
+    all. `no_room_after_shift`: every entry read from the picture that the
+    timing shift left with no room at its own time, wherever it falls, with its video time
+    and text (never counted in the two above). `unplaced_human_lines`, in a polish run: the human Turkish lines
     that landed on no cue and lie under no entry delivered. `limits`: what
-    no run finds. None for a work folder with no on_screen.json, outside a
-    polish run."""
+    no run finds. `picture`, when the picture was read (`screen.py frames`):
+    every entry it looked at (time, text, state, reason and what the picture
+    showed), the frames saved and not read, and its notes. None for a work
+    folder with no on_screen.json, outside a polish run."""
     entries_file = work / prepare.ON_SCREEN_FILE
     polish = polish_seed(work) is not None
     if not entries_file.exists() and not polish:
@@ -1681,16 +1710,21 @@ def on_screen_report(work: Path) -> dict | None:
     back: dict[int, list[int]] = {}
     for d, info in (read_map(work) or {"cues": {}})["cues"].items():
         back.setdefault(info["cue"], []).append(int(d))
-    delivered, at_ends, rest = [], [], Counter()
+    delivered, at_ends, rest, after_shift = [], [], Counter(), []
     for e in entries:
         text = srt.strip_tags(prepare._one_line(e["lines"]))
-        if e["state"] == "cue":
+        if e.get("reason") == prepare.NO_ROOM_SHIFT:
+            # Found in the picture, but after the timing shift the lines
+            # leave no room at its own time: listed one by one, at its video
+            # time, wherever it falls.
+            after_shift.append({"at": srt.fmt_ms(_video_at(e)), "text": text})
+        elif e["state"] == "cue":
             ds = sorted(back.get(e["n"], []))
             at = shown[ds[0]].ts[:12] if ds else None
             turkish = " / ".join(ln for d in ds for ln in shown[d].lines)
             delivered.append({"cue": ds, "at": at, "text": text, "turkish": turkish})
-        elif first is None or e["start"] < first or e["start"] >= story_end:
-            at_ends.append({"at": srt.fmt_ms(e["start"]), "text": text, "reason": e.get("reason", e["state"])})
+        elif first is None or _video_at(e) < first or _video_at(e) >= story_end:
+            at_ends.append({"at": srt.fmt_ms(_video_at(e)), "text": text, "reason": e.get("reason", e["state"])})
         else:
             rest[e.get("reason", e["state"])] += 1
     unplaced = []
@@ -1701,12 +1735,34 @@ def on_screen_report(work: Path) -> dict | None:
             if a is not None and any(min(b, y) > max(a, x) for x, y in cards):
                 continue
             unplaced.append({"at": srt.fmt_ms(a) if a is not None else None, "text": item["text"]})
+    picture = None
+    info = (_build_info(work).get("on_screen") or {}).get("picture")
+    if info is not None:
+        picture = {
+            "frames": info.get("frames"),
+            "frames_not_read": info.get("frames_not_read", []),
+            "readings_already_in_timing": info.get("readings_already_in_timing", 0),
+            "notes": info.get("notes", []),
+            "looked_at": [
+                {
+                    "at": srt.fmt_ms(_video_at(e)),
+                    "text": srt.strip_tags(prepare._one_line(e["lines"])),
+                    "state": e["state"],
+                    "reason": e.get("reason"),
+                    "picture": e["picture"],
+                }
+                for e in entries
+                if e.get("picture")
+            ],
+        }
     return {
         "delivered": delivered,
         "left_out_at_ends": at_ends,
+        "no_room_after_shift": after_shift,
         "left_out": dict(rest),
         "file": str(entries_file) if entries_file.exists() else None,
         "unplaced_human_lines": unplaced,
+        "picture": picture,
         "limits": list(ON_SCREEN_LIMITS),
     }
 
