@@ -138,3 +138,30 @@ def test_screen_frames_saves_real_frames_fitted_into_960x540(tmp_path: Path):
             capture_output=True, text=True, check=True,
         )  # fmt: skip
         assert probe.stdout.strip() == "960,540"
+
+
+def test_screen_ends_finds_black_with_a_small_title_on_it(tmp_path: Path, monkeypatch):
+    # White to 6 s, then black from 6 s to 9 s with a white box of 1.5% of
+    # the picture, as a title fading in over the cut to black, then white.
+    # pic_th=0.98 lets 2% be lit; the 1.0 it replaced found nothing here.
+    video = tmp_path / "Film.mkv"
+    subprocess.run(
+        [
+            "ffmpeg", "-v", "error", "-y",
+            "-f", "lavfi", "-i", "color=c=white:s=160x90:r=25:d=6",
+            "-f", "lavfi", "-i", "color=c=black:s=160x90:r=25:d=3",
+            "-f", "lavfi", "-i", "color=c=white:s=160x90:r=25:d=3",
+            "-filter_complex",
+            "[1:v]drawbox=x=70:y=40:w=18:h=12:color=white:t=fill[t];[0:v][t][2:v]concat=n=3:v=1:a=0",
+            "-c:v", "mpeg4", "-q:v", "2", str(video),
+        ],
+        check=True,
+    )  # fmt: skip
+    w = tmp_path / "work"
+    w.mkdir()
+    (w / "draft.tr.srt").write_text("1\n00:00:00,500 --> 00:00:03,000\nMerhaba.\n", encoding="utf-8")
+    (w / "cues.json").write_text("[]", encoding="utf-8")
+    [(start, end)] = screen.ends(w, video)["black"]
+    assert abs(start - 6_000) <= 80 and abs(end - 9_000) <= 80
+    monkeypatch.setattr(screen, "BLACK_FILTER", "blackdetect=d=2:pic_th=1.0:pix_th=0.10")
+    assert screen.ends(w, video)["black"] == []

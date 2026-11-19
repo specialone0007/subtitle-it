@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+Fewer background signs become subtitles, and the goodbye lands on the
+film's cut to black even after a long epilogue.
+
+- With six or more other languages among the tracks that fit, a line
+  the timing file lacks is added only when three quarters of them show
+  it (`prepare.SHARE`), not any two; the timing file's own language does
+  not count. A line shown by fewer is left out as `too few languages`,
+  and `screen.py frames` sends it to the picture check, so a sign the
+  film wants read still comes back. Below six languages, two still
+  prove a line. On a test film with 31 other languages this kept the 18
+  story texts and dropped 19 shop signs and credits shown by 5 to 21.
+- Basque subtitle credits ("Azpitituluak:", "Ikuskatzailea:") are read
+  as subtitle credits.
+- `screen.py ends` finds black with up to 2% of the picture lit
+  (`pic_th=0.98`, was 1.0), so a title fading in over the cut to black
+  no longer hides it.
+- `assemble.py deliver` also puts the goodbye on a black stretch more
+  than 30 s after the story when the frames show a title card, closing
+  text or the credits within 12 s of its start. Without that, the 30 s
+  rule stands.
+
 ## 0.13.0 (2026-11-19)
 
 Title cards and signs are now read from the picture itself: when the
