@@ -434,8 +434,10 @@ When the input is a video and the last `check` wrote a draft, run
 `screen.py ends --work WORK --video '<video>'` once, in the background
 (the Bash tool's `run_in_background`), and go on with step 10 without
 waiting for it; before step 12, wait for it to end. ffmpeg reads the 2.5 minutes after the story's last line
-for the cut to black, which takes about half a minute; `deliver` then
-starts "Görüşmek üzere." on it. Its result never stops a run: when it has
+for the cut to black, which takes about half a minute; when that black
+leads into the end cards the frames showed (credits, a title card, closing
+text or a logo), `deliver` starts "Görüşmek üzere." on it, and otherwise on
+the first end card. Its result never stops a run: when it has
 an `error` (no ffmpeg, the video could not be read), put that in one line
 of the report, and `deliver` places the goodbye as it does without it.
 Skip it for an `.srt` input.
@@ -576,8 +578,9 @@ changed, and how many lines are still softer than the source), any timing shift
 and sync verdict, whether each source file is hearing-impaired and how
 many cues lost tags or labels and how many sound-only cues were left
 out, how many bare sounds were left out, where the goodbye went
-(`deliver`'s `goodbye`: on the `cut to black` or `after the story`, and
-`screen.py ends`'s `error` when it had one), the songs (song cues found,
+(`deliver`'s `goodbye`: `cut to black before the end cards`, `first end
+card`, `after the last line` or `no room`, and `screen.py ends`'s `error`
+when it had one), the songs (song cues found,
 translated, left out, and the `Songs` mode), the on-screen text from `deliver`'s `on_screen` (each entry in `delivered` with its time and text; each in `left_out_at_ends` with its time, text and reason; when `no_room_after_shift` is not empty, the line "The picture found these texts, but after the timing shift the lines leave no room at their time; they can be added by hand." and under it each of its entries with its time and text, never only a count; the counts in `left_out` with the path in `file`; in a polish run each line in `unplaced_human_lines` with its time and text; when `picture` is set, each entry in its `looked_at` with its time, text, state, reason and what the picture showed, how many `frames` were saved, the count of `frames_not_read`, and its `notes`; then its two `limits` lines as they are; and, for a video, the extra download of step 2 when it was skipped, or that the picture was not read and why), any file `build` warned was malformed, the voices dropped as mixed, the bible check (decisions, agreed,
 judged, ties, questions the second reader never answered), in a polish
 run the lines whose sen or siz differs from the human file
@@ -598,7 +601,9 @@ the figures a run cannot see. It also saves `WORK/usage.json`, so several
 films can be compared later. End the report with
 `## Check after watching`: each tie from `bible.py apply` (question,
 answer, timestamps), in a polish run each cue the last `soft` still listed, hard fails delivered with `--force`, translator flags
-the reviewers left, and, when the timing confidence is not certain, 3
+the reviewers left, for a video input whose `goodbye` is `after the last
+line` or `no room` the goodbye's time (the picture showed no end cards, so
+check it lands well), and, when the timing confidence is not certain, 3
 timestamps spread over the film to spot-check in a player. When the text
 came from the audio, add one line saying names and quiet or overlapping
 lines may be misheard, and list the cues flagged "may be misheard".

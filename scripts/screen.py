@@ -13,13 +13,14 @@
 to 2.5 minutes after it. ffmpeg counts the times from the seek point;
 without `-copyts` the seek itself counts from the video's start_time, as
 the tracks `sources.py` extracts do, so only the seek is added back.
-Story end is the end of the draft's last cue that is not on-screen text, as `assemble.py deliver` reads it, so run it
-after `check` has written the draft. It writes W/screen/ends.json with
-every black stretch of 2 s or more, in ms on the subtitles' clock;
-`deliver` starts the closing credit on the first one that begins within
-30 s after story end, or later when the frames show a title card, closing
-text or the credits right after it. pic_th=0.98 lets 2% of the picture be lit: a cut to
-black that a white title fades in over still counts.
+Story end is the end of the draft's last cue that is not on-screen text,
+as `assemble.py deliver` reads it, so run it after `check` has written the
+draft. It writes W/screen/ends.json with every black stretch of 2 s or
+more, in ms on the subtitles' clock; `deliver` starts the closing credit
+on the one that leads into the end cards the frames show (credits, a
+title card, closing text or a logo), never on a fade inside the last
+scene. pic_th=0.98 lets 2% of the picture be lit: a cut to black that a
+white title fades in over still counts.
 
 ffmpeg missing, failing or too slow never stops a run: the result then
 says why in `error`, no ends.json is left, and `deliver` places the
@@ -47,8 +48,9 @@ the file the reader writes its lines to; `readers` gives each reader's
 batches, one reader per 150 frames.
 
 `collect` reads the readers' lines (agents/screen-reader.md) and writes
-W/screen/readings.json: neighbouring frames with the same text joined
-into one reading, first and last seen. Every frame must have exactly one
+W/screen/readings.json: neighbouring frames with the same text (case,
+punctuation, line breaks and spacing aside) joined into one reading, first
+and last seen, and when the next frame was saved. Every frame must have exactly one
 valid line. The first time some do not, it writes W/screen/batch_redo.json
 with those frames for one more reader and returns it in `redo`; after
 that, frames still without a line are listed in `missing`.
@@ -525,41 +527,63 @@ def _one(lines: list[dict | None] | None) -> dict | None:
     return lines[0] if lines and len(lines) == 1 and lines[0] is not None else None
 
 
+def _join_key(r: dict) -> tuple[str, str]:
+    """What two neighbouring frames must share to be one reading: the text
+    with case, punctuation, line breaks and spacing folded away, and the
+    kind, any two story kinds counting as one ("sign" and "caption")."""
+    return prepare.fold_text(r["text"]), "story" if prepare.is_story_kind(r["kind"]) else r["kind"]
+
+
+def _most(values: list) -> object:
+    """The value most frames give; on a tie, the first frame's."""
+    return max(values, key=lambda v: (values.count(v), -values.index(v)))
+
+
 def join_readings(listed: list[dict], read: dict[str, dict]) -> list[dict]:
     """Neighbouring frames (next to each other in time order, NEIGHBOUR_MS
-    apart at most) with the same text, kind and wants_read become one
-    reading. A frame with no text, or not read, ends a reading."""
-    out: list[dict] = []
+    apart at most) that show the same text become one reading (_join_key):
+    a reader writing "Dad's shop" on one frame and "dad's shop" on the
+    next is one text. The reading takes the text and kind most of its frames
+    give (the first frame's on a tie), and wants_read when any frame says so,
+    since a card fading in can look like background on its first frame.
+    `next_ms` is the time of the next saved frame after its last one, null
+    after the last saved frame: the text stays on screen until then at most
+    (prepare.picture_shown_end). A frame with no text, or not read, ends a
+    reading."""
+    groups: list[list[tuple[dict, dict]]] = []
     prev = None
     for f in listed:
         r = read.get(f["file"])
         if r is None or not r["text"]:
             prev = None
             continue
-        key = (r["text"], r["kind"], r["wants_read"])
+        key = _join_key(r)
         if prev is not None and prev[0] == key and f["ms"] - prev[1] <= NEIGHBOUR_MS:
-            cur = out[-1]
-            cur["last_ms"] = f["ms"]
-            cur["frames"].append(f["file"])
-            if r["shows_entry"] and r["shows_entry"] not in cur["shows_entry"]:
-                cur["shows_entry"].append(r["shows_entry"])
+            groups[-1].append((f, r))
         else:
-            out.append(
-                {
-                    "text": r["text"],
-                    "kind": r["kind"],
-                    "wants_read": r["wants_read"],
-                    "story": prepare.is_story(r["kind"], r["wants_read"]),
-                    "first_ms": f["ms"],
-                    "last_ms": f["ms"],
-                    "at": f["at"],
-                    "frames": [f["file"]],
-                    "shows_entry": [r["shows_entry"]] if r["shows_entry"] else [],
-                }
-            )
+            groups.append([(f, r)])
         prev = (key, f["ms"])
-    for r in out:
-        r["shows_entry"].sort()
+    times = [f["ms"] for f in listed]
+    out: list[dict] = []
+    for g in groups:
+        first, last = g[0][0], g[-1][0]
+        kind = _most([r["kind"] for _, r in g])
+        wants = any(r["wants_read"] for _, r in g)
+        shows = sorted({r["shows_entry"] for _, r in g if r["shows_entry"]})
+        out.append(
+            {
+                "text": _most([r["text"] for _, r in g]),
+                "kind": kind,
+                "wants_read": wants,
+                "story": prepare.is_story(kind, wants),
+                "first_ms": first["ms"],
+                "last_ms": last["ms"],
+                "next_ms": next((t for t in times if t > last["ms"]), None),
+                "at": first["at"],
+                "frames": [f["file"] for f, _ in g],
+                "shows_entry": shows,
+            }
+        )
     return out
 
 

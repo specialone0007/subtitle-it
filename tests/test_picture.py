@@ -538,6 +538,141 @@ def test_a_single_frame_reading_lasts_the_shortest_cue():
     assert prepare.picture_span(_reading("X", 5_000, 5_000)) == (5_000, 5_000 + prepare.ON_SCREEN_MIN_MS)
 
 
+def _next(r: dict, next_ms: int | None) -> dict:
+    return {**r, "next_ms": next_ms}
+
+
+def test_a_picture_cue_stays_up_until_the_next_saved_frame():
+    # One test film: a sign on two frames 1.5 s apart, the next frame 1.5 s
+    # later. The cue lasts until that frame: 01:31:19.458 to 01:31:22.458.
+    sign = _next(_reading("Dad's / shop", 5_479_458, 5_480_958, kind="sign"), 5_482_458)
+    assert prepare.picture_shown_end(sign) == 5_482_458
+    # Frames 1 s apart in the middle of the film: until the next one; one
+    # frame alone still lasts 1.5 s.
+    assert prepare.picture_shown_end(_next(_reading("X", 0, 2_000), 3_000)) == 3_000
+    assert prepare.picture_shown_end(_next(_reading("X", 0, 0), 1_000)) == 1_500
+    # Frames far apart: 1.5 s after the last one at most; after the last
+    # saved frame too.
+    assert prepare.picture_shown_end(_next(_reading("X", 0, 3_000), 60_000)) == 4_500
+    assert prepare.picture_shown_end(_next(_reading("X", 0, 3_000), None)) == 4_500
+    # A reading from an older work folder has no next_ms: its seen span.
+    assert prepare.picture_shown_end(_reading("X", 0, 3_000)) == 3_000
+    assert prepare.picture_shown_end(_reading("X", 0, 0)) == prepare.ON_SCREEN_MIN_MS
+
+
+def test_collect_joins_frames_whose_text_differs_only_in_case_or_punctuation(tmp_path: Path):
+    w = tmp_path / "work"
+    times = [0, 1_500, 3_000, 4_500, 6_000, 7_500, 9_000, 10_500, 12_000, 13_500]
+    outs = _frames_file(w, [(ms, []) for ms in times])
+    lines = [
+        _line(1, "Dad's / shop", "sign", True),
+        _line(2, "dad's shop", "sign", True),
+        _line(3),
+        # Two story kinds are one text; wants_read when any frame says so.
+        _line(4, "EXIT", "sign", False),
+        _line(5, "Exit.", "caption", True),
+        _line(6, "exit", "caption", True),
+        # A story kind and credits are not.
+        _line(7, "EXIT", "credits", False),
+        # Really different texts stay apart.
+        _line(8, "OPEN", "sign", True),
+        _line(9, "CLOSED", "sign", True),
+        _line(10, "CLOSED", "sign", True),
+    ]
+    Path(outs[0]).write_text("\n".join(lines), encoding="utf-8")
+    out = screen.collect(w)
+    readings = _json(w / screen.READINGS_FILE)["readings"]
+    got = [(r["text"], r["kind"], r["wants_read"], r["story"], r["first_ms"], r["last_ms"], r["next_ms"]) for r in readings]
+    assert got == [
+        # On a tie, the first frame's text.
+        ("Dad's / shop", "sign", True, True, 0, 1_500, 3_000),
+        ("EXIT", "caption", True, True, 4_500, 7_500, 9_000),
+        ("EXIT", "credits", False, False, 9_000, 9_000, 10_500),
+        ("OPEN", "sign", True, True, 10_500, 10_500, 12_000),
+        # After the last saved frame: null.
+        ("CLOSED", "sign", True, True, 12_000, 13_500, None),
+    ]
+    assert out["readings"] == 5 and out["story_readings"] == 4
+    assert readings[1]["frames"] == ["frame_0004.jpg", "frame_0005.jpg", "frame_0006.jpg"]
+
+
+def _forced(tmp: Path, *lines: tuple[int, int, str]) -> Path:
+    path = tmp / "forced.srt"
+    srt.write(
+        path,
+        [
+            srt.Cue(n=k, start=a, end=b, ts=f"{srt.fmt_ms(a)} --> {srt.fmt_ms(b)}", lines=[t])
+            for k, (a, b, t) in enumerate(lines, 1)
+        ],
+    )
+    return path
+
+
+def _two_timing_cues(end_of_gap: int) -> list[srt.Cue]:
+    return [
+        srt.Cue(n=1, start=10_000, end=12_000, ts="", lines=["Line one."]),
+        srt.Cue(n=2, start=end_of_gap, end=end_of_gap + 2_000, ts="", lines=["Line two."]),
+    ]
+
+
+def test_a_picture_cue_never_pushes_the_next_item_out(tmp_path: Path):
+    # A one-frame card at 50 s aims to stay up to 51.5 s, but a forced
+    # track's 0.8 s sign starts at 51 s: the card ends there and the sign
+    # still shows.
+    timing = _two_timing_cues(80_000)
+    forced = _forced(tmp_path, (51_000, 51_800, "SORTIE"))
+    picture = {"readings": [_next(_reading("CARD", 50_000, 50_000), 51_000)]}
+    entries, _ = prepare.on_screen(timing, [], [("fr", forced)], picture)
+    shown = [(e["lines"], e["start"], e["end"]) for e in entries if e["state"] == "cue"]
+    assert shown == [(["CARD"], 50_000, 51_000), (["SORTIE"], 51_000, 51_800)]
+    # Two one-frame cards 1 s apart before a line at 52 s: both show.
+    timing = _two_timing_cues(52_000)
+    picture = {"readings": [_next(_reading("ONE", 50_000, 50_000), 51_000), _next(_reading("TWO", 51_000, 51_000), 52_000)]}
+    entries, _ = prepare.on_screen(timing, [], [], picture)
+    assert [(e["lines"], e["state"], e["start"], e["end"]) for e in entries] == [
+        (["ONE"], "cue", 50_000, 51_000),
+        (["TWO"], "cue", 51_000, 52_000),
+    ]
+
+
+def test_a_sync_rebuild_never_lets_a_picture_cue_push_the_next_one_out():
+    cue = lambda n, a, b: srt.Cue(n=n, start=a, end=b, ts="", lines=["x"])  # noqa: E731
+
+    def entry(a: int, seen: int, shown: int) -> dict:
+        return {"evidence": prepare.PICTURE, "state": "cue", "start": a, "end": shown, "found": [a, seen], "shown_end": shown}
+
+    one, two = entry(50_000, 50_700, 51_500), entry(51_000, 51_700, 52_500)
+    merged = [(cue(1, 10_000, 12_000), None), (None, one), (None, two), (cue(2, 52_000, 54_000), None)]
+    prepare._fit_picture_entries(merged, True, {1, 2})
+    assert (one["state"], one["start"], one["end"]) == ("cue", 50_000, 51_000)
+    assert (two["state"], two["start"], two["end"]) == ("cue", 51_000, 52_000)
+
+
+def test_a_sync_rebuild_keeps_where_a_picture_cue_aims_to_end(tmp_path: Path):
+    w, _ = _screen_film(tmp_path)
+    reading = _next(_reading("THE END", *TAIL_TEXT, kind="closing text"), TAIL_TEXT[1] + 1_500)
+    _build_screen(tmp_path, w, _picture(w, [(TAIL_TEXT[0], [])], [], [reading]))
+    e = _entries(w)[f"picture:{TAIL_TEXT[0]}"]
+    assert (e["start"], e["end"], e["found"], e["shown_end"]) == (
+        TAIL_TEXT[0],
+        TAIL_TEXT[1] + 1_500,
+        list(TAIL_TEXT),
+        TAIL_TEXT[1] + 1_500,
+    )
+    timing = tmp_path / "en.srt"
+    prepare.build(w, _shifted(tmp_path, timing, 2_000), None, None, keep_bible_check=True, shift_ms=2_000)
+    e = _entries(w)[f"picture:{TAIL_TEXT[0]}"]
+    assert (e["state"], e["start"], e["end"], e["found"]) == ("cue", TAIL_TEXT[0], TAIL_TEXT[1] + 1_500, list(TAIL_TEXT))
+    # An entry from an older work folder has no shown_end: its seen span.
+    rows = _json(w / prepare.ON_SCREEN_FILE)
+    for r in rows:
+        r.pop("shown_end", None)
+    (w / prepare.ON_SCREEN_FILE).write_text(json.dumps(rows), encoding="utf-8")
+    prepare.build(w, _shifted(tmp_path, timing, 2_000), None, None, keep_bible_check=True, shift_ms=2_000)
+    e = _entries(w)[f"picture:{TAIL_TEXT[0]}"]
+    assert (e["state"], e["start"], e["end"]) == ("cue", *TAIL_TEXT)
+
+
 def test_screen_and_shift_do_not_go_together(tmp_path: Path):
     with pytest.raises(SystemExit):
         prepare.build(tmp_path / "w", _film(tmp_path, "en.srt", "Line"), None, None, shift_ms=10, screen_path=tmp_path / "r.json")
