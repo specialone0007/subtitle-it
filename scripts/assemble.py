@@ -1663,6 +1663,14 @@ ON_SCREEN_LIMITS = (
 )
 
 
+def _video_at(e: dict) -> int:
+    """When an entry shows: a picture entry left out has its row clipped
+    into its numbered slot, so its own time is the reading's (`found`)."""
+    if e.get("evidence") == prepare.PICTURE and e["state"] == "left_out" and e.get("found"):
+        return e["found"][0]
+    return e["start"]
+
+
 def on_screen_report(work: Path) -> dict | None:
     """The run report's on-screen section, read once the file is delivered.
 
@@ -1698,15 +1706,14 @@ def on_screen_report(work: Path) -> dict | None:
         if e.get("reason") == prepare.NO_ROOM_SHIFT:
             # Found in the picture, but the timing shift left no place for
             # it: listed one by one, at its video time, wherever it falls.
-            at = (e.get("found") or [e["start"]])[0]
-            after_shift.append({"at": srt.fmt_ms(at), "text": text})
+            after_shift.append({"at": srt.fmt_ms(_video_at(e)), "text": text})
         elif e["state"] == "cue":
             ds = sorted(back.get(e["n"], []))
             at = shown[ds[0]].ts[:12] if ds else None
             turkish = " / ".join(ln for d in ds for ln in shown[d].lines)
             delivered.append({"cue": ds, "at": at, "text": text, "turkish": turkish})
-        elif first is None or e["start"] < first or e["start"] >= story_end:
-            at_ends.append({"at": srt.fmt_ms(e["start"]), "text": text, "reason": e.get("reason", e["state"])})
+        elif first is None or _video_at(e) < first or _video_at(e) >= story_end:
+            at_ends.append({"at": srt.fmt_ms(_video_at(e)), "text": text, "reason": e.get("reason", e["state"])})
         else:
             rest[e.get("reason", e["state"])] += 1
     unplaced = []
@@ -1727,7 +1734,7 @@ def on_screen_report(work: Path) -> dict | None:
             "notes": info.get("notes", []),
             "looked_at": [
                 {
-                    "at": srt.fmt_ms(e["start"]),
+                    "at": srt.fmt_ms(_video_at(e)),
                     "text": srt.strip_tags(prepare._one_line(e["lines"])),
                     "state": e["state"],
                     "reason": e.get("reason"),
