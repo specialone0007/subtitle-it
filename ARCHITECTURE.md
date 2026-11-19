@@ -491,8 +491,14 @@ skipping any card in its way, and ends 0.1 s before the next one, so an
 end title read from another track comes after it. With no free 2 s, or
 no story cue at all, it follows the last cue by 3 s. When
 `screen.py ends` found a cut to black after the story
-(`W/screen/ends.json`), the goodbye starts on the first black stretch
-that begins within 30 s after story end instead: half a second after the
+(`W/screen/ends.json`, blackdetect with `pic_th=0.98`, so a title fading
+in over the black still counts), the goodbye starts on the first black
+stretch that counts instead: one that begins within 30 s after story
+end, or a later one when the frames show a title card, closing text or
+the credits first within 12 s of its start (`W/screen/readings.json`),
+as when an epilogue with no lines runs a minute or more before the cut
+to the title. A cue on the black, such as the title read from the frames, is skipped
+while the stretch lasts. It starts half a second after the
 story's last line at the earliest, and after any cue still on screen. It
 ends 0.1 s before the next cue, 4 s at most; with under 2 s free there,
 the rule above places it. `deliver` reads the file only when it covers
