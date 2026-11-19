@@ -131,7 +131,11 @@ Then it settles the timings:
   text, credits, logo, background), whether the film wants it read, and
   the entry it shows, if any. `screen.py collect` checks one line per
   frame, sends missing ones back once, and joins neighbouring frames
-  with the same text into one reading (`W/screen/readings.json`).
+  with the same text into one reading (`W/screen/readings.json`). Case
+  and punctuation do not count ("Mommy's / home" and "mommy's home" are
+  one text), and two story kinds (a sign read as a caption) are one kind;
+  the reading takes the text and kind most of its frames give, and
+  records when the next frame was saved (`next_ms`).
   `build --screen W/screen/readings.json` then decides: a reading joins
   an entry only when it names it. An unsure entry a story reading names
   is added; one whose frames were all read and never named is left out
@@ -140,6 +144,10 @@ Then it settles the timings:
   languages, a subtitle credit, a song line) is added when a story reading names it.
   A story reading no entry holds becomes an entry of its own,
   `picture:<first ms>`, added under the same coverage and room rules.
+  It stays on screen until the next saved frame (the text may still be
+  there), for 1.5 s at least and at most 1.5 s after its last frame,
+  but never into the next item it would push out; `found` keeps the span
+  the frames saw, and `shown_end` where it aims to end.
   One a timing line covers or with no room still gets a cue number, as
   a row left out and never delivered, so a sync rebuild can place it.
   Credits, logos, background text and text the film does not want read
@@ -193,7 +201,8 @@ film.
   every cue keeps its number and the bible's citations stay true. The
   amount counts from the times the first build found, so running the
   same rebuild twice moves the entries once. An entry read from the
-  picture keeps its video times (`found`, the reading's own time) and its
+  picture keeps its video times (`found`, the reading's own time, and
+  `shown_end`) and its
   cue number, and is judged again against the shifted cues next to it in
   time, whatever their numbers (a cue that holds only sounds is never
   shown, so it takes no room): one they cover is left out as `under a
@@ -488,27 +497,34 @@ there is moved to a backups folder, and the result says what it was:
 `earlier delivery`, `Turkish` or `not Turkish` (an English `<film>.srt`,
 say). Unless the preferences turn the credit off, "İyi seyirler." opens
 the file in the silence before the first line, and "Görüşmek üzere." comes
-3 s after the story's last line: the last cue that is not `on_screen` (a
-kept song counts as story). It takes the first free 2 s from there,
-skipping any card in its way, and ends 0.1 s before the next one, so an
-end title read from another track comes after it. With no free 2 s, or
-no story cue at all, it follows the last cue by 3 s. When
-`screen.py ends` found a cut to black after the story
-(`W/screen/ends.json`, blackdetect with `pic_th=0.98`, so a title fading
-in over the black still counts), the goodbye starts on the first black
-stretch that counts instead: one that begins within 30 s after story
-end, or a later one when the frames show a title card, closing text or
-the credits first within 12 s of its start (`W/screen/readings.json`),
-as when an epilogue with no lines runs a minute or more before the cut
-to the title. A cue on the black, such as the title read from the frames, is skipped
-while the stretch lasts. It starts half a second after the
-story's last line at the earliest, and after any cue still on screen. It
-ends 0.1 s before the next cue, 4 s at most; with under 2 s free there,
-the rule above places it. `deliver` reads the file only when it covers
-half a second after story end to 30 s after it, so a later `check` that
-holds the last line a little longer keeps it. The result's `goodbye` says
-which rule placed it. With `--video` it
-stays inside the video's length, moving earlier or ending with the video.
+after every translated line: spoken lines, kept songs, on-screen story text
+and an after-credits scene too, so nothing translated ever follows it. It
+starts half a second after the last of them at the earliest, and lasts 4 s.
+Where it starts depends on the end cards, the frames' readings
+(`W/screen/readings.json`) of credits, a title card, closing text or a logo
+that start after the last line. The film's end starts at the first card
+followed within 10 s by a card with other text, or still on screen in the
+last frame saved from the tail when the tail ended with the video
+(`W/screen/frames.json`); a stray logo
+inside the story, or one card read twice, does not start it. Then:
+
+- When `screen.py ends` found a black stretch (`W/screen/ends.json`,
+  blackdetect with `pic_th=0.98`, so a title fading in over the black still
+  counts) that the end starts inside, or within 3 s after, and that is still
+  black half a second after the last line, the goodbye starts on it:
+  `cut to black before the end cards`. A fade to black inside the last
+  scene, with no end cards right after it, never counts, however late it
+  comes.
+- Otherwise, with end cards, it starts on the first one: `first end card`.
+- With neither (an `.srt` input, or a picture that shows no end cards), it
+  comes 3 s after the last line: `after the last line`.
+
+`deliver` reads `ends.json` only when it covers half a second after story
+end to 30 s after it, so a later `check` that holds the last line a little
+longer keeps it. With `--video` the goodbye stays inside the video's
+length: it moves earlier, but never before its earliest start, and ends
+with the video; with under 3 s left there, it is left out (`no room`). The
+result's `goodbye` says which rule placed it.
 For an `.srt` input the name keeps the input's, with `tr` as its
 language, so the input is never written over. When it delivers to that
 default name next to the video (`--video`), this plugin's earlier

@@ -257,7 +257,7 @@ def test_track_arg_reads_lang_and_path():
             prepare.track_arg(bad)
 
 
-def test_deliver_puts_the_goodbye_before_an_end_title(tmp_path: Path):
+def test_deliver_puts_the_goodbye_after_an_end_title(tmp_path: Path):
     timing = _timing(tmp_path)
     fr = _film(tmp_path, "fr.srt", "Ligne", [(*CREDIT, "L'HISTOIRE SANS FIN")])
     es = _film(tmp_path, "es.srt", "Línea", [(*CREDIT, "LA HISTORIA INTERMINABLE")])
@@ -268,17 +268,16 @@ def test_deliver_puts_the_goodbye_before_an_end_title(tmp_path: Path):
     (w / "out" / "tr_01.txt").write_text(tr, encoding="utf-8")
     assert assemble.run_checks(w)["hard_fail_count"] == 0
     info = assemble.deliver(w, tmp_path / "Film.srt", tmp_path / "backups", force=False, translator="specialone0007")
-    # Opening credit, 80 lines, the goodbye 3 s after the last line, then the title.
-    assert info["credit_cues"] == [1, LINES + 2]
+    # Opening credit, 80 lines, the title, then the goodbye 3 s after it:
+    # nothing translated follows the goodbye.
+    assert info["credit_cues"] == [1, LINES + 3] and info["goodbye"] == assemble.GOODBYE_AFTER_LINE
     shown = _cues(tmp_path / "Film.srt")
-    bye, title = shown[LINES + 1], shown[LINES + 2]
+    title, bye = shown[LINES + 1], shown[LINES + 2]
     assert bye.lines == [assemble.CREDIT_BYE, "specialone0007"] and title.lines == ["BİTMEYEN ÖYKÜ"]
-    last_line = 12_500 + (LINES - 1) * 4_000
-    assert (bye.start, bye.end) == (last_line + 3_000, last_line + 7_000) and title.start == CREDIT[0]
-    # The delivered map leads every number past the goodbye to its own cue.
-    assert [x["delivered"] for x in assemble.where(w, [LINES, LINES + 1])] == [[LINES + 1], [LINES + 3]]
+    assert title.start == CREDIT[0] and (bye.start, bye.end) == (CREDIT[1] + 3_000, CREDIT[1] + 7_000)
+    assert [x["delivered"] for x in assemble.where(w, [LINES, LINES + 1])] == [[LINES + 1], [LINES + 2]]
     delivered = json.loads((w / assemble.DELIVERED_MAP_FILE).read_text(encoding="utf-8"))
-    assert delivered["credits"] == [1, LINES + 2] and delivered["cues"][str(LINES + 3)] == {"cue": LINES + 1}
+    assert delivered["credits"] == [1, LINES + 3] and delivered["cues"][str(LINES + 2)] == {"cue": LINES + 1}
 
 
 def test_build_clears_the_picture_folder_of_an_earlier_run(tmp_path: Path):
@@ -529,10 +528,10 @@ def test_deliver_reports_each_entry_delivered_and_left_out_at_the_ends(tmp_path:
     info = assemble.deliver(w, tmp_path / "Film.srt", tmp_path / "backups", force=False)
     report = info["on_screen"]
     # The card leaves no room for the opening credit; the end title comes
-    # after the goodbye.
+    # before the goodbye.
     assert report["delivered"] == [
         {"cue": [1], "at": "00:00:01,000", "text": "UN JOUR", "turkish": "1. satır."},
-        {"cue": [LINES + 3], "at": "00:05:50,000", "text": "LA FIN", "turkish": f"{LINES + 2}. satır."},
+        {"cue": [LINES + 2], "at": "00:05:50,000", "text": "LA FIN", "turkish": f"{LINES + 2}. satır."},
     ]
     # One line before the first spoken cue, one after story end; the one
     # in the middle is only counted.

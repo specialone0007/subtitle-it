@@ -29,9 +29,10 @@ lines as they will be delivered: laid out by layout.py (at most two lines
 of 42 characters, a long two-speaker cue split into one cue per speaker),
 without the cues that hold only sounds, and numbered from 1. The delivered
 file is the draft plus, unless --no-credit, one credit cue before the
-first line (when the silence allows it) and one after the story's last
-line, before any end title shown as on-screen text (inside the video's
-length when --video gives a video ffprobe can read).
+first line (when the silence allows it) and one after the last
+translated line, on the cut to black before the end cards when the
+picture shows one (inside the video's length when --video gives a video
+ffprobe can read).
 W/cue_map.json maps each draft number to the timing file's cue; `deliver`
 writes it as W/delivered_map.json, numbered around the credit cues,
 which are listed under "credits", and `where` answers
@@ -73,6 +74,7 @@ import sys
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
+from typing import NamedTuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import bible  # noqa: E402
@@ -1487,36 +1489,67 @@ CREDIT_NAME_MAX = layout.MAX_LINE
 # Each end shows one screen for 4 s: the greeting over the translator's
 # name. The opening starts at 3 s and ends at least half a second before
 # the first line: with a first line before 7.5 s it is cut short, but kept
-# for 3 s at least (a first line from 6.5 s); with less room, nothing. The
-# closing screen starts 3 s after the story's last line, so it does not
-# run into it, in the first free 2 s from there on, and ends 0.1 s before
-# the next cue (an end title). When the video's end is known, the closing
-# screen stays inside it: it moves earlier, to half a second after the cue
-# before it at most, to keep its 4 s; with less room it ends with the
-# video, kept for 3 s at least; with under 3.5 s, nothing.
+# for 3 s at least (a first line from 6.5 s); with less room, nothing.
+# The closing screen comes after every translated line (goodbye_floor):
+# spoken lines, kept songs and on-screen story text, an after-credits scene
+# too, so nothing translated ever follows it. From half a second after that
+# it starts on the cut to black that leads into the end cards, else on the
+# first end card; with neither, 3 s after the last line. When the video's
+# end is known, the closing screen stays inside it: it moves earlier, to
+# half a second after the last line at most, to keep its 4 s; with less
+# room it ends with the video, kept for 3 s at least; with less, nothing.
 CREDIT_START_AT = 3000
 CREDIT_GAP = 500
 CREDIT_END_AFTER = 3000
 CREDIT_MS = 4000
 CREDIT_MIN_MS = 3000
-CREDIT_FREE_MS = 2000
-CREDIT_BEFORE_NEXT = 100
-# The cut to black after the story, when `screen.py ends` found one
-# (W/screen/ends.json): the closing screen starts on the first black
-# stretch that counts, at least half a second after the last story line
-# and after any cue still on screen, and ends 0.1 s before the next cue,
-# 4 s at most. A stretch counts when it begins within 30 s after story
-# end, or later in the file when the frames show the film's end right
-# after it: a title card, closing text or the credits, first read within
-# 12 s of its start (W/screen/readings.json). A film can run an epilogue
-# with no lines for a minute or more before it cuts to its title. With
-# under 2 s free there, or no stretch that counts, the rule above places
-# it.
+# The end cards are the frames' readings (W/screen/readings.json) of
+# END_CARD_KINDS that start after the last line. The film's end starts at
+# the first one followed by one with other text within END_CARD_NEXT (from
+# its last frame to the next one's first), or still on screen in the tail's
+# last frame when the tail ended with the video (W/screen/frames.json,
+# tail_end): a stray logo or credit inside the
+# story, or one card read twice, does not start it. A black stretch
+# (W/screen/ends.json, `screen.py ends`) leads into the end cards when the
+# end starts inside it or within BLACK_BEFORE_CARD after it, and is still
+# black half a second after the last line; a fade inside the last scene
+# with no end cards after it never does. ends.json is read only when it
+# covers half a second after story end to ENDS_COVER_MS after it, so a
+# file written for another draft is never used.
 ENDS_FILE = Path("screen") / "ends.json"
 READINGS_FILE = Path("screen") / "readings.json"
-BLACK_WITHIN = 30_000
-END_CARD_AFTER = 12_000
-END_CARD_KINDS = ("title card", "closing text", "credits")
+ENDS_COVER_MS = 30_000
+END_CARD_KINDS = ("title card", "closing text", "credits", "logo")
+END_CARD_NEXT = 10_000
+BLACK_BEFORE_CARD = 3_000
+# How long a full tail is (screen.WINDOW_MS): a shorter one ended with the
+# video, so a card in its last frame is still up when the film ends.
+TAIL_WINDOW_MS = 150_000
+# How the closing credit was placed (`goodbye` in delivered.json).
+GOODBYE_ON_BLACK = "cut to black before the end cards"
+GOODBYE_ON_CARD = "first end card"
+GOODBYE_AFTER_LINE = "after the last line"
+GOODBYE_NO_ROOM = "no room"
+
+
+class EndCard(NamedTuple):
+    first_ms: int
+    last_ms: int
+    text: str  # prepare.fold_text
+
+
+class Ends(NamedTuple):
+    """What the picture says about the film's end (read_ends)."""
+
+    black: tuple[tuple[int, int], ...] = ()
+    cards: tuple[EndCard, ...] = ()
+    tail_end: int | None = None
+
+
+class Goodbye(NamedTuple):
+    start: int
+    end: int
+    how: str
 
 
 def credit_lines(greeting: str, translator: str = "") -> list[str]:
@@ -1530,95 +1563,66 @@ def credit_lines(greeting: str, translator: str = "") -> list[str]:
 
 def story_end(cues: list[srt.Cue], on_screen: set[int]) -> int | None:
     """The end of the last cue that is not on-screen text (a kept song
-    counts as story), or None with no such cue."""
+    counts as story), or None with no such cue. `screen.py ends` looks for
+    black from here, and read_ends checks ends.json against it."""
     return max((c.end for c in cues if c.n not in on_screen), default=None)
 
 
-def goodbye_on_black(cues: list[srt.Cue], on_screen: set[int], black: list[tuple[int, int]]) -> tuple[int, int] | None:
-    """Start and end of the closing credit on the first of `black` (the
-    stretches that count, black_after_story) that begins at story end or
-    later, or None with no such stretch or one that leaves under 2 s free.
-    A cue in the way (a title card read on the black) is skipped while the
-    stretch lasts: the goodbye then starts after it."""
-    s = story_end(cues, on_screen)
-    if s is None:
-        return None
-    b, b_end = next(((b, e) for b, e in sorted(black) if s <= b), (None, None))
-    if b is None:
-        return None
-    at = max(b, s + CREDIT_GAP)
-    while at < b_end:
-        while running := next((c for c in cues if c.start <= at < c.end), None):
-            at = running.end
-        if at >= b_end:
-            return None
-        # Strictly after: a cue starting at `at` that runs was skipped above,
-        # and one timed backwards (end before start) must not stop the loop.
-        following = min((c.start for c in cues if c.start > at), default=None)
-        end = at + CREDIT_MS if following is None else min(at + CREDIT_MS, following - CREDIT_BEFORE_NEXT)
-        if end - at >= CREDIT_FREE_MS:
-            return at, end
-        if following is None:
-            return None
-        at = following
+def goodbye_floor(cues: list[srt.Cue]) -> int:
+    """The last translated moment: the latest end of any cue, or its start
+    for a cue timed backwards (end before start)."""
+    return max(max(c.start, c.end) for c in cues)
+
+
+def end_start(cards: tuple[EndCard, ...] | list[EndCard], floor: int, tail_end: int | None) -> int | None:
+    """When the film's end cards start after `floor` (see END_CARD_NEXT),
+    or None when the frames show none."""
+    after = sorted((c for c in cards if c.first_ms > floor), key=lambda c: (c.first_ms, c.last_ms))
+    for i, c in enumerate(after):
+        if tail_end is not None and c.last_ms >= tail_end:
+            return c.first_ms
+        if any(n.text != c.text and n.first_ms - c.last_ms <= END_CARD_NEXT for n in after[i + 1 :]):
+            return c.first_ms
     return None
 
 
-def goodbye_at(
-    cues: list[srt.Cue], on_screen: set[int], video_end: int | None = None, black: list[tuple[int, int]] | None = None
-) -> tuple[int, int] | None:
-    """Start and end of the closing credit, or None when the video leaves
-    no room for it. On the cut to black after the story when `black` (the
-    stretches that count, black_after_story) has one that fits
-    (`goodbye_on_black`).
-    Otherwise it follows the story, not an end title shown after the
-    credits roll: from 3 s after the last cue that is not on-screen text (a
-    kept song counts as story), it takes the first free 2 s, skipping any
-    cue in its way, and ends 0.1 s before the next cue. With no such free
-    time, or no story cue at all, it starts 3 s after the last cue.
-    `video_end` (ms), when known, keeps it inside the video."""
-    last = max(c.end for c in cues)
-    story = [c.end for c in cues if c.n not in on_screen]
-    at, end = last + CREDIT_END_AFTER, None
-    if on_black := goodbye_on_black(cues, on_screen, black or []):
-        at, end = on_black
-    elif story:
-        at = max(story) + CREDIT_END_AFTER
-        for c in sorted(cues, key=lambda c: c.start):
-            if c.end <= at:
-                continue
-            if c.start - at >= CREDIT_FREE_MS:
-                end = min(at + CREDIT_MS, c.start - CREDIT_BEFORE_NEXT)
-                break
-            at = max(at, c.end)
-        if end is None and at == last:
-            # Cues in the way up to the end of the file: after the last one.
-            at = last + CREDIT_END_AFTER
-    end = at + CREDIT_MS if end is None else end
+def goodbye_at(cues: list[srt.Cue], video_end: int | None = None, ends: Ends | None = None) -> Goodbye | None:
+    """Where the closing credit goes, and how it was placed, or None when
+    the video leaves no room for it (see CREDIT_START_AT and END_CARD_NEXT).
+    `video_end` (ms), when known, keeps it inside the video; `ends` is what
+    the picture says about the film's end (read_ends)."""
+    ends = ends or Ends()
+    floor = goodbye_floor(cues)
+    earliest = floor + CREDIT_GAP
+    start = end_start(ends.cards, floor, ends.tail_end)
+    black = None
+    if start is not None:
+        black = next((a for a, b in sorted(ends.black) if a <= start <= b + BLACK_BEFORE_CARD and b > earliest), None)
+    if black is not None:
+        at, how = max(black, earliest), GOODBYE_ON_BLACK
+    elif start is not None:
+        at, how = max(start, earliest), GOODBYE_ON_CARD
+    else:
+        at, how = floor + CREDIT_END_AFTER, GOODBYE_AFTER_LINE
+    end = at + CREDIT_MS
     if video_end is not None and end > video_end:
-        before = max((c.end for c in cues if c.end <= at), default=0)
         end = video_end
-        at = max(before + CREDIT_GAP, end - CREDIT_MS)
+        at = max(earliest, end - CREDIT_MS)
         if end - at < CREDIT_MIN_MS:
             return None
-    return at, end
+    return Goodbye(at, end, how)
 
 
 def with_credit(
-    cues: list[srt.Cue],
-    translator: str = "",
-    video_end: int | None = None,
-    on_screen: set[int] | None = None,
-    black: list[tuple[int, int]] | None = None,
-) -> tuple[list[srt.Cue], int, list[int]]:
+    cues: list[srt.Cue], translator: str = "", video_end: int | None = None, ends: Ends | None = None
+) -> tuple[list[srt.Cue], int, list[int], str | None]:
     """The delivered cues with the credit added, renumbered from 1; how many
-    cues were put before the film's own (0 or 1), and the numbers of the
-    credit cues, which are no translation. `video_end` (ms), when known,
-    keeps the closing credit inside the video; `on_screen` holds the numbers
-    of the cues that are on-screen text, not the story's lines, and `black`
-    the black stretches after the story (`goodbye_at`)."""
+    cues were put before the film's own (0 or 1); the numbers of the credit
+    cues, which are no translation; and how the closing credit was placed
+    (Goodbye.how, GOODBYE_NO_ROOM when the video leaves no room, None with
+    no cues). `video_end` and `ends` are goodbye_at's."""
     if not cues:
-        return cues, 0, []
+        return cues, 0, [], None
 
     def cue(start: int, end: int, lines: list[str]) -> srt.Cue:
         return srt.Cue(n=0, start=start, end=end, ts=f"{srt.fmt_ms(start)} --> {srt.fmt_ms(end)}", lines=lines)
@@ -1628,46 +1632,66 @@ def with_credit(
     at = CREDIT_START_AT
     if room >= at + CREDIT_MIN_MS:
         head = [cue(at, min(room, at + CREDIT_MS), credit_lines(CREDIT_HELLO, translator))]
-    bye = goodbye_at(cues, on_screen or set(), video_end, black)
-    if bye is None:
-        tail, before = [], len(cues)
-    else:
-        tail, before = [cue(*bye, credit_lines(CREDIT_BYE, translator))], sum(1 for c in cues if c.start < bye[0])
-    body = head + cues[:before] + tail + cues[before:]
+    bye = goodbye_at(cues, video_end, ends)
+    # The goodbye starts after every cue (goodbye_floor): it comes last.
+    tail = [] if bye is None else [cue(bye.start, bye.end, credit_lines(CREDIT_BYE, translator))]
+    body = head + cues + tail
     out = [srt.Cue(n=i, start=c.start, end=c.end, ts=c.ts, lines=c.lines) for i, c in enumerate(body, 1)]
-    credits = list(range(1, len(head) + 1)) + ([len(head) + before + 1] if tail else [])
-    return out, len(head), credits
+    credits = list(range(1, len(head) + 1)) + ([len(body)] if tail else [])
+    return out, len(head), credits, GOODBYE_NO_ROOM if bye is None else bye.how
 
 
-def black_after_story(work: Path, story: int | None) -> list[tuple[int, int]] | None:
-    """The black stretches in W/screen/ends.json that count (ENDS_FILE):
-    those that begin within 30 s after story end, and later ones the
-    frames show the film's end right after (end_cards). None when the file
-    is missing, malformed, or does not cover half a second after story end
-    to 30 s after it: the closing credit then follows the story alone. A
-    later `check` can hold the last line up to half a second longer, and
-    the goodbye starts that late at the earliest, so a file read a little
-    before still holds every stretch that counts."""
+def read_ends(work: Path, story: int | None) -> Ends:
+    """What the picture says about the film's end, for goodbye_at: the
+    black stretches (black_stretches), the end cards (end_cards) and when
+    the tail's last frame was saved (tail_end)."""
+    return Ends(tuple(black_stretches(work, story)), tuple(end_cards(work)), tail_end(work))
+
+
+def black_stretches(work: Path, story: int | None) -> list[tuple[int, int]]:
+    """The black stretches in W/screen/ends.json (ENDS_FILE); empty when
+    the file is missing, malformed, or does not cover half a second after
+    story end to ENDS_COVER_MS after it, or with no story cue. A later
+    `check` can hold the last line up to half a second longer, so a file
+    read a little before is still this draft's."""
     try:
         data = json.loads((work / ENDS_FILE).read_text(encoding="utf-8"))
-        if story is None or not (data["from_ms"] <= story + CREDIT_GAP and story + BLACK_WITHIN <= data["to_ms"]):
-            return None
-        black = [(int(a), int(b)) for a, b in data["black"]]
+        if story is None or not (data["from_ms"] <= story + CREDIT_GAP and story + ENDS_COVER_MS <= data["to_ms"]):
+            return []
+        return [(int(a), int(b)) for a, b in data["black"]]
     except (OSError, ValueError, TypeError, KeyError):
-        return None
-    cards = end_cards(work)
-    return [(a, b) for a, b in black if a <= story + BLACK_WITHIN or any(a <= t <= a + END_CARD_AFTER for t in cards)]
+        return []
 
 
-def end_cards(work: Path) -> list[int]:
-    """When the frames first show a title card, closing text or the
-    credits (W/screen/readings.json, END_CARD_KINDS), in ms; empty when
-    the picture was not read or the file is malformed."""
+def end_cards(work: Path) -> list[EndCard]:
+    """The frames' readings of END_CARD_KINDS (W/screen/readings.json);
+    empty when the picture was not read or the file is malformed."""
     try:
         readings = json.loads((work / READINGS_FILE).read_text(encoding="utf-8"))["readings"]
-        return [int(r["first_ms"]) for r in readings if r.get("kind") in END_CARD_KINDS]
+        return [
+            EndCard(int(r["first_ms"]), int(r["last_ms"]), prepare.fold_text(r["text"]))
+            for r in readings
+            if r.get("kind") in END_CARD_KINDS
+        ]
     except (OSError, ValueError, TypeError, KeyError, AttributeError):
         return []
+
+
+def tail_end(work: Path) -> int | None:
+    """When the last frame of the tail was saved (W/screen/frames.json), but
+    only when the tail ended with the video: its span (`tail`) is shorter
+    than TAIL_WINDOW_MS, so that frame shows the film's last moments. A full
+    tail stops 2.5 minutes after story end, maybe inside a long silent
+    scene, so a card held to its last frame proves nothing; then None, as
+    when the frames were not saved or the file is malformed."""
+    try:
+        data = json.loads((work / prepare.FRAMES_FILE).read_text(encoding="utf-8"))
+        start, end = (int(t) for t in data["tail"])
+        if end - start >= TAIL_WINDOW_MS:
+            return None
+        return max((int(f["ms"]) for f in data["frames"] if f.get("why") == "tail"), default=None)
+    except (OSError, ValueError, TypeError, KeyError, AttributeError):
+        return None
 
 
 def video_end_ms(video: Path) -> int | None:
@@ -1873,13 +1897,8 @@ def deliver(
     goodbye = None
     if credit:
         cues = srt.parse_text(srt.decode(data)[0])
-        on_screen = on_screen_draft_cues(work)
-        black = black_after_story(work, story_end(cues, on_screen)) if cues else None
-        shown, opening, credits = with_credit(
-            cues, translator, video_end_ms(video) if video is not None else None, on_screen, black
-        )
-        if len(credits) > opening:
-            goodbye = "cut to black" if goodbye_on_black(cues, on_screen, black or []) else "after the story"
+        ends = read_ends(work, story_end(cues, on_screen_draft_cues(work))) if cues else None
+        shown, _, credits, goodbye = with_credit(cues, translator, video_end_ms(video) if video is not None else None, ends)
         data = srt.render(shown).replace("\n", "\r\n").encode("utf-8")
     if not data.startswith(UTF8_BOM):
         data = UTF8_BOM + data
@@ -1907,8 +1926,9 @@ def deliver(
         "credit": credit,
         "credit_name": translator if credit else "",
         "credit_cues": credits,
-        # What placed the closing credit: "cut to black" (W/screen/ends.json)
-        # or "after the story"; None with no closing credit.
+        # How the closing credit was placed (GOODBYE_ON_BLACK,
+        # GOODBYE_ON_CARD, GOODBYE_AFTER_LINE, or GOODBYE_NO_ROOM when the
+        # video left no room); None with no credit or no cue.
         "goodbye": goodbye,
         "on_screen": on_screen_report(work),
     }

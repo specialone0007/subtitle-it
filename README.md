@@ -74,8 +74,9 @@ when no other command uses that name.)
   into rules for the next film.
 - **A short credit.** "İyi seyirler." over your name opens the file in the
   silence before the first line, and "Görüşmek üzere." over your name
-  follows the story's last line, before any end title. When the film cuts
-  to black after its last line, the goodbye starts on the black. Put your name
+  comes after the last translated line. When the film cuts to black into
+  its end cards, the goodbye starts on the black; otherwise on the first
+  end card, or 3 seconds after the last line. Put your name
   under `Credit` in your preferences, or set it to `off`.
 
 ## Languages
