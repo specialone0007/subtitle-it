@@ -614,3 +614,98 @@ def test_deliver_stops_on_a_malformed_on_screen_file_before_any_file_moves(tmp_p
         with pytest.raises(SystemExit, match="is malformed"):
             assemble.deliver(w, tmp_path / "Film.srt", tmp_path / "backups", force=True)
         assert not (tmp_path / "Film.srt").exists() and not (w / "delivered.json").exists()
+
+
+# --- many languages: a share of them must show the line ----------------------
+
+LANGS = ["fr", "es", "de", "it", "nl", "pl", "sv", "fi"]
+
+
+def _many(tmp: Path, langs: list[str], showing: int, text: str = "FARMACIA") -> list[tuple[str, Path]]:
+    """One track per language; the first `showing` of them show `text` in the card's gap."""
+    return [
+        (lang, _film(tmp, f"{lang}_{k}.srt", "Ligne", [(*CARD, text)] if k < showing else [])) for k, lang in enumerate(langs)
+    ]
+
+
+@pytest.mark.parametrize(
+    "n, need",
+    [(0, 2), (1, 2), (5, 2), (6, 5), (8, 6), (31, 24)],
+)
+def test_the_share_starts_at_six_other_languages(n: int, need: int):
+    assert prepare.need_languages(n) == need
+
+
+def test_with_many_languages_a_line_too_few_show_is_left_out(tmp_path: Path):
+    # Eight other languages: six must show it. Five is a sign in the background.
+    timing = _cues(_timing(tmp_path))
+    entries, summary = prepare.on_screen(timing, _many(tmp_path, LANGS, 5), [], timing_language="en")
+    assert _added(entries) == [] and summary["reasons"] == {prepare.FEW_LANGUAGES: 1}
+    assert summary["languages_needed"] == 6
+    entries, summary = prepare.on_screen(timing, _many(tmp_path, LANGS, 6), [], timing_language="en")
+    assert len(_added(entries)) == 1
+
+
+def test_with_few_languages_two_still_prove(tmp_path: Path):
+    entries, summary = prepare.on_screen(_cues(_timing(tmp_path)), _many(tmp_path, LANGS[:4], 2), [], timing_language="en")
+    assert len(_added(entries)) == 1 and summary["languages_needed"] == 2
+
+
+def test_the_timing_language_counts_neither_in_the_share_nor_for_the_line(tmp_path: Path):
+    # English and six others: n is 6, so five of the others must show it.
+    # English and four others show it: four is too few.
+    langs = ["en", *LANGS[:6]]
+    entries, summary = prepare.on_screen(_cues(_timing(tmp_path)), _many(tmp_path, langs, 5), [], timing_language="en")
+    assert summary["languages_needed"] == 5 and _added(entries) == []
+    assert summary["reasons"] == {prepare.FEW_LANGUAGES: 1}
+
+
+def test_a_forced_track_still_proves_alone_among_many_languages(tmp_path: Path):
+    forced = tmp_path / "forced.srt"
+    forced.write_text(f"1\n{srt.fmt_ms(CARD[0])} --> {srt.fmt_ms(CARD[1])}\nFARMACIA\n\n", encoding="utf-8")
+    entries, _ = prepare.on_screen(_cues(_timing(tmp_path)), _many(tmp_path, LANGS, 0), [("es", forced)], timing_language="en")
+    assert len(_added(entries)) == 1
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["Azpitituluak: Miren", "Ikuskatzailea: Jon"],
+)
+def test_basque_subtitle_credits_are_credits(text: str):
+    assert prepare.CREDIT_RE.search(text)
+
+
+def test_a_line_shown_with_a_subtitle_credit_is_a_credit_too(tmp_path: Path):
+    # "Creative supervisor" reads as a credit in no language, but the
+    # Basque track names the supervisor at the same time.
+    timing = _cues(_timing(tmp_path))
+    tracks = _many(tmp_path, LANGS, 8, "Supervision créative / Jean")
+    eu = _film(tmp_path, "eu.srt", "Lerroa", [(*CARD, "Ikuskatzailea: Jon")])
+    entries, summary = prepare.on_screen(timing, [*tracks, ("eu", eu)], [], timing_language="en")
+    assert _added(entries) == [] and summary["reasons"] == {prepare.CREDIT: 1}
+    assert len(entries[0]["texts"]) == 9
+
+
+def test_below_six_languages_a_credit_at_the_same_time_leaves_a_card_alone(tmp_path: Path):
+    # French and Spanish show a card while the German track's subtitle
+    # credit overlaps it: with three other languages the card is added.
+    fr = _film(tmp_path, "fr.srt", "Ligne", [(*CARD, "UN JOUR")])
+    es = _film(tmp_path, "es.srt", "Línea", [(*CARD, "UN DÍA")])
+    de = _film(tmp_path, "de.srt", "Zeile", [(*CARD, "Untertitel: Hans")])
+    tracks = [("fr", fr), ("es", es), ("de", de)]
+    entries, summary = prepare.on_screen(_cues(_timing(tmp_path)), tracks, [], timing_language="en")
+    assert [e["lines"] for e in _added(entries)] == [["UN JOUR"]]
+    assert summary["reasons"] == {prepare.CREDIT: 1}
+
+
+def test_the_share_counts_a_region_once_and_leaves_out_tracks_that_do_not_fit(tmp_path: Path):
+    # pt and pt-br are one language, and a track that does not fit counts
+    # for nothing: five other languages in all, so two still prove.
+    tracks = _many(tmp_path, ["fr", "es", "de", "it"], 1)
+    tracks.append(("pt", _film(tmp_path, "pt.srt", "Linha", [(*CARD, "FARMÁCIA")])))
+    tracks.append(("pt-br", _film(tmp_path, "br.srt", "Linha", [(*CARD, "FARMÁCIA")])))
+    far = tmp_path / "far.srt"
+    far.write_text("1\n00:50:00,000 --> 00:50:02,000\nLoin.\n\n", encoding="utf-8")
+    tracks.append(("nl", far))
+    entries, summary = prepare.on_screen(_cues(_timing(tmp_path)), tracks, [], timing_language="en")
+    assert summary["languages_needed"] == 2 and len(_added(entries)) == 1

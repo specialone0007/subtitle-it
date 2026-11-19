@@ -62,10 +62,9 @@ def test_goodbye_with_under_two_seconds_on_black_follows_the_story():
     assert _bye(cues, [(64_500, 67_000)]) == _bye(cues, None) == (73_000, 77_000)
 
 
-def test_goodbye_takes_only_black_within_30_s_after_the_story():
+def test_goodbye_takes_the_first_black_after_the_story():
     cues = _cues(*STORY)
     assert _bye(cues, [(92_500, 95_000)], on_screen=()) == (92_500, 96_500)
-    assert _bye(cues, [(92_501, 95_000)], on_screen=()) == AFTER_THE_STORY
     # Black before story end does not count; the first one after it does.
     assert _bye(cues, [(50_000, 70_000), (70_000, 73_000), (75_000, 78_000)], on_screen=()) == (70_000, 74_000)
 
@@ -102,6 +101,41 @@ def test_black_after_story_reads_only_a_file_for_this_story_end(tmp_path: Path):
     for bad in ("not json", "[]", "{" + ok + "}", "{" + ok + ', "black": [[1]]}', "{" + ok + ', "black": 3}'):
         (w / assemble.ENDS_FILE).write_text(bad, encoding="utf-8")
         assert assemble.black_after_story(w, 62_500) is None
+
+
+def _readings(w: Path, *cards: tuple[int, str]) -> None:
+    data = {"readings": [{"text": "X", "kind": kind, "wants_read": False, "first_ms": ms, "last_ms": ms} for ms, kind in cards]}
+    (w / assemble.READINGS_FILE).write_text(json.dumps(data), encoding="utf-8")
+
+
+def test_black_counts_within_30_s_or_with_the_films_end_right_after(tmp_path: Path):
+    # Story ends at 62.5 s. Black at 92.5 s counts; at 161.5 s (99 s later,
+    # after an epilogue with no lines) only with a title card or the
+    # credits first read within 12 s of its start.
+    w = _work(tmp_path, black=[[92_500, 95_000], [161_500, 165_000]])
+    assert assemble.black_after_story(w, 62_500) == [(92_500, 95_000)]
+    w = _work(tmp_path / "late", black=[[92_501, 95_000], [161_500, 165_000]])
+    assert assemble.black_after_story(w, 62_500) == []
+    _readings(w, (162_700, "title card"))
+    assert assemble.black_after_story(w, 62_500) == [(161_500, 165_000)]
+    for ms, kind in ((173_501, "title card"), (161_000, "credits"), (163_000, "sign"), (163_000, "logo")):
+        _readings(w, (ms, kind))
+        assert assemble.black_after_story(w, 62_500) == [], (ms, kind)
+    for kind in ("credits", "closing text"):
+        _readings(w, (173_500, kind))
+        assert assemble.black_after_story(w, 62_500) == [(161_500, 165_000)]
+    (w / assemble.READINGS_FILE).write_text("not json", encoding="utf-8")
+    assert assemble.black_after_story(w, 62_500) == []
+
+
+def test_deliver_lands_the_goodbye_on_a_late_cut_to_black_only_with_the_end_card(tmp_path: Path):
+    cues = _cues(*STORY)
+    w = _work(tmp_path, black=[[161_500, 165_000]])
+    assert _bye(cues, assemble.black_after_story(w, 62_500), on_screen=()) == AFTER_THE_STORY
+    _readings(w, (162_700, "title card"))
+    assert _bye(cues, assemble.black_after_story(w, 62_500), on_screen=()) == (161_500, 165_500)
+    # A last line half a second later still reads the same file.
+    assert assemble.black_after_story(w, 63_000) == [(161_500, 165_000)]
 
 
 def _ffmpeg(monkeypatch, stderr: str = "", code: int = 0) -> list[list[str]]:
@@ -177,3 +211,26 @@ def test_screen_cli_writes_the_result(tmp_path: Path, monkeypatch):
     res = tmp_path / "res.json"
     screen.main(["--result", str(res), "ends", "--work", str(w), "--video", str(tmp_path / "Film.mkv")])
     assert json.loads(res.read_text(encoding="utf-8"))["black"] == [[74_846, 77_557]]
+
+
+def test_goodbye_on_black_goes_after_a_title_card_on_the_black():
+    # The title is read on the black 1.2 s in and becomes a cue of its own:
+    # the goodbye follows it while the black lasts.
+    cues = _cues(*STORY, (162_700, 166_000))
+    assert _bye(cues, [(161_500, 175_000)]) == (166_000, 170_000)
+    # Once the black is over, the rule after the story places it.
+    assert _bye(cues, [(161_500, 165_000)]) == AFTER_THE_STORY
+
+
+def test_end_cards_ignore_readings_of_the_wrong_shape(tmp_path: Path):
+    w = _work(tmp_path, black=[[161_500, 165_000]])
+    for bad in ('{"readings": [1, 2]}', '{"readings": 3}', "[]"):
+        (w / assemble.READINGS_FILE).write_text(bad, encoding="utf-8")
+        assert assemble.end_cards(w) == []
+
+
+def test_goodbye_on_black_moves_past_a_cue_timed_backwards():
+    # Cue 3 is timed 65 s to 63 s, a typo in the timing file. The goodbye
+    # still lands on the black after it, and the search ends.
+    cues = _cues(*STORY, (65_000, 63_000))
+    assert _bye(cues, [(63_500, 70_000)]) == (65_000, 69_000)

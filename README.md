@@ -59,10 +59,12 @@ when no other command uses that name.)
   report also gives the run's time per step and its subagents' tokens.
 - **Title cards and signs.** A card, a sign or a dedication that the
   English subtitles leave to the picture is often in the French or Spanish
-  ones. When two languages show it, it joins the Turkish file. For a
+  ones. When two languages show it (three quarters of them when a film
+  has six or more), it joins the Turkish file. For a
   video, the picture is read too: frames from the opening and the last
-  minutes, and around a text only one language shows, so a card no track
-  holds, or one only French shows, is still added when the film shows it.
+  minutes, and around a text only one language or too few show, so a card
+  no track holds, or one only French shows, is still added when the film
+  shows it.
   When fewer than two other languages are at hand, one French or Spanish
   file is downloaded from OpenSubtitles for this. Every text found is
   recorded with its time, and the report says which were added, and how
