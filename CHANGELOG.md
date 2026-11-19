@@ -14,7 +14,11 @@ film's cut to black even after a long epilogue.
   prove a line. On a test film with 31 other languages this kept the 18
   story texts and dropped 19 shop signs and credits shown by 5 to 21.
 - Basque subtitle credits ("Azpitituluak:", "Ikuskatzailea:") are read
-  as subtitle credits.
+  as subtitle credits. With six or more other languages, a line shown at
+  the same time as another track's subtitle credit is left out with it
+  as a credit, since a credit reads as one in some languages only
+  ("Creative supervisor" does not); the picture can still bring it back,
+  and the cue then takes the text of a line that is not a credit.
 - `screen.py ends` finds black with up to 2% of the picture lit
   (`pic_th=0.98`, was 1.0), so a title fading in over the cut to black
   no longer hides it.

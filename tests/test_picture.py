@@ -837,3 +837,16 @@ def test_the_picture_brings_back_a_story_sign_too_few_languages_show(tmp_path: P
     )
     _many_build(tmp_path, path)
     assert _entries(w)[sign["id"]]["state"] == state
+
+
+def test_a_story_reading_of_a_credit_group_takes_the_cards_text(tmp_path: Path):
+    # The first track shows its subtitle credit while six others show a
+    # sign at the same time: the group is a credit, and when the frames
+    # show the sign as story text the cue carries the sign, not the credit.
+    timing = srt.parse(_film(tmp_path, "en.srt", "Line"))[0]
+    eu = _film(tmp_path, "eu.srt", "Lerroa", [(*SIGN, "Azpitituluak: Jon")])
+    signs = [(lang, _film(tmp_path, f"{lang}.srt", "Ligne", [(*SIGN, "FARMACIA")])) for lang in MANY[:6]]
+    (credit,), _ = prepare.on_screen(timing, [("eu", eu), *signs], [], timing_language="en")
+    assert credit["reason"] == prepare.CREDIT and credit["lines"] == ["FARMACIA"]
+    (cue,), _ = prepare.on_screen(timing, [("eu", eu), *signs], [], picture={"story": [credit["id"]]}, timing_language="en")
+    assert cue["state"] == "cue" and cue["lines"] == ["FARMACIA"]

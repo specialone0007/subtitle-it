@@ -217,8 +217,8 @@ def _group(found: list[Found]) -> list[list[Found]]:
 
 def _lead(g: list[Found]) -> Found:
     """The line whose text and times a group takes: a forced track's first,
-    then the first track given."""
-    return min(g, key=lambda x: (not x[2], x[0]))
+    then a line that is not a subtitle credit, then the first track given."""
+    return min(g, key=lambda x: (not x[2], bool(CREDIT_RE.search(x[3].plain)), x[0]))
 
 
 def _proved(g: list[Found], need: int = 2, timing_language: str | None = None) -> bool:
@@ -351,7 +351,8 @@ def on_screen(
     (the timing file's own language and `und` left out), a line needs
     three quarters of them (need_languages); one shown by two or more but
     fewer is left out as too few languages, and the picture can still
-    bring it back."""
+    bring it back. With that many languages, a line shown at the same time
+    as another track's subtitle credit is left out with it as a credit."""
     sung = srt.italic_songs(timing) | {
         c.n for c in timing if srt.is_sound(c) or srt.is_bare_sound(srt.strip_hi(c.lines, True)[0])
     }
@@ -392,7 +393,8 @@ def on_screen(
             found[kind].append((k, lang, is_forced, c))
 
     used = [t["language"] for t in summary_tracks if not t["forced"] and t.get("fits")]
-    need = need_languages(len(srt.other_languages(used, timing_language)))
+    others = len(srt.other_languages(used, timing_language))
+    need = need_languages(others)
     pic = picture or {}
     story = set(pic.get("story", ()))
     entries = []
@@ -409,10 +411,17 @@ def on_screen(
         else:
             covered_lines += len(g)
     # A subtitle credit reads as one in some languages only ("Tekstitys:",
-    # "Creative supervisor" do not), so the lines are grouped together and
-    # a group is a credit when any of its lines reads as one.
+    # "Creative supervisor" do not). With SHARE_FROM or more other
+    # languages the lines are grouped together, and a group is a credit
+    # when any of its lines reads as one. With fewer, credits are grouped
+    # apart, so a card two languages show stays a card when another
+    # track's credit overlaps it.
     credit_lines = {(k, c.n) for k, _, _, c in found[CREDIT]}
-    for g in _group(found[None] + found[CREDIT]):
+    if others >= SHARE_FROM:
+        groups = _group(found[None] + found[CREDIT])
+    else:
+        groups = _group(found[CREDIT]) + _group(found[None])
+    for g in groups:
         eid = _id(g)
         if any((k, c.n) in credit_lines for k, _, _, c in g):
             if eid in story:
