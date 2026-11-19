@@ -990,7 +990,8 @@ def _listen_frame(work: Path) -> dict:
     timing, _ = srt.parse(work / "timing.srt")
     rows = {r["n"]: r for r in json.loads((work / "cues.json").read_text(encoding="utf-8"))}
     sound_only = sound_only_cues(work, rows)
-    kept = [c for c in timing if c.n not in sound_only]
+    # In time order, as `run_checks` reads them: the same sentence groups.
+    kept = prepare.time_order([c for c in timing if c.n not in sound_only], picture_cues(work))
     by_start = sorted(kept, key=lambda c: (c.start, c.n))
     gap = layout.usual_gap(kept)
     next_start = {a.n: b.start for a, b in zip(by_start, by_start[1:])}

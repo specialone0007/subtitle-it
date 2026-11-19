@@ -672,6 +672,46 @@ def test_an_early_timing_file_shows_a_card_at_its_own_time_before_a_lower_number
     ]
     assert report["no_room_after_shift"] == []
     assert report["delivered"] == [{"cue": [2], "at": "00:00:12,000", "text": "THREE YEARS LATER", "turkish": "2. satır."}]
+    # The listeners read the cues in time order too, as check does: the
+    # card runs on into line A, the cue shown after it, not into line 2.
+    listen = Path(assemble.listen_parts(w, size=50)["parts"][0]["file"]).read_text(encoding="utf-8").splitlines()
+    head = listen[0].split("\t")
+    group = {r[0]: r[head.index("group")] for r in (x.split("\t") for x in listen[1:])}
+    assert group["2"] == group["1"] == "2-1" and group["3"] == ""
+
+
+def test_a_sound_only_cue_the_shift_moves_onto_a_card_leaves_it_its_room(tmp_path: Path):
+    # The early-subtitles case with a sound description before line A.
+    # After the +2 s shift "[door creaks]" sits at 11.6-12.4 s, on the
+    # card's own time, but a cue that holds only sounds is never shown, so
+    # the card keeps its room there, as in the first build.
+    w = tmp_path / "work"
+    lines = [(9_600, 10_400, "[door creaks]"), (11_500, 13_500, "Line A.")]
+    lines += [
+        (20_000 + k * 4_000, 22_500 + k * 4_000, f"[wind] Line {k + 3}." if k % 3 == 0 else f"Line {k + 3}.") for k in range(40)
+    ]
+    timing = tmp_path / "en.srt"
+    timing.write_text(
+        "".join(f"{i}\n{srt.fmt_ms(a)} --> {srt.fmt_ms(b)}\n{t}\n\n" for i, (a, b, t) in enumerate(lines, 1)), encoding="utf-8"
+    )
+    (w / "screen").mkdir(parents=True)
+    card = (12_000, 13_000)
+    path = _picture(w, [(card[0], [])], [], [_reading("THREE YEARS LATER", *card, kind="caption")])
+    prepare.build(w, timing, None, None, timing_language="en", screen_path=path)
+    assert _entries(w)[f"picture:{card[0]}"]["reason"] == prepare.UNDER_TIMING
+    before = [(r["n"], r["source"]) for r in _json(w / "cues.json")]
+    prepare.build(w, _shifted(tmp_path, timing, 2_000), None, None, keep_bible_check=True, shift_ms=2_000)
+    rows = _json(w / "cues.json")
+    assert [(r["n"], r["source"]) for r in rows] == before
+    assert rows[0]["sound_only"] and (rows[0]["start"], rows[0]["end"]) == (11_600, 12_400)
+    e = _entries(w)[f"picture:{card[0]}"]
+    assert (e["state"], e["n"], (e["start"], e["end"])) == ("cue", 3, card) and "reason" not in e
+    (w / "out").mkdir(exist_ok=True)
+    tr = "".join(f"{r['n']}\n{r['n']}. satır.\n\n" for r in rows if not prepare.left_out(r))
+    (w / "out" / "tr_01.txt").write_text(tr, encoding="utf-8")
+    assert assemble.run_checks(w)["hard_fail_count"] == 0
+    draft = srt.parse(w / "draft.tr.srt")[0]
+    assert [(c.start, c.lines) for c in draft[:2]] == [(card[0], ["3. satır."]), (13_500, ["2. satır."])]
 
 
 def test_an_early_timing_file_leaves_a_card_with_no_room_at_its_own_time_out_and_lists_it(tmp_path: Path):
