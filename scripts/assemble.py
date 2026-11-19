@@ -1552,7 +1552,9 @@ def goodbye_on_black(cues: list[srt.Cue], on_screen: set[int], black: list[tuple
             at = running.end
         if at >= b_end:
             return None
-        following = min((c.start for c in cues if c.start >= at), default=None)
+        # Strictly after: a cue starting at `at` that runs was skipped above,
+        # and one timed backwards (end before start) must not stop the loop.
+        following = min((c.start for c in cues if c.start > at), default=None)
         end = at + CREDIT_MS if following is None else min(at + CREDIT_MS, following - CREDIT_BEFORE_NEXT)
         if end - at >= CREDIT_FREE_MS:
             return at, end

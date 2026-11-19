@@ -227,3 +227,10 @@ def test_end_cards_ignore_readings_of_the_wrong_shape(tmp_path: Path):
     for bad in ('{"readings": [1, 2]}', '{"readings": 3}', "[]"):
         (w / assemble.READINGS_FILE).write_text(bad, encoding="utf-8")
         assert assemble.end_cards(w) == []
+
+
+def test_goodbye_on_black_moves_past_a_cue_timed_backwards():
+    # Cue 3 is timed 65 s to 63 s, a typo in the timing file. The goodbye
+    # still lands on the black after it, and the search ends.
+    cues = _cues(*STORY, (65_000, 63_000))
+    assert _bye(cues, [(63_500, 70_000)]) == (65_000, 69_000)
