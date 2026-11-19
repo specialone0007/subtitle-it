@@ -235,8 +235,9 @@ def lay_out(
     sound_only: list[int],
     why: dict[int, str] | None = None,
 ) -> tuple[list[srt.Cue], dict]:
-    """The cues as delivered, numbered from 1, and the map from each
-    delivered number to the timing file's cue. A cue the layout split
+    """The cues as delivered, numbered from 1 in the order of `kept`, the
+    order they are shown in, and the map from each delivered number to the
+    timing file's cue. A cue the layout split
     becomes several delivered cues, each with its part number; a cue left
     whole keeps its timestamp line exactly as written, unless it stays on
     screen longer (`layout.available_end`): then its start stays as written
@@ -317,6 +318,12 @@ def on_screen_entries(work: Path) -> list[dict]:
     it existed."""
     path = work / prepare.ON_SCREEN_FILE
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+
+
+def picture_cues(work: Path) -> set[int]:
+    """The cue numbers of the picture entries, which a sync rebuild can
+    show out of number order (`prepare.time_order`)."""
+    return {e["n"] for e in on_screen_entries(work) if e.get("evidence") == prepare.PICTURE and isinstance(e.get("n"), int)}
 
 
 def left_out_why(rows: dict[int, dict]) -> dict[int, str]:
@@ -545,7 +552,9 @@ def run_checks(work: Path, texts: dict[int, list[str]] | None = None, write: boo
     for p in problems:
         h(None, "file format", p)
     sound_only = sound_only_cues(work, rows)
-    kept = [c for c in timing if c.n not in sound_only]
+    # In the order they are shown: the draft, its gaps and the sentences
+    # that run over several cues follow time, not numbers.
+    kept = prepare.time_order([c for c in timing if c.n not in sound_only], picture_cues(work))
     valid = {c.n for c in kept}
     for n in sorted(set(texts) - valid - sound_only):
         h(n, "cue count", "cue number not in the timing file")
@@ -1680,7 +1689,7 @@ def on_screen_report(work: Path) -> dict | None:
     the last cue that is not on-screen text), with its reason. `left_out`:
     the count per reason of the other entries left out; `file` holds them
     all. `no_room_after_shift`: every entry read from the picture that the
-    timing shift left with no room, wherever it falls, with its video time
+    timing shift left with no room at its own time, wherever it falls, with its video time
     and text (never counted in the two above). `unplaced_human_lines`, in a polish run: the human Turkish lines
     that landed on no cue and lie under no entry delivered. `limits`: what
     no run finds. `picture`, when the picture was read (`screen.py frames`):
@@ -1704,8 +1713,9 @@ def on_screen_report(work: Path) -> dict | None:
     for e in entries:
         text = srt.strip_tags(prepare._one_line(e["lines"]))
         if e.get("reason") == prepare.NO_ROOM_SHIFT:
-            # Found in the picture, but the timing shift left no place for
-            # it: listed one by one, at its video time, wherever it falls.
+            # Found in the picture, but after the timing shift the lines
+            # leave no room at its own time: listed one by one, at its video
+            # time, wherever it falls.
             after_shift.append({"at": srt.fmt_ms(_video_at(e)), "text": text})
         elif e["state"] == "cue":
             ds = sorted(back.get(e["n"], []))

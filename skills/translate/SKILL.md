@@ -308,7 +308,7 @@ Mark `hints_bible` with this step's first command.
      `--shift-ms` is the same number the files were shifted by: `build` moves the on-screen entries by it instead of
      finding them again, so every cue keeps its number. It always counts from the files of the first build, so
      running the same rebuild again moves nothing twice. Never pass `--screen` here: an entry read from the picture
-     keeps its video times and its number, and is added or left out again by where the shifted lines now fall. Then run `speakers.py run` once
+     keeps its video times and its number, and is shown at its own time, or left out, by where the shifted lines now fall around that time; the draft is written in time order. Then run `speakers.py run` once
      more (in the foreground), since the voices were matched on the old
      times. The bible stays: a shift moves times, not cue numbers. Do not
      shift a second time; note the shift and the second verdict for the
@@ -576,7 +576,7 @@ many cues lost tags or labels and how many sound-only cues were left
 out, how many bare sounds were left out, where the goodbye went
 (`deliver`'s `goodbye`: on the `cut to black` or `after the story`, and
 `screen.py ends`'s `error` when it had one), the songs (song cues found,
-translated, left out, and the `Songs` mode), the on-screen text from `deliver`'s `on_screen` (each entry in `delivered` with its time and text; each in `left_out_at_ends` with its time, text and reason; when `no_room_after_shift` is not empty, the line "The picture found these texts, but the timing shift left no place for them; they can be added by hand." and under it each of its entries with its time and text, never only a count; the counts in `left_out` with the path in `file`; in a polish run each line in `unplaced_human_lines` with its time and text; when `picture` is set, each entry in its `looked_at` with its time, text, state, reason and what the picture showed, how many `frames` were saved, the count of `frames_not_read`, and its `notes`; then its two `limits` lines as they are; and, for a video, the extra download of step 2 when it was skipped, or that the picture was not read and why), any file `build` warned was malformed, the voices dropped as mixed, the bible check (decisions, agreed,
+translated, left out, and the `Songs` mode), the on-screen text from `deliver`'s `on_screen` (each entry in `delivered` with its time and text; each in `left_out_at_ends` with its time, text and reason; when `no_room_after_shift` is not empty, the line "The picture found these texts, but after the timing shift the lines leave no room at their time; they can be added by hand." and under it each of its entries with its time and text, never only a count; the counts in `left_out` with the path in `file`; in a polish run each line in `unplaced_human_lines` with its time and text; when `picture` is set, each entry in its `looked_at` with its time, text, state, reason and what the picture showed, how many `frames` were saved, the count of `frames_not_read`, and its `notes`; then its two `limits` lines as they are; and, for a video, the extra download of step 2 when it was skipped, or that the picture was not read and why), any file `build` warned was malformed, the voices dropped as mixed, the bible check (decisions, agreed,
 judged, ties, questions the second reader never answered), in a polish
 run the lines whose sen or siz differs from the human file
 (`address_changes` in `WORK/checks.json`, each with its reason, and those

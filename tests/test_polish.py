@@ -93,6 +93,21 @@ def test_seed_puts_the_turkish_on_the_timing_cues(work: Path, tmp_path: Path):
     assert 6 not in texts
 
 
+def test_seed_places_the_turkish_by_time_when_numbers_are_out_of_time_order(tmp_path: Path):
+    # Cue 2 is shown before cue 1, as a picture card a sync rebuild showed
+    # at its own time.
+    en = "1\n00:00:03,500 --> 00:00:06,000\nIt's cold.\n\n2\n00:00:01,000 --> 00:00:03,000\nCome here.\n"
+    tr = "1\n00:00:01,000 --> 00:00:03,000\nBuraya gel.\n\n2\n00:00:03,500 --> 00:00:06,000\nHava soğuk.\n"
+    (tmp_path / "en.srt").write_text(en, encoding="utf-8")
+    (tmp_path / "tr.srt").write_text(tr, encoding="utf-8")
+    w = tmp_path / "work"
+    prepare.build(w, tmp_path / "en.srt", None, tmp_path / "en.srt")
+    out = polish.seed(w, tmp_path / "tr.srt")
+    assert out["seeded"] == 2
+    texts = _seeded(w)
+    assert (texts[1], texts[2]) == (["Hava soğuk."], ["Buraya gel."])
+
+
 def test_seed_rewraps_joined_cues_that_grow_past_two_lines(tmp_path: Path):
     (tmp_path / "en.srt").write_text("1\n00:00:01,000 --> 00:00:05,000\nOne long English line here.\n", encoding="utf-8")
     parts = "".join(f"{i + 1}\n00:00:0{i + 1},000 --> 00:00:0{i + 1},900\nbir iki üç dört\n\n" for i in range(4))

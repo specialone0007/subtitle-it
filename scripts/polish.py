@@ -146,7 +146,8 @@ def seed(work: Path, tr_path: Path) -> dict:
     # Cues that hold only sounds get no Turkish: a Turkish line there goes
     # to a spoken neighbour or is listed as placed nowhere.
     sound_only = assemble.sound_only_cues(work, rows)
-    timing = [c for c in timing if c.n not in sound_only]
+    # In time order, as pairing and the search for neighbours read them.
+    timing = prepare.by_start([c for c in timing if c.n not in sound_only])
     turkish, enc = srt.parse(tr_path)
     if not turkish:
         raise SystemExit(f"no cues found in {tr_path}")

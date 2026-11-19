@@ -36,6 +36,13 @@ def test_assign_voices_skips_cues_with_two_speakers():
     assert speakers.assign_voices([two, one], [(0, 2000, "A")]) == {2: "V1"}
 
 
+def test_assign_voices_reads_the_cues_in_time_order():
+    # A picture card a sync rebuild showed at its own time: cue 2 comes
+    # before cue 1 on the screen.
+    cues = [cue(1, 2000, 3000), cue(2, 0, 1000)]
+    assert speakers.assign_voices(cues, [(0, 1000, "A"), (2000, 3000, "B")]) == {2: "V1", 1: "V2"}
+
+
 def test_merge_similar_joins_alike_voices_and_keeps_others():
     turns = [(0, 1000, "A"), (1000, 2000, "B"), (2000, 3000, "C"), (3000, 4000, "D")]
     cent = {"A": [1.0, 0.0], "B": [0.9, 0.1], "C": [0.0, 1.0], "D": [float("nan"), 0.0]}

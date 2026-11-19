@@ -131,8 +131,11 @@ def assign_voices(cues: list[srt.Cue], turns: list[Turn], min_share: float = MIN
     covers at least `min_share` of the cue and the runner-up covers less
     than `margin` times the top speaker's time. A cue with two dash lines
     gets no voice: one voice would be wrong for one of its lines. Speakers
-    are renamed V1, V2, ... in the order they first win a cue."""
+    are renamed V1, V2, ... in the order they first win a cue. The cues are
+    read in time order: a picture entry a sync rebuild showed at its own
+    time can sit out of number order."""
     turns = sorted(turns)
+    cues = sorted(cues, key=lambda c: (c.start, c.n))
     names: dict[str, str] = {}
     out: dict[int, str] = {}
     i = 0

@@ -74,9 +74,12 @@ timing cue covers it and there is room. Every picture entry gets a cue
 number, the ones left out (no room, or under a timing line) too: their rows
 are left out and not delivered. `--screen` keeps W/screen/. In a
 `--shift-ms` rebuild a picture entry keeps its times, which are the video's
-(`found`), and each is judged again against the shifted timing cues: one
-they cover is left out, and one left with no room keeps its number, left
-out (NO_ROOM_SHIFT).
+(`found`), and its number, and each is judged again against the shifted
+cues next to it in time, whatever their numbers: one they cover is left
+out, one with room is shown at its own time, even before a cue with a lower
+number, and one with no room at its own time is left out (NO_ROOM_SHIFT).
+So its number can sit out of time order; whatever is shown or measured in
+time reads the cues in `time_order`.
 """
 
 from __future__ import annotations
@@ -551,7 +554,8 @@ def build(
     are then moved too, not found again, and the timing cues it dropped
     under them are dropped again, so every cue keeps its number. A work
     folder with no on_screen.json finds them again. A picture entry keeps
-    its times, which are the video's. `screen_path` is the readings file
+    its times, which are the video's, and its number, and is shown at its
+    own time when it has room there. `screen_path` is the readings file
     of `screen.py collect`: the entries are found again with what the
     picture showed (read_picture)."""
     if hi not in HI_MODES:
@@ -702,7 +706,7 @@ def build(
     if source_path and source_path.resolve() != timing_path.resolve():
         repairs["source"] = []
         source, _ = srt.parse(source_path, repairs["source"])
-        src_pairs = srt.pair(timing, source)
+        src_pairs = srt.pair(by_start(timing), source)
         hearing_impaired["source"] = srt.hearing_impaired(source)["hearing_impaired"]
     # Songs marked only with italics, found in the file the source text
     # comes from (srt.italic_songs). The on-screen cues are not the timing
@@ -714,7 +718,7 @@ def build(
     if en_path and en_path.resolve() != timing_path.resolve():
         repairs["en"] = []
         en, _ = srt.parse(en_path, repairs["en"])
-        en_pairs = srt.pair(timing, en)
+        en_pairs = srt.pair(by_start(timing), en)
         hearing_impaired["en"] = srt.hearing_impaired(en)["hearing_impaired"]
 
     # Each file is cleaned by its own flag: parentheses and labels in
@@ -864,33 +868,66 @@ def build(
 
 def _fit_picture_entries(merged: list[tuple[srt.Cue | None, dict | None]], refit: bool) -> None:
     """In a sync rebuild (`refit`) the cues around a picture entry moved and
-    it did not. Each keeps its place in `merged`; one left under
-    ON_SCREEN_MIN_MS between its neighbours is left out (NO_ROOM_SHIFT). A
-    picture entry left out, in any build, has its times clipped into its
-    slot so the file stays in time order."""
+    it did not. Each keeps its place in `merged`, its number, but its room
+    is looked for at its own time, between the cues shown just before and
+    just after it there, whatever their numbers: one left under
+    ON_SCREEN_MIN_MS is left out (NO_ROOM_SHIFT). A picture entry left out,
+    in any build, has its times clipped into its numbered slot; it is never
+    delivered."""
 
     def span(item: tuple[srt.Cue | None, dict | None]) -> tuple[int, int]:
         c, e = item
         return (c.start, c.end) if c is not None else (e["start"], e["end"])
 
-    for i, (_, e) in enumerate(merged):
-        if e is None or e.get("evidence") != PICTURE:
-            continue
-        lo = span(merged[i - 1])[1] if i else 0
-        hi = span(merged[i + 1])[0] if i + 1 < len(merged) else max(e["end"], lo)
+    def picture(e: dict | None) -> bool:
+        return e is not None and e.get("evidence") == PICTURE
+
+    # What is shown whatever the picture entries do: the timing cues and the
+    # tracks' entries. Picture entries shown join it one by one, in time.
+    shown = [span(x) for x in merged if not picture(x[1])]
+    for i in sorted((i for i, x in enumerate(merged) if picture(x[1])), key=lambda i: (merged[i][1]["start"], i)):
+        e = merged[i][1]
         if e["state"] == "cue":
             if not refit:
                 continue
+            lo = max((b for a, b in shown if a <= e["start"]), default=0)
+            hi = min((a for a, _ in shown if a > e["start"]), default=max(e["end"], lo))
             start, end = max(e["start"], lo), min(e["end"], hi)
             if end - start >= ON_SCREEN_MIN_MS:
                 e["start"], e["end"] = start, end
+                shown.append((start, end))
                 continue
             e["state"], e["reason"] = "left_out", NO_ROOM_SHIFT
+        lo = span(merged[i - 1])[1] if i else 0
+        hi = span(merged[i + 1])[0] if i + 1 < len(merged) else max(e["end"], lo)
         if lo > hi:
             e["start"] = e["end"] = hi
         else:
             e["start"] = min(max(e["start"], lo), hi)
             e["end"] = max(min(e["end"], hi), e["start"])
+
+
+def time_order(cues: list[srt.Cue], loose: set[int]) -> list[srt.Cue]:
+    """The cues in the order they are shown. A sync rebuild keeps every
+    number and shows a picture entry at its own time (`_fit_picture_entries`),
+    so its number can sit out of time order: each cue in `loose` is placed
+    by its start among the others, which keep their order."""
+    fixed = [c for c in cues if c.n not in loose]
+    extra = sorted((c for c in cues if c.n in loose), key=lambda c: (c.start, c.n))
+    out: list[srt.Cue] = []
+    k = 0
+    for c in fixed:
+        while k < len(extra) and extra[k].start < c.start:
+            out.append(extra[k])
+            k += 1
+        out.append(c)
+    return out + extra[k:]
+
+
+def by_start(cues: list[srt.Cue]) -> list[srt.Cue]:
+    """The cues sorted by start, as `srt.pair` reads them: a picture entry a
+    sync rebuild showed at its own time can sit out of time order."""
+    return sorted(cues, key=lambda c: (c.start, c.n))
 
 
 def _one_line(lines: list[str] | None) -> str:
