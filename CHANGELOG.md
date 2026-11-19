@@ -2,19 +2,21 @@
 
 ## 0.13.0 (2026-11-19)
 
-Title cards and signs are now read from the picture itself: texts only
-one other track shows are checked against the video, and story texts no
-track holds are added as cues of their own.
+Title cards and signs are now read from the picture itself: when the
+tracks hold exactly one other language, the texts only it shows are
+checked against the video, and story texts no track holds are added as
+cues of their own.
 
 - `sources.py others` counts the other languages among the usable
   subtitle candidates and names one download, French then Spanish, only
   when fewer than two are found. `prepare.py build --timing-language L`
   records the count of tracks that fit in `build.json`.
 - New `screen.py frames` saves frames with ffmpeg from the start to the
-  first spoken line and for 2.5 minutes after the story's end, plus 5
-  frames for each text only one other language shows; 300 frames at most,
-  HDR tone-mapped when ffmpeg can. It writes `W/screen/frames.json` and
-  batches of 20 frames.
+  first spoken line (2.5 minutes at most) and for 2.5 minutes after the
+  story's end, plus, when the tracks hold exactly one other language, 5
+  frames for each text only it shows outside those two stretches; 300
+  frames at most, HDR tone-mapped when ffmpeg can. It writes
+  `W/screen/frames.json` and batches of 20 frames.
 - New agent `agents/screen-reader.md` reads the frames and writes one
   line per frame: the text word for word, its kind, whether the film
   wants it read, and the entry it shows. `screen.py collect` checks the
