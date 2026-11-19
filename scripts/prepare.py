@@ -74,7 +74,10 @@ subtitle credit or a song line; an unsure entry the picture did not show
 is left out, `not confirmed by the picture`
 when its frames were read, `not checked by the picture` otherwise; a story
 text no entry holds is a new entry (`evidence: picture`), added when no
-timing cue covers it and there is room. Every picture entry gets a cue
+timing cue covers it and there is room. Its `found` is the span the frames
+saw; it is shown until the next saved frame (`shown_end`, at least
+PICTURE_HOLD_MS long and at most PICTURE_HOLD_MS past its last frame), but
+never into the next item it would push out. Every picture entry gets a cue
 number, the ones left out (no room, or under a timing line) too: their rows
 are left out and not delivered. `--screen` keeps W/screen/. In a
 `--shift-ms` rebuild a picture entry keeps its times, which are the video's
@@ -119,6 +122,10 @@ GAP_MAX_COVERED = 0.2
 SAME_LINE_SHARE = 0.5
 # An added cue squeezed between two timing cues must still last this long.
 ON_SCREEN_MIN_MS = 700
+# A story text only the picture shows stays up after its last frame until
+# the next saved frame, this long at most, and lasts this long at least
+# (picture_shown_end): frames are 1.5 s apart at the two ends of the film.
+PICTURE_HOLD_MS = 1500
 # A subtitler's own credit or a site's advert, in the languages tracks come in.
 CREDIT_RE = re.compile(
     r"subt[ií]t|sous-titr|untertitel|sottotitol|legendas|altyaz|napisy|traduc|translat|übersetz|azpititul|ikuskatzaile"
@@ -238,9 +245,21 @@ def need_languages(n: int) -> int:
     return max(2, math.ceil(SHARE * n)) if n >= SHARE_FROM else 2
 
 
+def is_story_kind(kind: str | None) -> bool:
+    """A kind of text that is story text: not credits, a logo or the
+    background."""
+    return kind in READER_KINDS and kind not in NOT_STORY_KINDS
+
+
 def is_story(kind: str | None, wants_read: bool) -> bool:
     """A reading the film wants read, of a kind that is story text."""
-    return bool(wants_read) and kind in READER_KINDS and kind not in NOT_STORY_KINDS
+    return bool(wants_read) and is_story_kind(kind)
+
+
+def fold_text(text: str) -> str:
+    """Text as compared for sameness: case, punctuation, line breaks and
+    spacing folded away, so "Dad's / shop" and "dad's shop" match."""
+    return " ".join(re.sub(r"[\W_]", " ", text.casefold()).split())
 
 
 def _id(g: list[Found]) -> str:
@@ -274,8 +293,23 @@ def _entry(g: list[Found], state: str, reason: str | None = None, start: int | N
 
 
 def picture_span(r: dict) -> tuple[int, int]:
-    """A reading's time: first seen to last seen, ON_SCREEN_MIN_MS at least."""
+    """A reading's time: first seen to last seen, ON_SCREEN_MIN_MS at least.
+    Whether timing cues cover it (_under_timing) is judged on this span."""
     return r["first_ms"], max(r["last_ms"], r["first_ms"] + ON_SCREEN_MIN_MS)
+
+
+def picture_shown_end(r: dict) -> int:
+    """Where a reading's cue aims to end: the text stays on screen after its
+    last frame until the next saved frame (`next_ms`), PICTURE_HOLD_MS at
+    most, and the cue lasts PICTURE_HOLD_MS at least. `next_ms` is null after
+    the last saved frame (PICTURE_HOLD_MS then); a reading with no `next_ms`
+    key comes from an older work folder and keeps picture_span's end."""
+    end = picture_span(r)[1]
+    if "next_ms" not in r:
+        return end
+    nxt = r["next_ms"]
+    hold = PICTURE_HOLD_MS if nxt is None else min(max(nxt - r["last_ms"], 0), PICTURE_HOLD_MS)
+    return max(end, r["first_ms"] + PICTURE_HOLD_MS, r["last_ms"] + hold)
 
 
 def _picture_entry(r: dict, state: str, reason: str | None = None, start: int | None = None, end: int | None = None) -> dict:
@@ -295,8 +329,12 @@ def _picture_entry(r: dict, state: str, reason: str | None = None, start: int | 
         "kind": r.get("kind"),
         "frames": list(r.get("frames", [])),
         "state": state,
-        # The reading's own time, which a sync rebuild starts from.
+        # The reading's own time, which a sync rebuild starts from and
+        # judges against the timing cues.
         "found": [a, b],
+        # Where its cue aims to end (picture_shown_end), which a sync
+        # rebuild places it with.
+        "shown_end": picture_shown_end(r),
     }
     if reason:
         entry["reason"] = reason
@@ -445,9 +483,14 @@ def on_screen(
         place.append((a, len(place), r))
     place.sort(key=lambda x: (x[0], x[1]))
     last_end = 0
-    for _, _, item in place:
+    for k, (_, _, item) in enumerate(place):
         if isinstance(item, dict):
-            lead_start, lead_end = picture_span(item)
+            lead_start, seen_end = picture_span(item)
+            # It stays up after its last frame, but never past where the
+            # next item to place starts, so it pushes none into no room.
+            following = place[k + 1][0] if k + 1 < len(place) else None
+            aim = picture_shown_end(item)
+            lead_end = max(seen_end, min(aim, following)) if following is not None else aim
             make = partial(_picture_entry, item)
         else:
             lead = _lead(item)[3]
@@ -679,6 +722,10 @@ def build(
                 else:
                     e["state"] = "cue"
                     e.pop("reason", None)
+                    # Judged on the seen span, placed by where it aims to
+                    # end; an entry from an older work folder has no
+                    # `shown_end` and keeps the seen span.
+                    e["end"] = max(e["end"], e.get("shown_end", e["end"]))
                 continue
             start, end = e.get("found") or (e["start"] - was, e["end"] - was)
             e["found"] = [start, end]
@@ -938,13 +985,22 @@ def _fit_picture_entries(merged: list[tuple[srt.Cue | None, dict | None]], refit
     # and the tracks' entries. Picture entries shown join it one by one, in
     # time.
     shown = [span(x) for x in merged if (x[0] is not None and x[0].n in spoken) or (x[1] is not None and not picture(x[1]))]
-    for i in sorted((i for i, x in enumerate(merged) if picture(x[1])), key=lambda i: (merged[i][1]["start"], i)):
+    order = sorted((i for i, x in enumerate(merged) if picture(x[1])), key=lambda i: (merged[i][1]["start"], i))
+    for k, i in enumerate(order):
         e = merged[i][1]
         if e["state"] == "cue":
             if not refit:
                 continue
             lo = max((b for a, b in shown if a <= e["start"]), default=0)
             hi = min((a for a, _ in shown if a > e["start"]), default=max(e["end"], lo))
+            # A picture entry still to come is not in `shown` yet: this one
+            # stays up after its last frame only until that one starts, so
+            # it pushes none into no room (never shorter than it was seen).
+            later = [merged[j][1]["start"] for j in order[k + 1 :] if merged[j][1]["state"] == "cue"]
+            later = [a for a in later if a > e["start"]]
+            if later:
+                seen_end = (e.get("found") or (e["start"], e["end"]))[1]
+                hi = min(hi, max(seen_end, min(later)))
             start, end = max(e["start"], lo), min(e["end"], hi)
             if end - start >= ON_SCREEN_MIN_MS:
                 e["start"], e["end"] = start, end

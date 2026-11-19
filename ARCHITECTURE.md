@@ -131,7 +131,11 @@ Then it settles the timings:
   text, credits, logo, background), whether the film wants it read, and
   the entry it shows, if any. `screen.py collect` checks one line per
   frame, sends missing ones back once, and joins neighbouring frames
-  with the same text into one reading (`W/screen/readings.json`).
+  with the same text into one reading (`W/screen/readings.json`). Case
+  and punctuation do not count ("Dad's / shop" and "dad's shop" are
+  one text), and two story kinds (a sign read as a caption) are one kind;
+  the reading takes the text and kind most of its frames give, and
+  records when the next frame was saved (`next_ms`).
   `build --screen W/screen/readings.json` then decides: a reading joins
   an entry only when it names it. An unsure entry a story reading names
   is added; one whose frames were all read and never named is left out
@@ -140,6 +144,10 @@ Then it settles the timings:
   languages, a subtitle credit, a song line) is added when a story reading names it.
   A story reading no entry holds becomes an entry of its own,
   `picture:<first ms>`, added under the same coverage and room rules.
+  It stays on screen until the next saved frame (the text may still be
+  there), for 1.5 s at least and at most 1.5 s after its last frame,
+  but never into the next item it would push out; `found` keeps the span
+  the frames saw, and `shown_end` where it aims to end.
   One a timing line covers or with no room still gets a cue number, as
   a row left out and never delivered, so a sync rebuild can place it.
   Credits, logos, background text and text the film does not want read
@@ -193,7 +201,8 @@ film.
   every cue keeps its number and the bible's citations stay true. The
   amount counts from the times the first build found, so running the
   same rebuild twice moves the entries once. An entry read from the
-  picture keeps its video times (`found`, the reading's own time) and its
+  picture keeps its video times (`found`, the reading's own time, and
+  `shown_end`) and its
   cue number, and is judged again against the shifted cues next to it in
   time, whatever their numbers (a cue that holds only sounds is never
   shown, so it takes no room): one they cover is left out as `under a
