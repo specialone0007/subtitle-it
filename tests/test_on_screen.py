@@ -82,16 +82,11 @@ def test_credits_sounds_and_one_language_twice_are_never_added(tmp_path: Path):
     entries, summary = prepare.on_screen(_cues(_timing(tmp_path)), tracks, [])
     assert _added(entries) == []
     # "Mmmh." alone is left; "Hmm..." and the song never count. The two
-    # credits, shown at the same time, are one entry left out as such, and
-    # "THE END" at that time joins them.
-    assert [e["lines"] for e in _left(entries, prepare.ONE_LANGUAGE)] == [["Mmmh."]]
+    # credits, shown at the same time, are one entry left out as such.
+    assert [e["lines"] for e in _left(entries, prepare.ONE_LANGUAGE)] == [["Mmmh."], ["THE END"]]
     credit = _left(entries, prepare.CREDIT)
-    assert len(credit) == 1 and credit[0]["texts"] == {
-        "fr": ["Sous-titres : Jean"],
-        "es": ["Subtítulos: Gabriel"],
-        "en": ["THE END"],
-    }
-    assert len(entries) == 2
+    assert len(credit) == 1 and credit[0]["texts"] == {"fr": ["Sous-titres : Jean"], "es": ["Subtítulos: Gabriel"]}
+    assert len(entries) == 3
 
 
 def test_one_language_with_and_without_a_region_is_still_one(tmp_path: Path):
@@ -689,6 +684,18 @@ def test_a_line_shown_with_a_subtitle_credit_is_a_credit_too(tmp_path: Path):
     entries, summary = prepare.on_screen(timing, [*tracks, ("eu", eu)], [], timing_language="en")
     assert _added(entries) == [] and summary["reasons"] == {prepare.CREDIT: 1}
     assert len(entries[0]["texts"]) == 9
+
+
+def test_below_six_languages_a_credit_at_the_same_time_leaves_a_card_alone(tmp_path: Path):
+    # French and Spanish show a card while the German track's subtitle
+    # credit overlaps it: with three other languages the card is added.
+    fr = _film(tmp_path, "fr.srt", "Ligne", [(*CARD, "UN JOUR")])
+    es = _film(tmp_path, "es.srt", "Línea", [(*CARD, "UN DÍA")])
+    de = _film(tmp_path, "de.srt", "Zeile", [(*CARD, "Untertitel: Hans")])
+    tracks = [("fr", fr), ("es", es), ("de", de)]
+    entries, summary = prepare.on_screen(_cues(_timing(tmp_path)), tracks, [], timing_language="en")
+    assert [e["lines"] for e in _added(entries)] == [["UN JOUR"]]
+    assert summary["reasons"] == {prepare.CREDIT: 1}
 
 
 def test_the_share_counts_a_region_once_and_leaves_out_tracks_that_do_not_fit(tmp_path: Path):

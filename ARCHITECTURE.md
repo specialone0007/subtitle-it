@@ -102,7 +102,10 @@ Then it settles the timings:
   tracks also subtitle shop signs in the background. In one test film
   with 31 other languages the story texts were shown by 27 to 31 and the
   background signs by 5 to 21. A line shown by fewer is left out as `too
-  few languages`. A line the timing file covers is its own line: it
+  few languages`. With that many languages, a line shown at the same time
+  as another track's subtitle credit is left out with it as a subtitle
+  credit, since a credit reads as one in some languages only ("Creative
+  supervisor" does not); below six, credits are grouped apart. A line the timing file covers is its own line: it
   is only counted. The list is empty when no track is given, so no
   earlier run's entries survive.
 - The picture, for a video input. Before `build`, `sources.py others`
