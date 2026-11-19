@@ -208,17 +208,19 @@ lines each track up itself. It adds a line as a cue of its own, marked
 `[on-screen text]` in the chunks, when tracks in two languages show it
 where the timing file shows nothing, or a forced track shows it. One
 language alone is not enough: a French track also subtitles shouts the
-English one leaves out. Every text it finds, added or left out, is a
+English one leaves out. With six or more other languages, three quarters
+of them must show it, since some tracks also subtitle signs in the
+background. Every text it finds, added or left out, is a
 row of `WORK/on_screen.json` with its time, its text per language and,
-when left out, a reason (one language only, no room, a subtitle credit,
+when left out, a reason (one language only, too few languages, no room, a subtitle credit,
 a song line, shown during a song or a sound). From its `on_screen`, keep
 only the tracks that did not fit for the report: the report's on-screen
 section comes from `deliver` at step 12 alone, so no entry is reported
 twice. With one candidate in all, pass no `--track`.
 
 The picture. For a video input, the on-screen text is also read from the
-frames at the two ends of the film and around the lines one language
-alone leaves unsure. An `.srt` input skips all of this: say in one line
+frames at the two ends of the film and around the lines the tracks leave
+unsure (one language alone, or too few languages). An `.srt` input skips all of this: say in one line
 of the report that the picture was not read, since the input is a
 subtitle file. In this order:
 

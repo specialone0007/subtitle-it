@@ -1503,12 +1503,20 @@ CREDIT_FREE_MS = 2000
 CREDIT_BEFORE_NEXT = 100
 # The cut to black after the story, when `screen.py ends` found one
 # (W/screen/ends.json): the closing screen starts on the first black
-# stretch that begins within 30 s after story end, at least half a second
-# after the last story line and after any cue still on screen, and ends
-# 0.1 s before the next cue, 4 s at most. With under 2 s free there, or no
-# such stretch, the rule above places it.
+# stretch that counts, at least half a second after the last story line
+# and after any cue still on screen, and ends 0.1 s before the next cue,
+# 4 s at most. A stretch counts when it begins within 30 s after story
+# end, or later in the file when the frames show the film's end right
+# after it: a title card, closing text or the credits, first read within
+# 12 s of its start (W/screen/readings.json). A film can run an epilogue
+# with no lines for a minute or more before it cuts to its title. With
+# under 2 s free there, or no stretch that counts, the rule above places
+# it.
 ENDS_FILE = Path("screen") / "ends.json"
+READINGS_FILE = Path("screen") / "readings.json"
 BLACK_WITHIN = 30_000
+END_CARD_AFTER = 12_000
+END_CARD_KINDS = ("title card", "closing text", "credits")
 
 
 def credit_lines(greeting: str, translator: str = "") -> list[str]:
@@ -1527,21 +1535,33 @@ def story_end(cues: list[srt.Cue], on_screen: set[int]) -> int | None:
 
 
 def goodbye_on_black(cues: list[srt.Cue], on_screen: set[int], black: list[tuple[int, int]]) -> tuple[int, int] | None:
-    """Start and end of the closing credit on the cut to black after the
-    story (see ENDS_FILE), or None when no black stretch begins within 30 s
-    after story end or it leaves under 2 s free."""
+    """Start and end of the closing credit on the first of `black` (the
+    stretches that count, black_after_story) that begins at story end or
+    later, or None with no such stretch or one that leaves under 2 s free.
+    A cue in the way (a title card read on the black) is skipped while the
+    stretch lasts: the goodbye then starts after it."""
     s = story_end(cues, on_screen)
     if s is None:
         return None
-    b = next((b for b, _ in sorted(black) if s <= b <= s + BLACK_WITHIN), None)
+    b, b_end = next(((b, e) for b, e in sorted(black) if s <= b), (None, None))
     if b is None:
         return None
     at = max(b, s + CREDIT_GAP)
-    while running := next((c for c in cues if c.start <= at < c.end), None):
-        at = running.end
-    following = min((c.start for c in cues if c.start >= at), default=None)
-    end = at + CREDIT_MS if following is None else min(at + CREDIT_MS, following - CREDIT_BEFORE_NEXT)
-    return (at, end) if end - at >= CREDIT_FREE_MS else None
+    while at < b_end:
+        while running := next((c for c in cues if c.start <= at < c.end), None):
+            at = running.end
+        if at >= b_end:
+            return None
+        # Strictly after: a cue starting at `at` that runs was skipped above,
+        # and one timed backwards (end before start) must not stop the loop.
+        following = min((c.start for c in cues if c.start > at), default=None)
+        end = at + CREDIT_MS if following is None else min(at + CREDIT_MS, following - CREDIT_BEFORE_NEXT)
+        if end - at >= CREDIT_FREE_MS:
+            return at, end
+        if following is None:
+            return None
+        at = following
+    return None
 
 
 def goodbye_at(
@@ -1549,7 +1569,8 @@ def goodbye_at(
 ) -> tuple[int, int] | None:
     """Start and end of the closing credit, or None when the video leaves
     no room for it. On the cut to black after the story when `black` (the
-    stretches `screen.py ends` found) has one that fits (`goodbye_on_black`).
+    stretches that count, black_after_story) has one that fits
+    (`goodbye_on_black`).
     Otherwise it follows the story, not an end title shown after the
     credits roll: from 3 s after the last cue that is not on-screen text (a
     kept song counts as story), it takes the first free 2 s, skipping any
@@ -1619,19 +1640,34 @@ def with_credit(
 
 
 def black_after_story(work: Path, story: int | None) -> list[tuple[int, int]] | None:
-    """The black stretches in W/screen/ends.json, or None when the file is
-    missing, malformed, or does not cover half a second after story end to
-    30 s after it: the closing credit then follows the story alone. A later
-    `check` can hold the last line up to half a second longer, and the
-    goodbye starts that late at the earliest, so a file read a little
+    """The black stretches in W/screen/ends.json that count (ENDS_FILE):
+    those that begin within 30 s after story end, and later ones the
+    frames show the film's end right after (end_cards). None when the file
+    is missing, malformed, or does not cover half a second after story end
+    to 30 s after it: the closing credit then follows the story alone. A
+    later `check` can hold the last line up to half a second longer, and
+    the goodbye starts that late at the earliest, so a file read a little
     before still holds every stretch that counts."""
     try:
         data = json.loads((work / ENDS_FILE).read_text(encoding="utf-8"))
         if story is None or not (data["from_ms"] <= story + CREDIT_GAP and story + BLACK_WITHIN <= data["to_ms"]):
             return None
-        return [(int(a), int(b)) for a, b in data["black"]]
+        black = [(int(a), int(b)) for a, b in data["black"]]
     except (OSError, ValueError, TypeError, KeyError):
         return None
+    cards = end_cards(work)
+    return [(a, b) for a, b in black if a <= story + BLACK_WITHIN or any(a <= t <= a + END_CARD_AFTER for t in cards)]
+
+
+def end_cards(work: Path) -> list[int]:
+    """When the frames first show a title card, closing text or the
+    credits (W/screen/readings.json, END_CARD_KINDS), in ms; empty when
+    the picture was not read or the file is malformed."""
+    try:
+        readings = json.loads((work / READINGS_FILE).read_text(encoding="utf-8"))["readings"]
+        return [int(r["first_ms"]) for r in readings if r.get("kind") in END_CARD_KINDS]
+    except (OSError, ValueError, TypeError, KeyError, AttributeError):
+        return []
 
 
 def video_end_ms(video: Path) -> int | None:
