@@ -1671,7 +1671,9 @@ def on_screen_report(work: Path) -> dict | None:
     starts before the first spoken cue or at or after story end (the end of
     the last cue that is not on-screen text), with its reason. `left_out`:
     the count per reason of the other entries left out; `file` holds them
-    all. `unplaced_human_lines`, in a polish run: the human Turkish lines
+    all. `no_room_after_shift`: every entry read from the picture that the
+    timing shift left with no room, wherever it falls, with its video time
+    and text (never counted in the two above). `unplaced_human_lines`, in a polish run: the human Turkish lines
     that landed on no cue and lie under no entry delivered. `limits`: what
     no run finds. `picture`, when the picture was read (`screen.py frames`):
     every entry it looked at (time, text, state, reason and what the picture
@@ -1690,10 +1692,15 @@ def on_screen_report(work: Path) -> dict | None:
     back: dict[int, list[int]] = {}
     for d, info in (read_map(work) or {"cues": {}})["cues"].items():
         back.setdefault(info["cue"], []).append(int(d))
-    delivered, at_ends, rest = [], [], Counter()
+    delivered, at_ends, rest, after_shift = [], [], Counter(), []
     for e in entries:
         text = srt.strip_tags(prepare._one_line(e["lines"]))
-        if e["state"] == "cue":
+        if e.get("reason") == prepare.NO_ROOM_SHIFT:
+            # Found in the picture, but the timing shift left no place for
+            # it: listed one by one, at its video time, wherever it falls.
+            at = (e.get("found") or [e["start"]])[0]
+            after_shift.append({"at": srt.fmt_ms(at), "text": text})
+        elif e["state"] == "cue":
             ds = sorted(back.get(e["n"], []))
             at = shown[ds[0]].ts[:12] if ds else None
             turkish = " / ".join(ln for d in ds for ln in shown[d].lines)
@@ -1733,6 +1740,7 @@ def on_screen_report(work: Path) -> dict | None:
     return {
         "delivered": delivered,
         "left_out_at_ends": at_ends,
+        "no_room_after_shift": after_shift,
         "left_out": dict(rest),
         "file": str(entries_file) if entries_file.exists() else None,
         "unplaced_human_lines": unplaced,
