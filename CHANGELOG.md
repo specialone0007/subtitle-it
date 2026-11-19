@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.13.0 (2026-11-19)
+
+Title cards and signs are now read from the picture itself: texts only
+one other track shows are checked against the video, and story texts no
+track holds are added as cues of their own.
+
+- `sources.py others` counts the other languages among the usable
+  subtitle candidates and names one download, French then Spanish, only
+  when fewer than two are found. `prepare.py build --timing-language L`
+  records the count of tracks that fit in `build.json`.
+- New `screen.py frames` saves frames with ffmpeg from the start to the
+  first spoken line and for 2.5 minutes after the story's end, plus 5
+  frames for each text only one other language shows; 300 frames at most,
+  HDR tone-mapped when ffmpeg can. It writes `W/screen/frames.json` and
+  batches of 20 frames.
+- New agent `agents/screen-reader.md` reads the frames and writes one
+  line per frame: the text word for word, its kind, whether the film
+  wants it read, and the entry it shows. `screen.py collect` checks the
+  lines, sends missing or bad frames back once, and joins neighbouring
+  frames into readings.
+- `prepare.py build --screen` adds an unsure or left-out entry as a cue
+  when the picture shows it, and adds a story text no track holds as a
+  cue of its own under the usual coverage and room rules. Credits, logos
+  and background text are never added.
+- In a `--shift-ms` rebuild a picture entry keeps its video time and its
+  cue number, and is shown at its own time when the shifted lines leave
+  room there, even before a cue with a lower number. No cue is ever
+  renumbered, so the bible's cue citations stay true. The draft and the
+  delivered file are written in time order, and `check` and the listen
+  parts measure gaps, reading speed and sentences in time order.
+- `deliver`'s report lists every entry the picture looked at, and each
+  picture text the shift left with no room, with its video time, to be
+  added by hand.
+- The translate skill runs all of this in step 2 for a video input.
+
 ## 0.12.0 (2026-11-19)
 
 Every on-screen text the other subtitle tracks show is now recorded, the
