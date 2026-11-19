@@ -199,20 +199,43 @@ def test_end_cards_are_the_credits_title_cards_closing_texts_and_logos(tmp_path:
         assert assemble.end_cards(w) == []
 
 
-def test_tail_end_is_the_last_tail_frame(tmp_path: Path):
+def _tail(w: Path, tail: tuple[int, int]) -> None:
+    """frames.json with the tail span `screen.py frames` wrote and a frame
+    every 1.5 s across it."""
+    frames = [{"ms": 1_000, "why": "head"}] + [{"ms": t, "why": "tail"} for t in range(tail[0], tail[1], 1_500)]
+    (w / prepare.FRAMES_FILE).write_text(
+        json.dumps({"tail": list(tail), "frames": frames + [{"ms": 90_000, "why": "x"}]}), encoding="utf-8"
+    )
+
+
+def test_tail_end_is_the_last_tail_frame_when_the_tail_ended_with_the_video(tmp_path: Path):
     w = _work(tmp_path)
     assert assemble.tail_end(w) is None
-    frames = [
-        {"ms": 1_000, "why": "head"},
-        {"ms": 63_000, "why": "tail"},
-        {"ms": 64_500, "why": "tail"},
-        {"ms": 90_000, "why": "x"},
-    ]
-    (w / prepare.FRAMES_FILE).write_text(json.dumps({"frames": frames}), encoding="utf-8")
-    assert assemble.tail_end(w) == 64_500
-    for bad in ('{"frames": [1]}', '{"frames": 3}', "[]", "not json"):
+    # The video ends 3 s after story end, so the tail is cut short.
+    _tail(w, (62_500, 65_500))
+    assert assemble.tail_end(w) == 64_000
+    # A full tail stops inside the film: its last frame proves nothing.
+    _tail(w, (62_500, 62_500 + assemble.TAIL_WINDOW_MS))
+    assert assemble.tail_end(w) is None
+    for bad in ('{"frames": [1], "tail": [0, 1]}', '{"frames": 3, "tail": [0, 1]}', '{"frames": []}', "[]", "not json"):
         (w / prepare.FRAMES_FILE).write_text(bad, encoding="utf-8")
         assert assemble.tail_end(w) is None
+
+
+def test_the_full_tail_matches_the_frames_window():
+    assert assemble.TAIL_WINDOW_MS == screen.WINDOW_MS
+
+
+def test_a_lone_card_held_to_a_full_tail_does_not_start_the_end(tmp_path: Path):
+    # A silent last scene runs past the 2.5-minute tail, and one misread card
+    # is still up in the tail's last frame: the end has not started.
+    w = _work(tmp_path)
+    _tail(w, (62_500, 62_500 + assemble.TAIL_WINDOW_MS))
+    _readings(w, (200_500, 211_000, "ACME", "logo"))
+    assert _bye(_cues(*STORY), assemble.read_ends(w, 62_500)) == (65_500, 69_500, AFTER)
+    # The same card when the video ends with the tail: the film's last card.
+    _tail(w, (62_500, 212_000))
+    assert _bye(_cues(*STORY), assemble.read_ends(w, 62_500)) == (200_500, 204_500, ON_CARD)
 
 
 def test_read_ends_with_only_cards_or_only_black(tmp_path: Path):

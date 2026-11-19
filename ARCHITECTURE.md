@@ -504,7 +504,8 @@ Where it starts depends on the end cards, the frames' readings
 (`W/screen/readings.json`) of credits, a title card, closing text or a logo
 that start after the last line. The film's end starts at the first card
 followed within 10 s by a card with other text, or still on screen in the
-last frame saved from the tail (`W/screen/frames.json`); a stray logo
+last frame saved from the tail when the tail ended with the video
+(`W/screen/frames.json`); a stray logo
 inside the story, or one card read twice, does not start it. Then:
 
 - When `screen.py ends` found a black stretch (`W/screen/ends.json`,

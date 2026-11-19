@@ -10,8 +10,8 @@ once becomes one cue.
   (credits, a title card, closing text or a logo). With no such black it
   starts on the first end card, and with no end cards 3 s after the last
   line. A card counts only when a card with other text follows within
-  10 s, or it is still up in the last frame saved from the tail, so a
-  stray logo inside the story does not count. A fade to black inside the
+  10 s, or it is still up in the last frame saved from a tail that ended
+  with the video, so a stray logo inside the story does not count. A fade to black inside the
   last scene no longer takes it: on a test film it had come a minute
   before the credits. This reverses 0.13.1's rule that put the goodbye
   before an end title; the title is translated, so it now comes first.

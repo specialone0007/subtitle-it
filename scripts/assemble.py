@@ -1507,7 +1507,8 @@ CREDIT_MIN_MS = 3000
 # END_CARD_KINDS that start after the last line. The film's end starts at
 # the first one followed by one with other text within END_CARD_NEXT (from
 # its last frame to the next one's first), or still on screen in the tail's
-# last frame (W/screen/frames.json): a stray logo or credit inside the
+# last frame when the tail ended with the video (W/screen/frames.json,
+# tail_end): a stray logo or credit inside the
 # story, or one card read twice, does not start it. A black stretch
 # (W/screen/ends.json, `screen.py ends`) leads into the end cards when the
 # end starts inside it or within BLACK_BEFORE_CARD after it, and is still
@@ -1521,6 +1522,9 @@ ENDS_COVER_MS = 30_000
 END_CARD_KINDS = ("title card", "closing text", "credits", "logo")
 END_CARD_NEXT = 10_000
 BLACK_BEFORE_CARD = 3_000
+# How long a full tail is (screen.WINDOW_MS): a shorter one ended with the
+# video, so a card in its last frame is still up when the film ends.
+TAIL_WINDOW_MS = 150_000
 # How the closing credit was placed (`goodbye` in delivered.json).
 GOODBYE_ON_BLACK = "cut to black before the end cards"
 GOODBYE_ON_CARD = "first end card"
@@ -1674,11 +1678,18 @@ def end_cards(work: Path) -> list[EndCard]:
 
 
 def tail_end(work: Path) -> int | None:
-    """When the last frame of the tail was saved (W/screen/frames.json), or
-    None when the frames were not saved or the file is malformed."""
+    """When the last frame of the tail was saved (W/screen/frames.json), but
+    only when the tail ended with the video: its span (`tail`) is shorter
+    than TAIL_WINDOW_MS, so that frame shows the film's last moments. A full
+    tail stops 2.5 minutes after story end, maybe inside a long silent
+    scene, so a card held to its last frame proves nothing; then None, as
+    when the frames were not saved or the file is malformed."""
     try:
-        frames = json.loads((work / prepare.FRAMES_FILE).read_text(encoding="utf-8"))["frames"]
-        return max((int(f["ms"]) for f in frames if f.get("why") == "tail"), default=None)
+        data = json.loads((work / prepare.FRAMES_FILE).read_text(encoding="utf-8"))
+        start, end = (int(t) for t in data["tail"])
+        if end - start >= TAIL_WINDOW_MS:
+            return None
+        return max((int(f["ms"]) for f in data["frames"] if f.get("why") == "tail"), default=None)
     except (OSError, ValueError, TypeError, KeyError, AttributeError):
         return None
 
