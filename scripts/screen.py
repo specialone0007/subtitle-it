@@ -13,13 +13,14 @@
 to 2.5 minutes after it. ffmpeg counts the times from the seek point;
 without `-copyts` the seek itself counts from the video's start_time, as
 the tracks `sources.py` extracts do, so only the seek is added back.
-Story end is the end of the draft's last cue that is not on-screen text, as `assemble.py deliver` reads it, so run it
-after `check` has written the draft. It writes W/screen/ends.json with
-every black stretch of 2 s or more, in ms on the subtitles' clock;
-`deliver` starts the closing credit on the first one that begins within
-30 s after story end, or later when the frames show a title card, closing
-text or the credits right after it. pic_th=0.98 lets 2% of the picture be lit: a cut to
-black that a white title fades in over still counts.
+Story end is the end of the draft's last cue that is not on-screen text,
+as `assemble.py deliver` reads it, so run it after `check` has written the
+draft. It writes W/screen/ends.json with every black stretch of 2 s or
+more, in ms on the subtitles' clock; `deliver` starts the closing credit
+on the one that leads into the end cards the frames show (credits, a
+title card, closing text or a logo), never on a fade inside the last
+scene. pic_th=0.98 lets 2% of the picture be lit: a cut to black that a
+white title fades in over still counts.
 
 ffmpeg missing, failing or too slow never stops a run: the result then
 says why in `error`, no ends.json is left, and `deliver` places the
