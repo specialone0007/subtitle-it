@@ -183,15 +183,23 @@ film.
   every cue keeps its number and the bible's citations stay true. The
   amount counts from the times the first build found, so running the
   same rebuild twice moves the entries once. An entry read from the
-  picture keeps its video times (`found`, the reading's own time) and is
-  judged again against the shifted lines: one they cover is left out as
-  `under a line of the timing file`, one they leave less than 0.7 s is
-  left out as `no room after the timing shift`, and the rest are added.
-  Each keeps its cue number, a row left out clipped into its slot, so
-  `check` skips it with a note. Its number was given before the shift,
-  so when the subtitles were early and the shift carries a neighbouring
-  line past it, it stays left out though the video has room: the report
-  lists each such text with its video time, to be added by hand.
+  picture keeps its video times (`found`, the reading's own time) and its
+  cue number, and is judged again against the shifted cues next to it in
+  time, whatever their numbers: one they cover is left out as `under a
+  line of the timing file`, one they leave less than 0.7 s at its own
+  time is left out as `no room after the timing shift` (a row clipped
+  into its slot, which `check` skips with a note, and the report lists
+  with its video time), and the rest are shown at their own time. When
+  the subtitles were early, that can be before a cue with a lower number,
+  so the draft and the delivered file are written in time order, and
+  whatever measures time (gaps, reading speed, sentences over several
+  cues, the credits, pairing with another file, the voices) reads the
+  cues in time order (`prepare.time_order`). Cue numbers never change: the
+  cue maps lead each delivered cue back to its number. Chunks and review
+  parts still go by number, so such a card can sit one line away from
+  its time there. Two other ways were turned down: renumbering would
+  break the bible's cue citations, and reading the picture after the
+  sync check would move a step of the pipeline after the bible.
 - A voice can gather several characters. When a voice has at least six
   cues with a speaker label and no character holds two thirds of them, its
   cues get no voice hint, and the address-form check leaves them alone.

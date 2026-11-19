@@ -607,12 +607,12 @@ def test_a_reading_under_the_unshifted_timing_is_placed_by_the_shift_rebuild(tmp
             assert e["reason"] == prepare.UNDER_TIMING and rows[1]["left_out"] == prepare.UNDER_TIMING
 
 
-def test_an_early_timing_file_leaves_a_card_out_under_its_number_and_the_report_lists_it(tmp_path: Path):
+def test_an_early_timing_file_shows_a_card_at_its_own_time_before_a_lower_number(tmp_path: Path):
     # The timing file is 2 s early. Before the shift, line A (11.5-13.5 s)
     # covers a card shown at 12.0-13.0 s on the video, so the card's number
-    # comes after A's. After the +2 s shift A is at 13.5-15.5 s: the card's
-    # slot opens after it has ended. It stays left out under its number, and
-    # the report lists it at its video time.
+    # comes after A's. After the +2 s shift A is at 13.5-15.5 s and the card
+    # has room at its own time: it is shown there, before A, and every cue
+    # keeps its number.
     w = tmp_path / "work"
     lines = [(11_500, 13_500, "Line A.")] + [(20_000 + k * 4_000, 22_500 + k * 4_000, f"Line {k + 2}.") for k in range(40)]
     timing = tmp_path / "en.srt"
@@ -626,13 +626,77 @@ def test_an_early_timing_file_leaves_a_card_out_under_its_number_and_the_report_
     e = _entries(w)[f"picture:{card[0]}"]
     assert (e["state"], e["reason"], e["n"]) == ("left_out", prepare.UNDER_TIMING, 2)
     before = [(r["n"], r["source"]) for r in _json(w / "cues.json")]
+    # The bible's files cite cue numbers: the rebuild keeps them as they are.
+    cited = {"decisions.json": '[{"cues": [1, 2, 3]}]', prepare.SONGS_FILE: '{"songs": [[3, 4]]}', "judged.json": "[2]"}
+    for name, text in cited.items():
+        (w / name).write_text(text, encoding="utf-8")
     prepare.build(w, _shifted(tmp_path, timing, 2_000), None, None, keep_bible_check=True, shift_ms=2_000)
     rows = _json(w / "cues.json")
     assert [(r["n"], r["source"]) for r in rows] == before
+    assert all((w / name).read_text(encoding="utf-8") == text for name, text in cited.items())
     assert (rows[0]["start"], rows[0]["end"]) == (13_500, 15_500)
     e = _entries(w)[f"picture:{card[0]}"]
+    assert (e["state"], e["n"], e["found"], (e["start"], e["end"])) == ("cue", 2, list(card), card) and "reason" not in e
+    assert "left_out" not in rows[1] and (rows[1]["start"], rows[1]["end"]) == card
+    info = _json(w / "build.json")["on_screen"]["picture"]
+    assert (info["readings_already_in_timing"], info["found"]) == (0, 1)
+    (w / "out").mkdir(exist_ok=True)
+    tr = "".join(f"{r['n']}\n{r['n']}. satır.\n\n" for r in rows if not prepare.left_out(r))
+    (w / "out" / "tr_01.txt").write_text(tr, encoding="utf-8")
+    assert assemble.run_checks(w)["hard_fail_count"] == 0
+
+    def in_time_order(cues: list[srt.Cue]) -> bool:
+        return all(a.end <= b.start for a, b in zip(cues, cues[1:]))
+
+    # The draft is in time order: the card, then A, then the rest.
+    draft = srt.parse(w / "draft.tr.srt")[0]
+    assert in_time_order(draft) and (draft[0].start, draft[0].end, draft[0].lines) == (*card, ["2. satır."])
+    assert (draft[1].start, draft[1].lines) == (13_500, ["1. satır."])
+    cue_map = _json(w / assemble.MAP_FILE)["cues"]
+    assert (cue_map["1"], cue_map["2"], cue_map["3"]) == ({"cue": 2}, {"cue": 1}, {"cue": 3})
+    assert [(x["cue"], x["delivered"], x["at"]) for x in assemble.where(w, [1, 2])] == [
+        (1, [2], ["00:00:13,500"]),
+        (2, [1], ["00:00:12,000"]),
+    ]
+    report = assemble.deliver(w, tmp_path / "Film.srt", tmp_path / "backups", force=False)["on_screen"]
+    shown = srt.parse(tmp_path / "Film.srt")[0]
+    assert in_time_order(shown)
+    # The opening credit ends before the card, the first cue shown.
+    [hello] = [c for c in shown if c.start < card[0]]
+    assert hello.end <= card[0] and shown[1].lines == ["2. satır."] and shown[2].lines == ["1. satır."]
+    delivered_map = _json(w / assemble.DELIVERED_MAP_FILE)["cues"]
+    assert (delivered_map["2"], delivered_map["3"]) == ({"cue": 2}, {"cue": 1})
+    assert [(x["cue"], x["delivered"], x["at"]) for x in assemble.where(w, [1, 2])] == [
+        (1, [3], ["00:00:13,500"]),
+        (2, [2], ["00:00:12,000"]),
+    ]
+    assert report["no_room_after_shift"] == []
+    assert report["delivered"] == [{"cue": [2], "at": "00:00:12,000", "text": "THREE YEARS LATER", "turkish": "2. satır."}]
+
+
+def test_an_early_timing_file_leaves_a_card_with_no_room_at_its_own_time_out_and_lists_it(tmp_path: Path):
+    # The timing file is 2 s early. Before the shift, line A (10.65-12.65 s)
+    # covers a card shown at 12.0-12.8 s. After the +2 s shift A starts at
+    # 12.65 s: too little of the card under it to cover it, and 0.65 s of
+    # room at the card's own time, under the shortest a cue is shown.
+    w = tmp_path / "work"
+    lines = [(10_650, 12_650, "Line A.")] + [(20_000 + k * 4_000, 22_500 + k * 4_000, f"Line {k + 2}.") for k in range(40)]
+    timing = tmp_path / "en.srt"
+    timing.write_text(
+        "".join(f"{i}\n{srt.fmt_ms(a)} --> {srt.fmt_ms(b)}\n{t}\n\n" for i, (a, b, t) in enumerate(lines, 1)), encoding="utf-8"
+    )
+    (w / "screen").mkdir(parents=True)
+    card = (12_000, 12_800)
+    path = _picture(w, [(card[0], [])], [], [_reading("THREE YEARS LATER", *card, kind="caption")])
+    prepare.build(w, timing, None, None, timing_language="en", screen_path=path)
+    assert _entries(w)[f"picture:{card[0]}"]["reason"] == prepare.UNDER_TIMING
+    before = [(r["n"], r["source"]) for r in _json(w / "cues.json")]
+    prepare.build(w, _shifted(tmp_path, timing, 2_000), None, None, keep_bible_check=True, shift_ms=2_000)
+    rows = _json(w / "cues.json")
+    assert [(r["n"], r["source"]) for r in rows] == before
+    e = _entries(w)[f"picture:{card[0]}"]
     assert (e["state"], e["reason"], e["n"], e["found"]) == ("left_out", prepare.NO_ROOM_SHIFT, 2, list(card))
-    assert rows[1]["left_out"] == prepare.NO_ROOM_SHIFT and rows[1]["start"] >= rows[0]["start"]
+    assert rows[1]["left_out"] == prepare.NO_ROOM_SHIFT
     (w / "out").mkdir(exist_ok=True)
     tr = "".join(f"{r['n']}\n{r['n']}. satır.\n\n" for r in rows if not prepare.left_out(r))
     (w / "out" / "tr_01.txt").write_text(tr, encoding="utf-8")
@@ -642,7 +706,7 @@ def test_an_early_timing_file_leaves_a_card_out_under_its_number_and_the_report_
     # One time for the card everywhere in the report: the video's.
     [looked] = [x for x in report["picture"]["looked_at"] if x["text"] == "THREE YEARS LATER"]
     assert (looked["at"], looked["reason"]) == ("00:00:12,000", prepare.NO_ROOM_SHIFT)
-    assert prepare.NO_ROOM_SHIFT not in report["left_out"]
+    assert prepare.NO_ROOM_SHIFT not in report["left_out"] and report["delivered"] == []
     assert all(x["text"] != "THREE YEARS LATER" for x in report["left_out_at_ends"])
 
 
