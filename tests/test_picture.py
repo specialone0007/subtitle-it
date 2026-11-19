@@ -639,6 +639,9 @@ def test_an_early_timing_file_leaves_a_card_out_under_its_number_and_the_report_
     assert assemble.run_checks(w)["hard_fail_count"] == 0
     report = assemble.deliver(w, tmp_path / "Film.srt", tmp_path / "backups", force=False)["on_screen"]
     assert report["no_room_after_shift"] == [{"at": "00:00:12,000", "text": "THREE YEARS LATER"}]
+    # One time for the card everywhere in the report: the video's.
+    [looked] = [x for x in report["picture"]["looked_at"] if x["text"] == "THREE YEARS LATER"]
+    assert (looked["at"], looked["reason"]) == ("00:00:12,000", prepare.NO_ROOM_SHIFT)
     assert prepare.NO_ROOM_SHIFT not in report["left_out"]
     assert all(x["text"] != "THREE YEARS LATER" for x in report["left_out_at_ends"])
 
