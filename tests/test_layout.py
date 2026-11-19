@@ -317,27 +317,29 @@ BYE = [assemble.CREDIT_BYE, "specialone0007"]
 
 
 def test_credit_opens_in_the_silence_and_closes_after_the_last_line():
-    shown, shift, credits = assemble.with_credit(_cues((10_000, 12_000), (60_000, 62_500)), "specialone0007")
+    shown, shift, credits, how = assemble.with_credit(_cues((10_000, 12_000), (60_000, 62_500)), "specialone0007")
     assert shift == 1 and credits == [1, 4] and [c.n for c in shown] == [1, 2, 3, 4]
     assert shown[0].ts == "00:00:03,000 --> 00:00:07,000" and shown[0].lines == HELLO
     assert shown[1].lines == ["Satır 1."] and shown[1].ts == "00:00:10,000 --> 00:00:12,000"
     assert shown[3].ts == "00:01:05,500 --> 00:01:09,500" and shown[3].lines == BYE
+    assert how == assemble.GOODBYE_AFTER_LINE
+    assert assemble.with_credit([], "specialone0007") == ([], 0, [], None)
 
 
 def test_credit_closing_stays_inside_the_video():
     spans = ((10_000, 12_000), (60_000, 62_500))
     # Room for the 3 s gap and the full 4 s: the video's end changes nothing.
-    shown, _, credits = assemble.with_credit(_cues(*spans), video_end=69_500)
+    shown, _, credits, _ = assemble.with_credit(_cues(*spans), video_end=69_500)
     assert credits == [1, 4] and shown[3].ts == "00:01:05,500 --> 00:01:09,500"
     # Less room: it moves earlier to keep its 4 s, ending with the video.
-    shown, _, _ = assemble.with_credit(_cues(*spans), video_end=68_000)
+    shown, _, _, _ = assemble.with_credit(_cues(*spans), video_end=68_000)
     assert shown[3].ts == "00:01:04,000 --> 00:01:08,000"
     # Half a second after the last line at most, then cut short, 3 s at least.
-    shown, _, _ = assemble.with_credit(_cues(*spans), video_end=66_000)
+    shown, _, _, _ = assemble.with_credit(_cues(*spans), video_end=66_000)
     assert shown[3].ts == "00:01:03,000 --> 00:01:06,000"
     # Under 3.5 s between the last line and the video's end: no closing credit.
-    shown, shift, credits = assemble.with_credit(_cues(*spans), video_end=65_900)
-    assert shift == 1 and credits == [1] and shown[-1].lines == ["Satır 2."]
+    shown, shift, credits, how = assemble.with_credit(_cues(*spans), video_end=65_900)
+    assert shift == 1 and credits == [1] and shown[-1].lines == ["Satır 2."] and how == assemble.GOODBYE_NO_ROOM
 
 
 def test_video_end_ms_is_none_when_the_video_cannot_be_read(tmp_path: Path, monkeypatch):
@@ -351,18 +353,18 @@ def test_video_end_ms_is_none_when_the_video_cannot_be_read(tmp_path: Path, monk
 
 def test_credit_opening_shortens_or_drops_when_the_film_speaks_early():
     # First line at 7.5 s: just room for the full 4 s.
-    shown, shift, _ = assemble.with_credit(_cues((7_500, 9_000)), "specialone0007")
+    shown, shift, _, _ = assemble.with_credit(_cues((7_500, 9_000)), "specialone0007")
     assert shift == 1 and shown[0].ts == "00:00:03,000 --> 00:00:07,000"
     # First line at 6.5 s: cut to 3 s, ending half a second before it.
-    shown, shift, _ = assemble.with_credit(_cues((6_500, 8_000)))
+    shown, shift, _, _ = assemble.with_credit(_cues((6_500, 8_000)))
     assert shift == 1 and shown[0].ts == "00:00:03,000 --> 00:00:06,000"
     # First line at 6.4 s: under 3 s of room, so no opening credit.
-    shown, shift, credits = assemble.with_credit(_cues((6_400, 8_000)))
+    shown, shift, credits, _ = assemble.with_credit(_cues((6_400, 8_000)))
     assert shift == 0 and credits == [2] and shown[0].lines == ["Satır 1."]
 
 
 def test_credit_without_a_name_shows_the_greeting_alone():
-    shown, _, _ = assemble.with_credit(_cues((10_000, 12_000)), "  ")
+    shown, _, _, _ = assemble.with_credit(_cues((10_000, 12_000)), "  ")
     assert shown[0].lines == [assemble.CREDIT_HELLO] and shown[-1].lines == [assemble.CREDIT_BYE]
 
 
@@ -448,7 +450,7 @@ def test_deliver_holds_the_closing_credit_to_the_video(tmp_path: Path, monkeypat
     assert (shown[-1].start, shown[-1].end) == (last + 500, last + 3_600)
 
 
-def test_deliver_puts_the_goodbye_on_the_cut_to_black(tmp_path: Path):
+def test_deliver_puts_the_goodbye_on_the_cut_to_black_before_the_end_cards(tmp_path: Path):
     (tmp_path / "fr.srt").write_text(FR_LATE, encoding="utf-8")
     w = tmp_path / "work"
     prepare.build(w, tmp_path / "fr.srt", None, None)
@@ -459,67 +461,61 @@ def test_deliver_puts_the_goodbye_on_the_cut_to_black(tmp_path: Path):
     last = max(c.end for c in draft)
     dest = tmp_path / "Film.srt"
     info = assemble.deliver(w, dest, tmp_path / "b", force=False)
-    assert info["goodbye"] == "after the story"
+    assert info["goodbye"] == assemble.GOODBYE_AFTER_LINE
     (w / "screen").mkdir()
     ends = {"story_end_ms": last, "from_ms": last, "to_ms": last + 150_000, "black": [[last + 1_000, last + 6_000]]}
     (w / assemble.ENDS_FILE).write_text(json.dumps(ends), encoding="utf-8")
+    # A black stretch alone may be a fade inside the last scene: not used.
+    info = assemble.deliver(w, dest, tmp_path / "b", force=False)
+    assert info["goodbye"] == assemble.GOODBYE_AFTER_LINE
+    # The credits start inside it: the goodbye starts on it.
+    cards = [
+        {"text": t, "kind": "credits", "wants_read": False, "first_ms": ms, "last_ms": ms}
+        for t, ms in (("DIRECTED BY X", last + 4_000), ("WRITTEN BY Y", last + 7_000))
+    ]
+    (w / assemble.READINGS_FILE).write_text(json.dumps({"readings": cards}), encoding="utf-8")
     info = assemble.deliver(w, dest, tmp_path / "b", force=False)
     shown, _ = srt.parse(dest)
-    assert info["goodbye"] == "cut to black" and (shown[-1].start, shown[-1].end) == (last + 1_000, last + 5_000)
-    # A file written for a draft that ended more than half a second later is not read.
+    assert info["goodbye"] == assemble.GOODBYE_ON_BLACK and (shown[-1].start, shown[-1].end) == (last + 1_000, last + 5_000)
+    # A file written for a draft that ended more than half a second later is
+    # not read: the goodbye then goes on the first end card.
     (w / assemble.ENDS_FILE).write_text(json.dumps({**ends, "from_ms": last + 501}), encoding="utf-8")
     info = assemble.deliver(w, dest, tmp_path / "b", force=False)
     shown, _ = srt.parse(dest)
-    assert info["goodbye"] == "after the story" and shown[-1].start == last + 3_000
+    assert info["goodbye"] == assemble.GOODBYE_ON_CARD and shown[-1].start == last + 4_000
     assert assemble.deliver(w, dest, tmp_path / "b", force=False, credit=False)["goodbye"] is None
 
 
-def test_goodbye_follows_the_story_not_an_end_title():
-    # The third cue is an end title from another track: the goodbye comes
-    # 3 s after the story's last line, before it.
-    shown, shift, credits = assemble.with_credit(
-        _cues((10_000, 12_000), (60_000, 62_500), (80_000, 83_000)), "specialone0007", on_screen={3}
-    )
-    assert shift == 1 and credits == [1, 4] and [c.n for c in shown] == [1, 2, 3, 4, 5]
-    assert shown[3].lines == BYE and shown[3].ts == "00:01:05,500 --> 00:01:09,500"
-    assert shown[4].lines == ["Satır 3."]
+def test_goodbye_follows_an_end_title_too():
+    # The third cue is an end title from another track: nothing translated
+    # follows the goodbye, so it comes 3 s after the title.
+    shown, shift, credits, _ = assemble.with_credit(_cues((10_000, 12_000), (60_000, 62_500), (80_000, 83_000)), "specialone0007")
+    assert shift == 1 and credits == [1, 5] and [c.n for c in shown] == [1, 2, 3, 4, 5]
+    assert shown[3].lines == ["Satır 3."]
+    assert shown[4].lines == BYE and shown[4].ts == "00:01:26,000 --> 00:01:30,000"
 
 
-def test_goodbye_ends_before_the_next_card_and_skips_cards_in_its_way():
-    # Two closing cards 2 s apart: the first is in the way, so the goodbye
-    # takes the 2 s between them and ends 0.1 s before the second.
-    cues = _cues((10_000, 12_000), (60_000, 62_500), (63_000, 66_000), (68_000, 70_000))
-    shown, _, credits = assemble.with_credit(cues, "specialone0007", on_screen={3, 4})
-    assert credits == [1, 5] and [c.lines for c in shown[3:]] == [["Satır 3."], BYE, ["Satır 4."]]
-    assert shown[4].ts == "00:01:06,000 --> 00:01:07,900"
-
-
-def test_goodbye_with_no_free_two_seconds_follows_the_last_cue():
+def test_goodbye_follows_the_last_cue_and_keeps_inside_the_video():
     cues = _cues((10_000, 12_000), (60_000, 62_500), (63_000, 66_000), (67_000, 70_000))
-    shown, _, credits = assemble.with_credit(cues, "specialone0007", on_screen={3, 4})
+    shown, _, credits, _ = assemble.with_credit(cues, "specialone0007")
     assert credits == [1, 6] and shown[-1].lines == BYE and shown[-1].ts == "00:01:13,000 --> 00:01:17,000"
     # A video that ends 3.6 s after the last cue: the goodbye moves earlier
     # and ends with it; 3.4 s leaves no room for it.
-    shown, _, credits = assemble.with_credit(cues, "specialone0007", 73_600, {3, 4})
-    assert credits == [1, 6] and shown[-1].ts == "00:01:10,500 --> 00:01:13,600"
-    shown, _, credits = assemble.with_credit(cues, "specialone0007", 73_400, {3, 4})
-    assert credits == [1] and shown[-1].lines == ["Satır 4."]
+    shown, _, credits, how = assemble.with_credit(cues, "specialone0007", 73_600)
+    assert credits == [1, 6] and shown[-1].ts == "00:01:10,500 --> 00:01:13,600" and how == assemble.GOODBYE_AFTER_LINE
+    shown, _, credits, how = assemble.with_credit(cues, "specialone0007", 73_400)
+    assert credits == [1] and shown[-1].lines == ["Satır 4."] and how == assemble.GOODBYE_NO_ROOM
 
 
-def test_goodbye_with_no_story_cue_follows_the_last_cue():
-    cues = _cues((10_000, 12_000), (60_000, 62_500))
-    shown, _, credits = assemble.with_credit(cues, "specialone0007", on_screen={1, 2})
-    assert credits == [1, 4] and shown[-1].ts == "00:01:05,500 --> 00:01:09,500"
-
-
-def test_goodbye_follows_kept_songs_after_the_last_line():
-    # A song still in the draft was kept because it carries the story.
+def test_goodbye_follows_kept_songs_and_on_screen_text():
+    # A song still in the draft was kept because it carries the story; the
+    # last cue is a sign from the picture. The goodbye follows both.
     cues = _cues((10_000, 12_000), (60_000, 62_500), (63_000, 66_000), (66_500, 69_000), (90_000, 93_000))
     for c in cues[2:4]:
         c.lines[:] = ["<i>♪ Şarkı sürüyor ♪</i>"]
-    shown, _, credits = assemble.with_credit(cues, "specialone0007", on_screen={5})
-    assert credits == [1, 6] and shown[5].ts == "00:01:12,000 --> 00:01:16,000"
-    assert shown[6].lines == ["Satır 5."]
+    shown, _, credits, _ = assemble.with_credit(cues, "specialone0007")
+    assert credits == [1, 7] and shown[5].lines == ["Satır 5."]
+    assert shown[6].lines == BYE and shown[6].ts == "00:01:36,000 --> 00:01:40,000"
 
 
 def test_credit_map_numbers_the_draft_around_a_goodbye_that_is_not_last():
