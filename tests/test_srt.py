@@ -289,6 +289,55 @@ def test_fit_says_when_nothing_pairs():
     assert not r["fits"] and "no cue pairs" in r["reason"] and "None" not in r["reason"]
 
 
+def _fixtures():
+    """Pairs for fit: a lead-in, merged lines with sound cues, lines
+    missing, a different cut, lines in the silences, cues that a shift
+    moves before 0:00, and cues of no length or overlapping."""
+    timing = _film(minutes=12)
+    merged = []
+    for k, (a, b) in enumerate(zip(timing[::2], timing[1::2])):
+        if k % 3 == 0:
+            merged.append(_cue(k, a.start + 15_300, b.end + 15_300, "merged"))
+        else:
+            merged += [_cue(k, c.start + 15_300, c.end + 15_300) for c in (a, b)]
+    merged += [_cue(1000 + i, c.end + 15_400, c.end + 16_000, "[thud]") for i, c in enumerate(timing[::5])]
+    merged.sort(key=lambda c: c.start)
+    gaps = [
+        _cue(5000 + i, a.end + 100, b.start - 100) for i, (a, b) in enumerate(zip(timing, timing[1:])) if b.start - a.end >= 1200
+    ]
+    odd = [_cue(1, 0, 0), _cue(2, 200, 900), _cue(3, 500, 2600), _cue(4, 2600, 2600), *srt.shift(timing, 30)]
+    return [
+        (timing, timing),
+        (timing, srt.shift(timing, -4_200)),
+        (timing, merged),
+        (timing, [c for i, c in enumerate(timing) if i % 4]),
+        (timing, [c if c.start < 300_000 else _cue(c.n, c.start + 20_000, c.end + 20_000) for c in timing]),
+        (timing, sorted(timing + gaps, key=lambda c: c.start)),
+        (odd, srt.shift(timing, 2_500)),
+        (timing, odd),
+    ]
+
+
+def test_shift_scorer_gives_the_share_of_the_shifted_cues():
+    timing = _film(minutes=12)
+    # Out of time order, and a timing cue before 0:00: scored step for step.
+    unordered = [timing[3], *timing[:3], *timing[4:]]
+    early = [_cue(0, -400, 300), *timing]
+    pairs = [*_fixtures(), (timing, unordered), (early, timing), (early, unordered)]
+    for timing, other in pairs:
+        score = srt._shift_scorer(timing, other)
+        for ms in (-61_000, -15_300, -2_550, -50, 0, 50, 2_500, 15_300, 60_000):
+            assert score(ms) == srt._covered_share(timing, srt.shift(other, ms))
+
+
+def test_fit_answers_as_when_it_scored_shifted_cues(monkeypatch):
+    fast = [srt.fit(timing, other) for timing, other in _fixtures()]
+    # How fit scored an offset before: shift the cues, then measure.
+    monkeypatch.setattr(srt, "_shift_scorer", lambda a, b: lambda ms: srt._covered_share(a, srt.shift(b, ms)))
+    assert fast == [srt.fit(timing, other) for timing, other in _fixtures()]
+    assert any(r["fits"] for r in fast) and any(not r["fits"] for r in fast)
+
+
 def test_fit_command_writes_the_result(tmp_path: Path):
     a = tmp_path / "a.srt"
     srt.write(a, _film(minutes=3))

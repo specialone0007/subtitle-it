@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.13.3 (2026-11-21)
+
+Finding a film's sources and building its work folder take seconds
+instead of minutes, and the picture check costs fewer tokens. Every file
+the steps write is the same as before.
+
+- `sources.py local` reads the video once for all its text subtitle
+  tracks: one ffmpeg call writes every track. A track that call leaves
+  missing or empty, and every track of a call that fails, is extracted
+  again on its own as before, so one bad track never loses the others.
+  A command line that would pass Windows' 32,767-character limit is
+  split over a few calls. On a film with 41 text tracks this step took
+  11 s instead of 114 s on a warm disk (310 s in a real run).
+- `srt.fit` scores the 260 or so offsets it tries on whole milliseconds,
+  without building shifted cues and their timestamp text for each one.
+  It gives exactly the answers it gave before (checked on 221 pairs of
+  nine films). `prepare.py build` with 39 tracks took 12 s instead of
+  59 s on one film and 22 s instead of 95 s on another, with the same
+  files written; `build` runs two or three times a film.
+- One `screen-reader` reads at most 40 frames (`screen.PER_READER`), not
+  150, so more readers run at once and none carries a long conversation:
+  in the measured runs each of two readers re-read about 184,000 tokens
+  on every call. Every batch holds 20 frames but the last (150 used to
+  leave a batch of 10 at each reader's end), and every reader still
+  reads each batch fresh.
+
 ## 0.13.2 (2026-11-20)
 
 The goodbye waits for the film's real end, and a text the picture shows

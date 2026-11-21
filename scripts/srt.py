@@ -21,7 +21,7 @@ import json
 import os
 import re
 import sys
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -1039,6 +1039,73 @@ def _covered_share(a: list[Cue], b: list[Cue]) -> float:
     return sum(x >= 0.5 for x in cov) / max(len(cov), 1)
 
 
+def _shifted_covered_share(a: list[tuple[int, int, int]], b: list[tuple[int, int]], ms: int) -> float:
+    """_covered_share(a, shift(b, ms)) on plain times, step for step: a as
+    (start, end, duration), b as (start, end)."""
+    starts = [max(s + ms, 0) for s, _ in b]
+    ends = [max(e + ms, 0) for _, e in b]
+    longest = max((max(e - s, 1) for s, e in zip(starts, ends)), default=0)
+    count = len(starts)
+    hits = 0
+    for c_start, c_end, c_duration in a:
+        i = bisect.bisect_left(starts, c_start - longest)
+        covered = 0
+        while i < count and starts[i] < c_end:
+            covered += max(0, min(c_end, ends[i]) - max(c_start, starts[i]))
+            i += 1
+        hits += min(covered / c_duration, 1.0) >= 0.5
+    return hits / max(len(a), 1)
+
+
+def _shift_scorer(a: list[Cue], b: list[Cue]) -> Callable[[int], float]:
+    """score(ms) == _covered_share(a, shift(b, ms)), for fit's offset search.
+
+    That search scores some 260 shifts per file, and building shifted cues
+    with their timestamp text for each one took nearly all of `prepare.py
+    build`'s time. This measures the same thing on whole milliseconds.
+
+    When b is in time order and no cue of a starts before 0:00 (as in any
+    parsed file), the time of a cue [s, e) covered by b moved by ms is
+    T(e - ms) - T(s - ms), where T(x) is how much of b lies before x: a
+    shift that would move a cue of b before 0:00 only cuts the part that
+    lies before every cue of a. T comes from b's sorted starts and ends and
+    their running sums, so each cue costs four binary searches instead of a
+    walk over the cues of b near it. Both are exact sums of whole
+    milliseconds, so the shares match to the last bit. Otherwise it scores
+    step for step (_shifted_covered_share)."""
+    a_times = [(c.start, c.end, c.duration) for c in a]
+    b_times = [(c.start, c.end) for c in b]
+    in_order = all(x[0] <= y[0] for x, y in zip(b_times, b_times[1:]))
+    if not in_order or any(s < 0 for s, _, _ in a_times):
+        return lambda ms: _shifted_covered_share(a_times, b_times, ms)
+    # A cue that ends before it starts covers nothing.
+    real = [(s, e) for s, e in b_times if e > s]
+    starts = sorted(s for s, _ in real)
+    ends = sorted(e for _, e in real)
+    start_sums = [0]
+    for x in starts:
+        start_sums.append(start_sums[-1] + x)
+    end_sums = [0]
+    for x in ends:
+        end_sums.append(end_sums[-1] + x)
+    left = bisect.bisect_left
+    # A cue of a with no length is covered by nothing, so never counts.
+    spans = [(s, e, d) for s, e, d in a_times if e > s]
+    total = max(len(a_times), 1)
+
+    def score(ms: int) -> float:
+        hits = 0
+        for c_start, c_end, c_duration in spans:
+            # T(x) = x * (starts before x - ends before x) - their sums.
+            x, y = c_end - ms, c_start - ms
+            i, j, k, m = left(starts, x), left(ends, x), left(starts, y), left(ends, y)
+            covered = x * (i - j) - start_sums[i] + end_sums[j] - y * (k - m) + start_sums[k] - end_sums[m]
+            hits += min(covered / c_duration, 1.0) >= 0.5
+        return hits / total
+
+    return score
+
+
 def _median_start_diff(a: list[Cue], b: list[Cue]) -> int | None:
     """Median of (start of b's partner - start of a) over a's paired cues.
     Only one-to-one pairs of similar length count: when a translation merges
@@ -1069,8 +1136,13 @@ def fit(timing: list[Cue], other: list[Cue], search_ms: int = 60_000) -> dict:
     if not t or not o:
         return {"fits": False, "offset_ms": 0, "reason": "no spoken cues in one of the files"}
 
+    shifted_share = _shift_scorer(t, o)
+    scores: dict[int, float] = {}
+
     def score(ms: int) -> float:
-        return _covered_share(t, shift(o, ms))
+        if ms not in scores:
+            scores[ms] = shifted_share(ms)
+        return scores[ms]
 
     def best_of(candidates) -> int:
         # ties go to the smallest shift, so a file that already fits stays put

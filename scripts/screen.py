@@ -45,7 +45,7 @@ the frames to W/screen/frames/, W/screen/frames.json (each frame's file,
 time, why it was picked and the texts of the entries within 3 s of it)
 and one batch file of 20 frames at a time, W/screen/batch_NN.json, with
 the file the reader writes its lines to; `readers` gives each reader's
-batches, one reader per 150 frames.
+batches, one reader per 40 frames.
 
 `collect` reads the readers' lines (agents/screen-reader.md) and writes
 W/screen/readings.json: neighbouring frames with the same text (case,
@@ -147,7 +147,7 @@ FRAMES_PER_UNSURE = 5
 UNSURE_WIDEN_MS = 2000
 NEAR_MS = 3000
 BATCH = 20
-PER_READER = 150
+PER_READER = 40
 # Neighbouring frames further apart than this are never one reading.
 NEIGHBOUR_MS = 5000
 HDR_TRANSFERS = {"smpte2084", "arib-std-b67"}
