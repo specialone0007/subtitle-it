@@ -7,13 +7,13 @@ session lists the other subtitle tracks in.
 
 - `prepare.py build` puts the `--track` files in order itself
   (`prepare.order_tracks`): the first one given (the original language)
-  and every English track stay in front in the order given, and the
-  rest follow by file number, so `track2.ar.srt` comes before
-  `track10.fin.srt`, with downloads after them by name. Forced tracks
-  are ordered the same way, after the tracks. A sign's text and times,
-  its id and the track list in `build.json` now come out the same
-  however the tracks are listed, and the build with `--screen` finds the
-  ids `screen.py frames` saw.
+  stays first, then every English track, then the rest. The English
+  tracks and the rest each go by file number, so `track2.ar.srt` comes
+  before `track10.fin.srt`, with downloads after them by name. Forced
+  tracks are ordered the same way, after the tracks. A sign's text and
+  times, its id and the track list in `build.json` now come out the
+  same however the tracks after the first are listed, and the build with
+  `--screen` finds the ids `screen.py frames` saw.
 - Two runs of one 2026 film with 39 other tracks had listed them
   in number order and in name order. The old code gave 32 of the 53
   on-screen entries different text or times: the title card came from
