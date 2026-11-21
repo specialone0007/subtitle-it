@@ -323,6 +323,56 @@ def to_srt(src: Path, dest: Path) -> Path:
     return dest
 
 
+# Windows refuses a command line over 32,767 characters. A film with 40
+# text tracks and long paths comes near it, so one ffmpeg call takes as
+# many tracks as fit in this many characters and the next call the rest.
+MAX_COMMAND_CHARS = 30_000
+
+
+def _track_cmd(video: Path, jobs: list[tuple[int, Path]]) -> list[str]:
+    """One ffmpeg call writing each text track (sub_index, dest) to its own
+    .srt: one output per track, so the video is read once for all of them."""
+    cmd = ["ffmpeg", "-v", "error", "-y", "-i", str(video)]
+    for sub_index, dest in jobs:
+        cmd += ["-map", f"0:s:{sub_index}", "-c:s", "srt", str(dest)]
+    return cmd
+
+
+def _track_groups(video: Path, jobs: list[tuple[int, Path]]) -> list[list[tuple[int, Path]]]:
+    """The tracks split into calls whose command lines stay under
+    MAX_COMMAND_CHARS."""
+    groups: list[list[tuple[int, Path]]] = []
+    for job in jobs:
+        if groups and len(subprocess.list2cmdline(_track_cmd(video, [*groups[-1], job]))) <= MAX_COMMAND_CHARS:
+            groups[-1].append(job)
+        else:
+            groups.append([job])
+    return groups
+
+
+def extract_tracks(video: Path, jobs: list[tuple[int, Path]]) -> None:
+    """Write each text track (sub_index, dest) to dest as .srt.
+
+    Reading the video takes most of the time (about 8 seconds for a 1080p
+    film), so all tracks come out of one ffmpeg call. A track that call did
+    not write, or wrote empty, is extracted again on its own, and so is
+    every track of a call that failed: one bad track never costs the others.
+    That second try is the one call per track used before, which stops the
+    run on an error as it always did."""
+    for _, dest in jobs:
+        dest.unlink(missing_ok=True)
+    for group in _track_groups(video, jobs):
+        try:
+            _run(_track_cmd(video, group))
+        except subprocess.CalledProcessError:
+            for _, dest in group:
+                dest.unlink(missing_ok=True)
+    for job in jobs:
+        dest = job[1]
+        if not dest.is_file() or dest.stat().st_size == 0:
+            _run(_track_cmd(video, [job]))
+
+
 EARLIER_DELIVERY = "this plugin's earlier delivery, not a source"
 
 # A forced track holds only the lines the audience cannot follow (signs, a
@@ -361,13 +411,14 @@ def local(video: Path, work: Path) -> dict:
     info = probe(video)
     out = work / "sources"
     out.mkdir(parents=True, exist_ok=True)
+    dests = {t["sub_index"]: out / f"track{t['sub_index']}.{t['language']}.srt" for t in info["tracks"] if t["text"]}
+    extract_tracks(video, list(dests.items()))
     candidates = []
     for t in info["tracks"]:
         if not t["text"]:
             candidates.append({**t, "source": "built-in track", "confidence": "skipped: image subtitles"})
             continue
-        dest = out / f"track{t['sub_index']}.{t['language']}.srt"
-        _run(["ffmpeg", "-v", "error", "-y", "-i", str(video), "-map", f"0:s:{t['sub_index']}", "-c:s", "srt", str(dest)])
+        dest = dests[t["sub_index"]]
         candidates.append(
             {
                 **t,
