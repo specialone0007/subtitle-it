@@ -213,15 +213,18 @@ def _natural_key(lang: str, path: Path) -> tuple:
 
 
 def order_tracks(tracks: list[tuple[str, Path]]) -> list[tuple[str, Path]]:
-    """The tracks in order of preference, whatever order they were given
-    in: the first one given (the original language, as the translate skill
-    lists them) and every English track stay in front in the order given;
-    the rest follow in natural file order (_natural_key). So the same
-    tracks always give the same on-screen entries, ids and build.json."""
-    lead = [i == 0 or lang.split("-")[0] in ("en", "eng") for i, (lang, _) in enumerate(tracks)]
-    front = [t for t, x in zip(tracks, lead) if x]
-    rest = [t for t, x in zip(tracks, lead) if not x]
-    return front + sorted(rest, key=lambda t: _natural_key(*t))
+    """The tracks in order of preference: the first one given (the
+    original language, as the translate skill lists them), then every
+    English track, then the rest, the English tracks and the rest each in
+    natural file order (_natural_key). Only which track comes first
+    depends on how they were given, so the same tracks with the same
+    first one always give the same on-screen entries, ids and build.json."""
+    if not tracks:
+        return []
+    first, others = tracks[0], tracks[1:]
+    english = [t for t in others if t[0].split("-")[0] in ("en", "eng")]
+    rest = [t for t in others if t[0].split("-")[0] not in ("en", "eng")]
+    return [first, *sorted(english, key=lambda t: _natural_key(*t)), *sorted(rest, key=lambda t: _natural_key(*t))]
 
 
 Found = tuple[int, str, bool, srt.Cue]  # (track order, language, forced, cue)
@@ -396,13 +399,13 @@ def on_screen(
     build.json. An entry in state `cue` is to be added to the timing file
     at its `start` and `end`; one in state `left_out` is only recorded,
     with a `reason` (ON_SCREEN_REASONS). `texts` holds the entry's lines per
-    language in order of preference, which order_tracks sets whatever
-    order the tracks come in: the first track given and every English
-    track first, in the order given, then the rest in natural file order
-    (track2 before track10, other files after); forced tracks the same
-    way, after the tracks. The first one with the line gives the entry's
-    text and times, and an entry's id names its place in that order, so
-    the build with --screen finds the same ids however the tracks are
+    language in order of preference, which order_tracks sets: the first
+    track given, then every English track, then the rest, the English
+    tracks and the rest each in natural file order (track2 before
+    track10, other files after); forced tracks the same way, after the
+    tracks. The first one with the line gives the entry's text and times,
+    and an entry's id names its place in that order, so the build with
+    --screen finds the same ids however the tracks after the first are
     listed.
 
     A line the timing file covers is the timing file's own line, so it
