@@ -84,7 +84,10 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--repo", default=REPO)
     args = parser.parse_args(argv)
     text = Path(args.changelog).read_text(encoding="utf-8")
-    sys.stdout.write(notes(text, args.version, args.previous_tag, args.repo))
+    # Always UTF-8: a Windows console redirected to a file would use cp1252,
+    # which cannot hold Turkish letters or the link separator.
+    sys.stdout.buffer.write(notes(text, args.version, args.previous_tag, args.repo).encode("utf-8"))
+    sys.stdout.flush()
 
 
 if __name__ == "__main__":
