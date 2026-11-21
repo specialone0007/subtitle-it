@@ -1,0 +1,16 @@
+name: Feature request
+description: Suggest something the plugin should do, or do differently.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you want to do
+      description: The situation and what gets in the way today. A real film or scene as an example helps.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+      description: What the plugin could do about it. Leave it out if you are not sure.
