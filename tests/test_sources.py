@@ -167,7 +167,8 @@ def test_local_lists_tracks_and_sidecars(tmp_path: Path, monkeypatch):
         calls.append(cmd)
         if cmd[0] == "ffprobe":
             return json.dumps({"format": {"duration": "70.0"}, "streams": streams})
-        Path(cmd[-1]).write_text(_srt(60), encoding="utf-8")
+        for dest in _outputs(cmd).values():
+            Path(dest).write_text(_srt(60), encoding="utf-8")
         return ""
 
     monkeypatch.setattr(sources, "_run", fake_run)
@@ -183,6 +184,132 @@ def test_local_lists_tracks_and_sidecars(tmp_path: Path, monkeypatch):
     assert en["confidence"] == "likely" and en["check"]["cues"] == 60
     # One ffprobe and one extraction: the image track and the .srt sidecars need no ffmpeg.
     assert [c[0] for c in calls] == ["ffprobe", "ffmpeg"]
+
+
+def _outputs(cmd: list[str]) -> dict[int, str]:
+    """The .srt files an ffmpeg call writes, by subtitle track number."""
+    return {int(cmd[i + 1].split(":")[-1]): cmd[i + 4] for i, arg in enumerate(cmd) if arg == "-map"}
+
+
+def _text_tracks(n: int) -> list[dict]:
+    return [{"codec_type": "video", "codec_name": "h264"}] + [
+        {"codec_type": "subtitle", "codec_name": "subrip", "tags": {"language": lang}}
+        for lang in ["eng", "fre", "ger", "spa", "ita"][:n]
+    ]
+
+
+def _extraction(tmp_path: Path, monkeypatch, n: int, write):
+    """Run local() on a film with n text tracks. `write(cmd, outputs)`
+    plays ffmpeg for each extraction call; the calls are returned."""
+    film = tmp_path / "Film"
+    film.mkdir()
+    video = film / "Film.mkv"
+    video.write_bytes(b"x")
+    calls = []
+
+    def fake_run(cmd):
+        if cmd[0] == "ffprobe":
+            return json.dumps({"format": {"duration": "70.0"}, "streams": _text_tracks(n)})
+        calls.append(cmd)
+        write(cmd, _outputs(cmd))
+        return ""
+
+    monkeypatch.setattr(sources, "_run", fake_run)
+    out = sources.local(video, tmp_path / "work")
+    return out, calls
+
+
+def test_local_reads_every_text_track_in_one_ffmpeg_call(tmp_path: Path, monkeypatch):
+    def write(cmd, outputs):
+        for k, dest in outputs.items():
+            Path(dest).write_text(_srt(60 + k), encoding="utf-8")
+
+    out, calls = _extraction(tmp_path, monkeypatch, 3, write)
+    [cmd] = calls
+    assert cmd[cmd.index("-i") + 1].endswith("Film.mkv") and cmd.count("-i") == 1
+    names = {k: Path(v).name for k, v in _outputs(cmd).items()}
+    assert names == {0: "track0.en.srt", 1: "track1.fr.srt", 2: "track2.de.srt"}
+    assert all(cmd[cmd.index(f"0:s:{k}") + 1 : cmd.index(f"0:s:{k}") + 3] == ["-c:s", "srt"] for k in names)
+    tracks = [c for c in out["candidates"] if c["source"] == "built-in track"]
+    assert [(Path(c["path"]).name, c["check"]["cues"]) for c in tracks] == [
+        ("track0.en.srt", 60),
+        ("track1.fr.srt", 61),
+        ("track2.de.srt", 62),
+    ]
+
+
+def test_local_extracts_each_track_alone_when_the_one_call_fails(tmp_path: Path, monkeypatch):
+    def write(cmd, outputs):
+        if len(outputs) > 1:
+            # A bad track stops the call after it wrote part of another.
+            Path(outputs[0]).write_text(_srt(60)[:40], encoding="utf-8")
+            raise sources.subprocess.CalledProcessError(1, cmd)
+        for k, dest in outputs.items():
+            Path(dest).write_text(_srt(60 + k), encoding="utf-8")
+
+    out, calls = _extraction(tmp_path, monkeypatch, 3, write)
+    assert [sorted(_outputs(c)) for c in calls] == [[0, 1, 2], [0], [1], [2]]
+    # The one call per track is the command used before.
+    video, out_dir = str(tmp_path / "Film" / "Film.mkv"), tmp_path / "work" / "sources"
+    assert calls[2] == [
+        "ffmpeg",
+        "-v",
+        "error",
+        "-y",
+        "-i",
+        video,
+        "-map",
+        "0:s:1",
+        "-c:s",
+        "srt",
+        str(out_dir / "track1.fr.srt"),
+    ]
+    tracks = [c for c in out["candidates"] if c["source"] == "built-in track"]
+    assert [c["check"]["cues"] for c in tracks] == [60, 61, 62]
+
+
+def test_local_extracts_again_only_the_tracks_the_one_call_left_out(tmp_path: Path, monkeypatch):
+    def write(cmd, outputs):
+        for k, dest in outputs.items():
+            # In the shared call, track 1 comes out empty and track 2 not at all.
+            if len(outputs) > 1 and k == 2:
+                continue
+            Path(dest).write_text("" if len(outputs) > 1 and k == 1 else _srt(60 + k), encoding="utf-8")
+
+    out, calls = _extraction(tmp_path, monkeypatch, 3, write)
+    assert [sorted(_outputs(c)) for c in calls] == [[0, 1, 2], [1], [2]]
+    tracks = [c for c in out["candidates"] if c["source"] == "built-in track"]
+    assert [c["check"]["cues"] for c in tracks] == [60, 61, 62]
+
+
+def test_local_never_takes_an_earlier_runs_file_for_an_extracted_track(tmp_path: Path, monkeypatch):
+    stale = tmp_path / "work" / "sources" / "track1.fr.srt"
+    stale.parent.mkdir(parents=True)
+    stale.write_text(_srt(5), encoding="utf-8")
+
+    def write(cmd, outputs):
+        for k, dest in outputs.items():
+            if len(outputs) == 1 or k != 1:
+                Path(dest).write_text(_srt(60 + k), encoding="utf-8")
+
+    out, calls = _extraction(tmp_path, monkeypatch, 2, write)
+    assert [sorted(_outputs(c)) for c in calls] == [[0, 1], [1]]
+    assert [c["check"]["cues"] for c in out["candidates"] if c["source"] == "built-in track"] == [60, 61]
+
+
+def test_local_splits_a_command_line_too_long_for_windows(tmp_path: Path, monkeypatch):
+    def write(cmd, outputs):
+        assert len(sources.subprocess.list2cmdline(cmd)) <= sources.MAX_COMMAND_CHARS
+        for k, dest in outputs.items():
+            Path(dest).write_text(_srt(60 + k), encoding="utf-8")
+
+    out_dir = tmp_path / "work" / "sources"
+    two = sources._track_cmd(tmp_path / "Film" / "Film.mkv", [(0, out_dir / "track0.en.srt"), (1, out_dir / "track1.fr.srt")])
+    # Room for two tracks a call, not three.
+    monkeypatch.setattr(sources, "MAX_COMMAND_CHARS", len(sources.subprocess.list2cmdline(two)))
+    out, calls = _extraction(tmp_path, monkeypatch, 5, write)
+    assert [sorted(_outputs(c)) for c in calls] == [[0, 1], [2, 3], [4]]
+    assert [c["check"]["cues"] for c in out["candidates"] if c["source"] == "built-in track"] == [60, 61, 62, 63, 64]
 
 
 def test_local_keeps_a_forced_track_that_holds_the_full_dialogue(tmp_path: Path, monkeypatch):
@@ -207,7 +334,8 @@ def test_local_keeps_a_forced_track_that_holds_the_full_dialogue(tmp_path: Path,
     def fake_run(cmd):
         if cmd[0] == "ffprobe":
             return json.dumps({"format": {"duration": "600.0"}, "streams": streams})
-        Path(cmd[-1]).write_text(_srt(next(sizes)), encoding="utf-8")
+        for dest in _outputs(cmd).values():
+            Path(dest).write_text(_srt(next(sizes)), encoding="utf-8")
         return ""
 
     monkeypatch.setattr(sources, "_run", fake_run)

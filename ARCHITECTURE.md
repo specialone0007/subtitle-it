@@ -125,7 +125,7 @@ Then it settles the timings:
   unsure frames are thinned first, down to one each, then the latest are
   dropped; the ends are never thinned. `W/screen/frames.json` lists each
   frame with its time, why it was picked and the entries within 3 s.
-  One `screen-reader` agent reads each 150 frames, 20 to a batch file,
+  One `screen-reader` agent reads each 40 frames, 20 to a batch file,
   and writes one line per frame: the text word for word, its kind
   (title card, caption, sign, text message, letter, dedication, closing
   text, credits, logo, background), whether the film wants it read, and
