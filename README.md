@@ -1,9 +1,15 @@
 # Subtitle It
 
-![Title card: Subtitle It, a Claude Code plugin that turns a film's subtitles into natural Turkish, the first of more languages to come](docs/assets/title-card.svg)
+![Title card: Subtitle It, a Claude Code plugin that turns a film's subtitles into natural Turkish](docs/assets/title-card.svg)
 
 <p align="center">
   <b>Name a film. Get Turkish subtitles that sound like people talking.</b>
+</p>
+
+<p align="center">
+  <a href="https://github.com/specialone0007/subtitle-it/actions/workflows/ci.yml"><img src="https://github.com/specialone0007/subtitle-it/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
+  <a href="https://github.com/specialone0007/subtitle-it/releases/latest"><img src="https://img.shields.io/github/v/release/specialone0007/subtitle-it" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/specialone0007/subtitle-it" alt="License: Apache-2.0"></a>
 </p>
 
 <p align="center">
@@ -14,8 +20,8 @@
 </p>
 
 A Claude Code plugin for people who want to watch a film that has no good
-subtitles in their language. Turkish is the first supported language, and
-more are planned; today every run writes Turkish. You type one command:
+Turkish subtitles. It reads the film's subtitles in any language and
+writes natural Turkish ones. You type one command:
 
 ```
 /subtitle-it:translate Harbour Lights
@@ -23,8 +29,8 @@ more are planned; today every run writes Turkish. You type one command:
 
 About a quarter of an hour later, `Harbour Lights.srt` sits next to
 `Harbour Lights.mkv`, on the source file's own timings. It has exactly the
-video's name, so a TV playing the film from a USB stick picks it up. (Plain `/translate` also works
-when no other command uses that name.)
+video's name, so a TV playing the film from a USB stick picks it up. (Plain `/translate`
+also works when no other command uses that name.)
 
 ![Same line, two translations. The English line "Well... you're coming, right?" becomes "Kuyu... geliyorsun, sağ?" word for word, and "Şey... geliyorsun, değil mi?" with the plugin](docs/assets/scene.svg)
 
@@ -34,84 +40,28 @@ when no other command uses that name.)
   by meaning, the way people in the scene would talk.
 - **One voice for the whole film.** A short "film bible" fixes the names, the
   terms and who says *sen* or *siz* to whom, before anyone translates a line.
-- **The original timings, easy to read.** Cues keep the source's times
-  and italics, with at most two lines of 42 characters. In a cue with two
-  speakers each speaker gets one line; when they cannot, and there is time
-  for it, the cue is split into one cue per speaker, which share its time.
-  Nothing is merged.
-- **No hearing-impaired clutter.** Sound descriptions in square brackets
-  (`[door slams]`) are taken out. From a hearing-impaired file, sound
-  descriptions in parentheses (`(sighs)`) and speaker labels (`MARA:`) go
-  too; in other files parentheses and capitals are often dialogue, so they
-  stay. A cue that is only a sound is left out. Set `Hearing-impaired tags`
-  to `keep` in your preferences to keep them all.
-- **Read at a glance.** Lines are reshaped into fewer, plainer words
-  without losing what is said, following the Netflix Turkish style guide:
-  a bare "Oh." or "Hmm?" is not subtitled, a phrase said twice in a row is
-  written once, and only songs that carry the story are translated (set
-  `Songs` to `skip` or `all` to change that). sen and siz follow the tone
-  of each scene, so people at ease do not talk like strangers.
+- **The original timings, easy to read.** Cues keep the source's times and
+  italics, with at most two short lines. Nothing is merged.
+- **Read at a glance.** Lines are reshaped into fewer, plainer words without
+  losing what is said, following the Netflix Turkish style guide. Only songs
+  that carry the story are translated (the `Songs` setting changes that).
+- **No hearing-impaired clutter.** Sound descriptions like `[door slams]` are
+  taken out. Set `Hearing-impaired tags` to `keep` to keep them.
+- **Title cards and signs.** On-screen text the English subtitles leave to
+  the picture is found in other languages' subtitles and in the picture
+  itself, and added. Cast and crew credits and logos are never added.
 - **No questions, no spoilers.** Once setup is done it runs to the end. The
   one question it may ask is which film you mean when a name matches several
   (Harbour Lights and Harbour Light). It does not discuss the plot in chat.
 - **An honest report.** What it could not settle for certain goes under
-  "Check after watching" in the film's `report.md`, with timestamps. The
-  report also gives the run's time per step and its subagents' tokens.
-- **Title cards and signs.** A card, a sign or a dedication that the
-  English subtitles leave to the picture is often in the French or Spanish
-  ones. When two languages show it (three quarters of them when a film
-  has six or more), it joins the Turkish file. For a
-  video, the picture is read too: frames from the opening and the last
-  minutes, and around a text only one language or too few show, so a card
-  no track holds, or one only French shows, is still added when the film
-  shows it.
-  When fewer than two other languages are at hand, one French or Spanish
-  file is downloaded from OpenSubtitles for this. Every text found is
-  recorded with its time, and the report says which were added, and how
-  many were left out, and why. Cast and crew credits and logos are never
-  added.
+  "Check after watching" in the film's `report.md`, with timestamps, next to
+  the run's time per step and its subagents' tokens.
 - **It learns from you.** Fix lines after watching, and it turns your edits
   into rules for the next film.
-- **A short credit.** "İyi seyirler." over your name opens the file in the
-  silence before the first line, and "Görüşmek üzere." over your name
-  comes after the last translated line. When the film cuts to black into
-  its end cards, the goodbye starts on the black; otherwise on the first
-  end card, or 3 seconds after the last line. Put your name
-  under `Credit` in your preferences, or set it to `off`.
+- **A short credit.** "İyi seyirler." opens the file and "Görüşmek üzere."
+  closes it, each over your name. Set `Credit` in your preferences, or `off`.
 
-## Languages
-
-- **From:** any language. The plugin reads the film's subtitle file, or
-  writes one from the audio when none exists.
-- **Into:**
-  - Turkish
-
-Turkish is the only target language today. The design is meant for more:
-each target language gets its own language pack of rules, and this list
-grows as they are added.
-
-![One run, by the numbers: about 17 minutes, about 8 dollars at API list prices on Opus, 1,838 cues, 0 questions asked. Measured once, on one 2-hour film on Windows](docs/assets/ticket.svg)
-
-## How a run goes
-
-![How a run goes: find the film, get subtitles, audio hints, film bible, translate, check, review, listen, deliver](docs/assets/run-strip.svg)
-
-The strip above is the short version. This is the whole run, in four acts.
-A dashed gold frame means the boxes inside it run at the same time.
-
-![The whole run on one page, in four acts: find, understand, translate, finish. Blue is a script, green a local model on your machine, red is Claude](docs/assets/run-map.svg)
-
-When a human-made Turkish subtitle already exists, the run polishes that
-file instead of translating from scratch, which uses less. It looks on
-your disk first, then on OpenSubtitles, which leaves out machine
-translations. It tries up to two files, a match for this exact video
-first, and uses the first one that fits the video's timings and covers at
-least 80% of the spoken lines. Lines that file lacks are translated.
-
-![The cast: the scripts are plain Python, the local models listen to the audio on your machine, and Claude does the language work as eight kinds of agent](docs/assets/cast.svg)
-
-[How a run works](ARCHITECTURE.md) explains every step in plain words: what it reads, what it
-writes, and why it is there.
+[How a run works](ARCHITECTURE.md) has the exact rules behind each of these.
 
 ## Quick start
 
@@ -185,6 +135,35 @@ the film or more.
 
 </details>
 
+## How a run goes
+
+![How a run goes: find the film, get subtitles, audio hints, film bible, translate, check, review, listen, deliver](docs/assets/run-strip.svg)
+
+The strip above is the short version. This is the whole run, in four acts.
+A dashed gold frame means the boxes inside it run at the same time.
+
+![The whole run on one page, in four acts: find, understand, translate, finish. Blue is a script, green a local model on your machine, red is Claude](docs/assets/run-map.svg)
+
+When a human-made Turkish subtitle already exists, the run polishes that
+file instead of translating from scratch, which uses less. It looks on
+your disk first, then on OpenSubtitles, which leaves out machine
+translations. It tries up to two files, a match for this exact video
+first, and uses the first one that fits the video's timings and covers at
+least 80% of the spoken lines. Lines that file lacks are translated.
+
+![The cast: the scripts are plain Python, the local models listen to the audio on your machine, and Claude does the language work as eight kinds of agent](docs/assets/cast.svg)
+
+[How a run works](ARCHITECTURE.md) explains every step in plain words: what it reads, what it
+writes, and why it is there.
+
+## Languages
+
+- **From:** any language. The plugin reads the film's subtitle file, or
+  writes one from the audio when none exists.
+- **Into:** Turkish.
+
+Turkish is the only target language for now; others may be added later.
+
 ## What it needs
 
 - [Claude Code](https://code.claude.com/docs). A feature film takes about
@@ -201,6 +180,8 @@ run it on. The plugin reads only the folders you give it and downloads from
 OpenSubtitles under your own account.
 
 ## Cost, time and platforms
+
+![One run, by the numbers: about 17 minutes, about 8 dollars at API list prices on Opus, 1,838 cues, 0 questions asked. Measured once, on one 2-hour film on Windows](docs/assets/ticket.svg)
 
 Measured on one 2-hour film on Windows: about 17 minutes per run, and about
 $8 at API list prices with Opus. On a Claude subscription a run uses your
