@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.13.4 (2026-11-21)
+
+The on-screen text `build` finds no longer depends on the order the
+session lists the other subtitle tracks in.
+
+- `prepare.py build` puts the `--track` files in order itself
+  (`prepare.order_tracks`): the first one given (the original language)
+  and every English track stay in front in the order given, and the
+  rest follow by file number, so `track2.ar.srt` comes before
+  `track10.fin.srt`, with downloads after them by name. Forced tracks
+  are ordered the same way, after the tracks. A sign's text and times,
+  its id and the track list in `build.json` now come out the same
+  however the tracks are listed, and the build with `--screen` finds the
+  ids `screen.py frames` saw.
+- Two runs of one 2026 film with 39 other tracks had listed them
+  in number order and in name order. The old code gave 32 of the 53
+  on-screen entries different text or times: the title card came from
+  the Arabic track in one run and the Hebrew track in the other, and was
+  delivered as two different titles. Both orders, and the reverse, now
+  give byte for byte the files of the run that used number order.
+
 ## 0.13.3 (2026-11-21)
 
 Finding a film's sources and building its work folder take seconds
