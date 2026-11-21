@@ -114,6 +114,58 @@ def test_the_id_names_the_first_track_and_a_forced_track_gives_the_text(tmp_path
     assert [(e["id"], e["lines"]) for e in _added(entries)] == [("1:1", ["WESTMINSTER, 1890"])]
 
 
+def test_order_tracks_keeps_the_first_and_english_in_front_and_sorts_the_rest():
+    p = Path
+    given = [
+        ("fr", p("dl/fr.srt")),
+        ("fin", p("s/track10.fin.srt")),
+        ("en", p("s/track1_fit.srt")),
+        ("de", p("dl/a.de.srt")),
+        ("ar", p("s/track2.ar.srt")),
+        ("en-gb", p("s/track5.en.srt")),
+        ("heb", p("s/Track12.heb.srt")),
+    ]
+    assert prepare.order_tracks(given) == [
+        # The first one given, then English in the order given.
+        ("fr", p("dl/fr.srt")),
+        ("en", p("s/track1_fit.srt")),
+        ("en-gb", p("s/track5.en.srt")),
+        # Then track<N> by number (2 before 10), then other files by name.
+        ("ar", p("s/track2.ar.srt")),
+        ("fin", p("s/track10.fin.srt")),
+        ("heb", p("s/Track12.heb.srt")),
+        ("de", p("dl/a.de.srt")),
+    ]
+    assert prepare.order_tracks([]) == []
+
+
+def test_the_same_tracks_in_any_order_give_the_same_entries(tmp_path: Path):
+    # Resident Evil (2026): the title card's text came from whichever track
+    # the session happened to list first after English.
+    en = _film(tmp_path, "track1_fit.srt", "Line", [(*CREDIT, "THE END")])
+    rest = [
+        ("heb", _film(tmp_path, "track12.heb.srt", "Shura", [(*CARD, "HEBREW TITLE")], offset=-44)),
+        ("ar", _film(tmp_path, "track2.ar.srt", "Satr", [(*CARD, "RESIDENT EVIL")], offset=-50)),
+        ("de", _film(tmp_path, "download.de.srt", "Zeile", [(*CARD, "GERMAN TITLE")])),
+        ("fin", _film(tmp_path, "track10.fin.srt", "Rivi", [(*CARD, "FINNISH TITLE"), (*CREDIT, "LOPPU")], offset=-300)),
+    ]
+    timing = _cues(_timing(tmp_path))
+    runs = [
+        prepare.on_screen(timing, [("en", en), *order], [], timing_language="en")
+        for order in (rest, rest[::-1], rest[1:] + rest[:1])
+    ]
+    assert runs[0] == runs[1] == runs[2]
+    entries, summary = runs[0]
+    card = _added(entries)[0]
+    # English first, then track2 (Arabic) before track10 and track12; the
+    # download last.
+    assert card["lines"] == ["RESIDENT EVIL"] and card["id"] == "2:1" and (card["start"], card["end"]) == CARD
+    assert list(card["texts"]) == ["ar", "fin", "heb", "de"]
+    assert [t["language"] for t in summary["tracks"]] == ["en", "ar", "fin", "heb", "de"]
+    # English keeps its lead over every other track: the end title is its.
+    assert [e["lines"] for e in entries if e["start"] >= CREDIT[0]] == [["THE END"]]
+
+
 def test_a_track_that_does_not_fit_is_left_out(tmp_path: Path):
     fr = _film(tmp_path, "fr.srt", "Ligne", [(*CARD, "Une carte")])
     # Every line two seconds apart from the timing file's: another cut.

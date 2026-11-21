@@ -201,6 +201,29 @@ def track_arg(text: str) -> tuple[str, Path]:
     return lang, result.path(path.strip())
 
 
+TRACK_FILE_RE = re.compile(r"track(\d+)(?!\d)", re.IGNORECASE)
+
+
+def _natural_key(lang: str, path: Path) -> tuple:
+    """A built-in track's file (`track<N>.*`, as `sources.py local` names
+    them) by its number, so track2 comes before track10, then any other
+    file (a download) by name."""
+    m = TRACK_FILE_RE.match(path.name)
+    return (0, int(m.group(1)), path.name.casefold(), str(path), lang) if m else (1, 0, path.name.casefold(), str(path), lang)
+
+
+def order_tracks(tracks: list[tuple[str, Path]]) -> list[tuple[str, Path]]:
+    """The tracks in order of preference, whatever order they were given
+    in: the first one given (the original language, as the translate skill
+    lists them) and every English track stay in front in the order given;
+    the rest follow in natural file order (_natural_key). So the same
+    tracks always give the same on-screen entries, ids and build.json."""
+    lead = [i == 0 or lang.split("-")[0] in ("en", "eng") for i, (lang, _) in enumerate(tracks)]
+    front = [t for t, x in zip(tracks, lead) if x]
+    rest = [t for t, x in zip(tracks, lead) if not x]
+    return front + sorted(rest, key=lambda t: _natural_key(*t))
+
+
 Found = tuple[int, str, bool, srt.Cue]  # (track order, language, forced, cue)
 
 
@@ -224,7 +247,9 @@ def _group(found: list[Found]) -> list[list[Found]]:
 
 def _lead(g: list[Found]) -> Found:
     """The line whose text and times a group takes: a forced track's first,
-    then a line that is not a subtitle credit, then the first track given."""
+    then a line that is not a subtitle credit, then the first track in
+    order_tracks' order (the first given, English, then natural file
+    order)."""
     return min(g, key=lambda x: (not x[2], bool(CREDIT_RE.search(x[3].plain)), x[0]))
 
 
@@ -263,8 +288,9 @@ def fold_text(text: str) -> str:
 
 
 def _id(g: list[Found]) -> str:
-    """The track's place in the list (from 1, tracks before forced tracks)
-    and the cue's number in that file, of the first track that shows it."""
+    """The track's place in order_tracks' order (from 1, tracks before
+    forced tracks) and the cue's number in that file, of the first track
+    that shows it."""
     k, _, _, first = min(g, key=lambda x: x[0])
     return f"{k + 1}:{first.n}"
 
@@ -370,8 +396,14 @@ def on_screen(
     build.json. An entry in state `cue` is to be added to the timing file
     at its `start` and `end`; one in state `left_out` is only recorded,
     with a `reason` (ON_SCREEN_REASONS). `texts` holds the entry's lines per
-    language in the order given. Tracks are given in order of preference:
-    the first one with the line gives the entry's text and times.
+    language in order of preference, which order_tracks sets whatever
+    order the tracks come in: the first track given and every English
+    track first, in the order given, then the rest in natural file order
+    (track2 before track10, other files after); forced tracks the same
+    way, after the tracks. The first one with the line gives the entry's
+    text and times, and an entry's id names its place in that order, so
+    the build with --screen finds the same ids however the tracks are
+    listed.
 
     A line the timing file covers is the timing file's own line, so it
     stays out and is only counted, except when two languages show it over
@@ -399,6 +431,7 @@ def on_screen(
     found: dict[str | None, list[Found]] = {None: [], CREDIT: [], SONG_LINE: [], DURING_SONG: []}
     summary_tracks = []
     covered_lines = 0
+    tracks, forced = order_tracks(tracks), order_tracks(forced)
     for k, (lang, path, is_forced) in enumerate([(a, b, False) for a, b in tracks] + [(a, b, True) for a, b in forced]):
         cues, _ = srt.parse(path)
         info = {"language": lang, "path": str(path), "forced": is_forced, "cues": len(cues)}
