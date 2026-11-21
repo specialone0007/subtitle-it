@@ -1,0 +1,43 @@
+name: Bug report
+description: A run failed, or the subtitle came out wrong.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please **never attach video files, subtitle files you have no right to share, or credentials** (your OpenSubtitles key or login, your Hugging Face token, or `credentials.json`). A few lines of text are enough.
+  - type: input
+    id: version
+    attributes:
+      label: Plugin version
+      description: The `version` in the plugin's `plugin.json`, or the one `claude plugin list` shows.
+      placeholder: 0.13.5
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [Windows, macOS, Linux]
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: The command you ran
+      placeholder: /subtitle-it:translate Inception
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, what you got instead, and the step where it went wrong if you know it. For a wrong line, give its time and the source line next to the Turkish.
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: The relevant part of the film's report.md
+      description: The run writes `report.md` in the film's work folder. Paste only the part about the problem.
+      render: markdown

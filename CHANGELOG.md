@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.13.5 (2026-11-21)
+
+The plugin now says plainly that it translates into Turkish, the README is
+easier to scan, and every version from here on gets its own GitHub release
+with notes a user can read.
+
+- The README, the plugin and marketplace descriptions, `ARCHITECTURE.md`
+  and the title card say the plugin translates from any language into
+  Turkish, the only target language for now. Nothing promises more.
+- The README has status badges, Quick start straight after "What you get",
+  and shorter "What you get" bullets; the exact rules stay in
+  `ARCHITECTURE.md`. `docs/assets/social-preview.png` is the title card
+  at 1280x640, for the repository's social preview.
+- A push to `main` with a new version in `plugin.json` tags that commit
+  and publishes its release (`.github/workflows/release.yml`). The notes
+  come from the changelog entry through `.github/scripts/release_notes.py`:
+  the opening paragraph, the bullets folded under "Technical notes", how to
+  update, and links to the entry and the changes since the last release.
+- Bug reports and feature requests have issue forms; security problems go
+  to `SECURITY.md`. `CONTRIBUTING.md` says how a release is made and what
+  a changelog entry and a bug report should hold.
+
 ## 0.13.4 (2026-11-21)
 
 The on-screen text `build` finds no longer depends on the order the

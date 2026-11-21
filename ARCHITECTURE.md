@@ -7,9 +7,9 @@ subtitle file sits next to the video. This page walks through what happens
 in between, step by step. The step numbers match `skills/translate/SKILL.md`,
 the skill Claude follows in your conversation for `/subtitle-it:translate`.
 
-Turkish is the first supported language, and more are planned. Every run
-today writes Turkish: the language rules sit in a Turkish language pack,
-`pack-tr.md`, and the agents' instructions are written for Turkish.
+Every run writes Turkish, the only target language for now. The language
+rules sit in a Turkish language pack, `pack-tr.md`, and the agents'
+instructions are written for Turkish.
 
 ## Who does what
 
