@@ -252,24 +252,30 @@ def test_frames_writes_the_list_the_batches_and_marks_the_unsure_entries(tmp_pat
     assert data["frames"][0]["entries"] == [{"id": card["id"], "texts": {"fr": "UN JOUR"}}]
     assert {e["state"] for e in _entries(w).values()} == {"unsure"}
     assert all("reason" not in e for e in _entries(w).values())
-    # 112 frames: one reader, 6 batches of 20 at most.
-    [reader] = data["readers"]
-    assert reader["frames"] == 112 and len(reader["batches"]) == 6
-    batch = _json(Path(reader["batches"][-1]))
+    # 112 frames: three readers of 40 at most, 6 batches of 20 at most.
+    assert [(r["frames"], len(r["batches"])) for r in data["readers"]] == [(40, 2), (40, 2), (32, 2)]
+    batch = _json(Path(data["readers"][-1]["batches"][-1]))
     assert len(batch["frames"]) == 12 and batch["out"] == str(w / "screen" / "read_06.jsonl")
     assert [c[0] for c in calls].count("one") == 5
     # Fitted into 960x540, nothing else: no frame is dropped as black.
     assert all(c[-1] == screen.SCALE for c in calls)
 
 
-def test_frames_split_readers_at_150_frames(tmp_path: Path, monkeypatch):
+def test_frames_split_readers_at_40_frames(tmp_path: Path, monkeypatch):
     w = tmp_path / "work"
     timing = _film(tmp_path, "en.srt", "Line", offset=140_000)  # a 2.5-minute head
     prepare.build(w, timing, None, None)
     _fake_ffmpeg(monkeypatch, duration=10_000_000)
     out = screen.frames(w, tmp_path / "Film.mkv")
     assert out["frames"] == 200
-    assert [(r["frames"], len(r["batches"])) for r in out["readers"]] == [(150, 8), (50, 3)]
+    assert [(r["frames"], len(r["batches"])) for r in out["readers"]] == [(40, 2)] * 5
+    # The batches take the frames 20 at a time in time order, whichever
+    # reader holds them.
+    batches = [_json(Path(b)) for r in out["readers"] for b in r["batches"]]
+    assert [b["batch"] for b in batches] == list(range(1, 11))
+    files = [f["file"] for b in batches for f in b["frames"]]
+    assert files == [f"frame_{k:04d}.jpg" for k in range(1, 201)]
+    assert all(len(b["frames"]) == screen.BATCH for b in batches)
 
 
 def test_frames_tone_map_hdr_or_say_why_not(tmp_path: Path, monkeypatch):
