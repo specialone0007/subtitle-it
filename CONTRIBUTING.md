@@ -2,6 +2,11 @@
 
 Issues and pull requests are welcome.
 
+A good bug report gives the plugin version, your system, the command you
+ran, what happened, and the part of the film's `report.md` about it. Never
+attach videos, subtitle files you may not share, or credentials. The issue
+forms ask for exactly this; security problems go to [SECURITY.md](SECURITY.md).
+
 ## Set up
 
 You need [uv](https://docs.astral.sh/uv/). The scripts declare their own
@@ -32,3 +37,17 @@ walks through a run.
   `fix(srt): keep italics across line breaks`.
 - Never commit subtitles, video or credentials. `.gitignore` blocks the
   common file types.
+
+## Releases
+
+- A release bumps the version in four places, which CI checks match:
+  `.claude-plugin/plugin.json`, `pyproject.toml`, `USER_AGENT` in
+  `scripts/opensubtitles.py`, and a new first entry in `CHANGELOG.md`.
+- Each changelog entry opens with a paragraph in plain words that a user
+  can follow without knowing the code: what changes for them. Technical
+  bullets come after it.
+- Merging to `main` does the rest: `.github/workflows/release.yml` tags the
+  commit `v<version>` and publishes a GitHub release. Its notes are the
+  opening paragraph, the bullets folded under "Technical notes", how to
+  update, and links to the changelog entry and the changes since the last
+  tag. Preview them with `python .github/scripts/release_notes.py <version>`.
