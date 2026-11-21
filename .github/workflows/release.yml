@@ -1,0 +1,40 @@
+name: Release
+
+# When a push to main carries a version that has no tag yet, tag that commit
+# and publish its GitHub release. A push whose version is already tagged does
+# nothing, so only the commit that bumps the version is released.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: tag and release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Tag and publish the version if it is new
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(python3 -c 'import json; print(json.load(open(".claude-plugin/plugin.json"))["version"])')
+          tag="v$version"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "$tag already exists; nothing to release."
+            exit 0
+          fi
+          previous=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+          python3 .github/scripts/release_notes.py "$version" ${previous:+--previous-tag "$previous"} > "$RUNNER_TEMP/notes.md"
+          gh release create "$tag" --target "$GITHUB_SHA" --title "$tag" --notes-file "$RUNNER_TEMP/notes.md" --latest
+          echo "Published $tag on $GITHUB_SHA."
