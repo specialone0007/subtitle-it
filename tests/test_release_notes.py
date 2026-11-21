@@ -1,7 +1,9 @@
 """The release notes helper in .github/scripts, which the release workflow runs."""
 
 import importlib.util
+import io
 import re
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -72,3 +74,14 @@ def test_every_released_changelog_entry_opens_with_plain_words():
     for version in released:
         text = release_notes.notes(changelog, version)
         assert not text.startswith("<details>"), version
+
+
+def test_main_writes_utf8_whatever_the_console_encoding(tmp_path, monkeypatch):
+    changelog = tmp_path / "CHANGELOG.md"
+    changelog.write_text("# Changelog\n\n## 1.0.0 (2026-11-21)\n\nGörüşmek üzere.\n\n- A bullet.\n", encoding="utf-8")
+    raw = io.BytesIO()
+    monkeypatch.setattr(sys, "stdout", io.TextIOWrapper(raw, encoding="cp1252"))
+    release_notes.main(["1.0.0", "--changelog", str(changelog), "--previous-tag", "v0.9.0"])
+    text = raw.getvalue().decode("utf-8")
+    assert text.startswith("Görüşmek üzere.")
+    assert " · [Changes since v0.9.0]" in text
