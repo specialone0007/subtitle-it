@@ -5,7 +5,8 @@
 A subtitle built into the video can still sit a fraction of a second off
 the speech. The plugin now checks the timing file against the film's own
 speech when the other subtitle tracks hint that it is off, or when the
-file is not a built-in track, and moves it onto the speech before the
+file's timing is not certain (it is not a built-in track or an
+OpenSubtitles hash match), and moves it onto the speech before the
 translation starts. One 2026 film was delivered 0.65 s late on
 every line; this check finds it and fixes it.
 

@@ -59,8 +59,10 @@ import statistics
 import subprocess
 import sys
 import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TypeVar
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import result  # noqa: E402
@@ -271,6 +273,23 @@ def sync_verdict(pairs: list[tuple[int, int]], spans: list[tuple[int, int]] | No
     return {**out, "shift_ms": shift, "verdict": f"subtitles are {abs(offset)} ms {'late' if offset > 0 else 'early'}"}
 
 
+T = TypeVar("T")
+
+
+def on_gpu_or_cpu(attempt: Callable[[str], T]) -> tuple[T, str]:
+    """attempt(device) on the GPU when there is one, and on the CPU when the
+    GPU's libraries fail; any other error is raised. Returns the result and
+    the device used."""
+    if speakers._device() == "cuda":
+        try:
+            return attempt("cuda"), "cuda"
+        except Exception as e:
+            if not any(w in str(e).lower() for w in speakers.CUDA_WORDS):
+                raise
+            speakers._say(f"GPU transcription failed ({type(e).__name__}); trying the CPU")
+    return attempt("cpu"), "cpu"
+
+
 def transcribe(wav: Path, model_name: str, language: str | None) -> tuple[list[Word], str, float, str]:
     from faster_whisper import WhisperModel
 
@@ -291,15 +310,8 @@ def transcribe(wav: Path, model_name: str, language: str | None) -> tuple[list[W
         words = [Word(w.start, w.end, w.word) for s in segments for w in (s.words or [])]
         return words, info.language, info.language_probability
 
-    device = speakers._device()
-    if device == "cuda":
-        try:
-            return (*attempt("cuda"), "cuda")
-        except Exception as e:
-            if not any(w in str(e).lower() for w in speakers.CUDA_WORDS):
-                raise
-            speakers._say(f"GPU transcription failed ({type(e).__name__}); trying the CPU")
-    return (*attempt("cpu"), "cpu")
+    found, device = on_gpu_or_cpu(attempt)
+    return (*found, device)
 
 
 def run(video: Path, work: Path, language: str | None, model_name: str) -> dict:
@@ -374,15 +386,7 @@ def window_words(video: Path, spans: list[tuple[int, int]], model_name: str, lan
                         out.append(Word(a / 1000 + w.start, a / 1000 + w.end, w.word))
         return out
 
-    device = speakers._device()
-    if device == "cuda":
-        try:
-            return attempt("cuda"), "cuda"
-        except Exception as e:
-            if not any(w in str(e).lower() for w in speakers.CUDA_WORDS):
-                raise
-            speakers._say(f"GPU transcription failed ({type(e).__name__}); trying the CPU")
-    return attempt("cpu"), "cpu"
+    return on_gpu_or_cpu(attempt)
 
 
 def sync(video: Path, timing: Path, language: str | None, model_name: str) -> dict:
