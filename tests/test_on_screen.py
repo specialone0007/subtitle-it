@@ -515,6 +515,7 @@ def test_a_shift_rebuild_moves_the_entries_and_keeps_every_number(tmp_path: Path
     w = tmp_path / "work"
     first = prepare.build(w, timing, None, None, tracks=tracks)
     assert first["on_screen"]["dropped_timing_cues"] == [1]
+    assert first["on_screen"]["tracks_offset"] == {"fitting": 2, "agreeing": 0, "offset_ms": None, "check_audio": False}
     rows_before, entries_before = json.loads((w / "cues.json").read_text(encoding="utf-8")), _entries(w)
     (w / "screen").mkdir()
     shift = -700
@@ -527,6 +528,7 @@ def test_a_shift_rebuild_moves_the_entries_and_keeps_every_number(tmp_path: Path
         (b["id"], b["n"], shift) for b in entries_before
     ]
     assert again["on_screen"]["shift_ms"] == shift and again["on_screen"]["dropped_timing_cues"] == [1]
+    assert "tracks_offset" not in again["on_screen"], "the tracks were lined up with the unshifted file"
     assert again["on_screen"]["cues"][0]["ts"] == srt.fmt_ms(CARD[0] + shift)
     assert (w / "screen").exists()
 
@@ -778,3 +780,30 @@ def test_the_share_counts_a_region_once_and_leaves_out_tracks_that_do_not_fit(tm
     tracks.append(("nl", far))
     entries, summary = prepare.on_screen(_cues(_timing(tmp_path)), tracks, [], timing_language="en")
     assert summary["languages_needed"] == 2 and len(_added(entries)) == 1
+
+
+def _track(language, offset_ms, fits=True, forced=False):
+    return {"language": language, "forced": forced, "fits": fits, "offset_ms": offset_ms}
+
+
+def test_tracks_offset_asks_for_an_audio_check_when_most_tracks_agree():
+    # Disclosure Day (2026): the timing track sat about 0.7 s late; most
+    # other languages fit at +650 to +900 ms, its English sibling at 0.
+    tracks = [_track("en", 0), _track("hrv", 850), _track("cze", 650), _track("da", 850), _track("nl", 650)]
+    tracks += [_track("est", 100), _track("fin", 800), _track("fr", -200), _track("fr", 650, fits=False)]
+    r = prepare.tracks_offset(tracks, "en")
+    assert r == {"fitting": 7, "agreeing": 5, "offset_ms": 800, "check_audio": True}
+
+
+def test_tracks_offset_stays_quiet_when_tracks_disagree_or_are_few():
+    two = [_track("de", 700), _track("fr", 750), _track("es", 0)]
+    assert prepare.tracks_offset(two)["check_audio"] is False
+    split = [_track(x, 700) for x in ("de", "fr", "es")] + [_track(x, 0) for x in ("it", "nl", "pt")]
+    assert prepare.tracks_offset(split) == {"fitting": 6, "agreeing": 3, "offset_ms": None, "check_audio": False}
+    near = [_track(x, 250) for x in ("de", "fr", "es", "it")]
+    assert prepare.tracks_offset(near)["check_audio"] is False
+
+
+def test_tracks_offset_counts_early_files_and_leaves_out_forced_tracks():
+    tracks = [_track(x, -900) for x in ("de", "fr", "es")] + [_track("it", -900, forced=True)]
+    assert prepare.tracks_offset(tracks) == {"fitting": 3, "agreeing": 3, "offset_ms": -900, "check_audio": True}
