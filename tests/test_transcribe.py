@@ -300,3 +300,78 @@ def test_sync_spans_spread_over_the_film_or_cover_a_short_one():
     assert all(b - a == transcribe.SYNC_WINDOW_S * 1000 for a, b in spans)
     assert spans[0][0] > 0 and spans[-1][1] < 7_200_000
     assert transcribe.sync_spans(1_200_000) == [(0, 1_200_000)]
+
+
+def _fake_whisper(monkeypatch, said, fail_on_cuda=False):
+    """A fake faster_whisper whose model says `said[i]` (start s, text) for
+    the i-th audio it is given; the audio is the stretch index."""
+    import sys
+    import types
+
+    devices = []
+
+    class FakeModel:
+        def __init__(self, name, device, compute_type):
+            devices.append(device)
+            self.device = device
+
+        def transcribe(self, audio, **kw):
+            if fail_on_cuda and self.device == "cuda":
+                raise RuntimeError("Library cublas64_12.dll is not found")
+            ws = [types.SimpleNamespace(start=t, end=t + 0.2, word=w) for t, w in said[audio]]
+            return iter([types.SimpleNamespace(words=ws)]), None
+
+    monkeypatch.setitem(sys.modules, "faster_whisper", types.SimpleNamespace(WhisperModel=FakeModel))
+    cut = iter(range(len(said)))
+    monkeypatch.setattr(transcribe, "_cut", lambda video, a, b, dest: dest)
+    monkeypatch.setattr(transcribe.speakers, "read_wav", lambda wav: next(cut))
+    return devices
+
+
+def test_window_words_puts_words_in_film_time_and_drops_those_near_a_cut(tmp_path: Path, monkeypatch):
+    spans = [(100_000, 280_000), (500_000, 680_000)]
+    said = [
+        [(1.0, " early"), (10.0, " one"), (179.0, " late")],
+        [(0.5, " early"), (20.25, " two"), (178.5, " edge")],
+    ]
+    _fake_whisper(monkeypatch, said)
+    monkeypatch.setattr(transcribe.speakers, "_device", lambda: "cpu")
+    words, device = transcribe.window_words(tmp_path / "v.mkv", spans, "small", "en")
+    assert device == "cpu"
+    assert [(w.start, w.text) for w in words] == [(110.0, " one"), (520.25, " two")]
+
+
+def test_window_words_keeps_every_word_of_a_single_stretch(tmp_path: Path, monkeypatch):
+    _fake_whisper(monkeypatch, [[(0.5, " first"), (59.5, " last")]])
+    monkeypatch.setattr(transcribe.speakers, "_device", lambda: "cpu")
+    words, _ = transcribe.window_words(tmp_path / "v.mkv", [(0, 60_000)], "small", None)
+    assert [w.text for w in words] == [" first", " last"]
+
+
+def test_window_words_falls_back_to_the_cpu_on_a_gpu_library_error(tmp_path: Path, monkeypatch):
+    devices = _fake_whisper(monkeypatch, [[(10.0, " hi")]], fail_on_cuda=True)
+    monkeypatch.setattr(transcribe.speakers, "_device", lambda: "cuda")
+    words, device = transcribe.window_words(tmp_path / "v.mkv", [(0, 60_000)], "small", None)
+    assert devices == ["cuda", "cpu"] and device == "cpu" and [w.text for w in words] == [" hi"]
+
+
+def test_sync_transcribes_spread_stretches_and_reports_the_offset(tmp_path: Path, monkeypatch):
+    cues = _lines(80, gap=60_000, first=30_000)
+    for c in cues:
+        c.ts = f"{srt.fmt_ms(c.start)} --> {srt.fmt_ms(c.end)}"
+    timing = tmp_path / "timing.srt"
+    srt.write(timing, cues)
+    seen = {}
+
+    def fake_window_words(video, spans, model_name, language):
+        seen["spans"], seen["args"] = spans, (model_name, language)
+        return _said(srt.parse(timing)[0], 800), "cuda"
+
+    monkeypatch.setattr(transcribe.sources, "probe", lambda video: {"duration_ms": 7_200_000})
+    monkeypatch.setattr(transcribe, "window_words", fake_window_words)
+    r = transcribe.sync(tmp_path / "v.mkv", timing, "en", "small")
+    assert seen["spans"] == transcribe.sync_spans(7_200_000) and seen["args"] == ("small", "en")
+    assert r["timing"] == str(timing) and r["device"] == "cuda" and r["model"] == "small"
+    assert r["matches"] == 80 and r["words"] == 80 * 5
+    assert r["offset_ms"] == 800 - transcribe.WHISPER_LEAD_MS and r["shift_ms"] == -r["offset_ms"]
+    assert r["verdict"] == f"subtitles are {r['offset_ms']} ms late"

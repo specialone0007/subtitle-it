@@ -327,6 +327,25 @@ def test_run_writes_voices_with_models_faked(tmp_path: Path, monkeypatch, capsys
     ]
 
 
+def test_the_tracks_offset_reaches_the_sync_check_from_the_command_line(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("HF_TOKEN", "hf_x")
+    (tmp_path / "timing.srt").write_text("1\n00:00:01,000 --> 00:00:02,000\nViens.\n", encoding="utf-8")
+    monkeypatch.setattr(speakers, "extract_audio", lambda video, dest: dest)
+    monkeypatch.setattr(speakers, "diarize", lambda wav, token: ([(900, 2100, "A")], {"A": [1.0]}))
+    monkeypatch.setattr(speakers, "speech_starts", lambda wav: [1000])
+    seen = []
+
+    def fake_sync_offset(cues, starts, expect_ms=None):
+        seen.append(expect_ms)
+        return {"verdict": "in sync"}
+
+    monkeypatch.setattr(speakers, "sync_offset", fake_sync_offset)
+    argv = ["--result", str(tmp_path / "r.json"), "run", "--video", str(tmp_path / "v.mkv"), "--work", str(tmp_path)]
+    speakers.main([*argv, "--config", str(tmp_path), "--expect-offset-ms", "650"])
+    speakers.main([*argv, "--config", str(tmp_path)])
+    assert seen == [650, None]
+
+
 def test_run_without_token_or_config_suggests_the_default_folder(tmp_path: Path, monkeypatch):
     monkeypatch.delenv("HF_TOKEN", raising=False)
     fix = speakers.run(tmp_path / "v.mkv", tmp_path, None, sync_check=False)["fix"]
