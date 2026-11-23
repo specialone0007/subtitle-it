@@ -178,6 +178,7 @@ def test_sync_offset_recentres_an_off_grid_shift(seed):
 
 def test_sync_offset_result_keys_are_the_same_on_every_path():
     keys = {"matched_cues", "speech_starts", "runner_up_matched", "chance_matched", "median_offset_ms", "verdict"}
+    keys |= {"best_offset_ms", "agrees_with_tracks"}
     speech = dialogue()
     assert set(speakers.sync_offset([], speech)) == keys
     assert set(speakers.sync_offset(cues_at([1000, 3000]), [1000, 3000])) == keys
@@ -221,6 +222,41 @@ def test_sync_offset_will_not_call_a_peak_that_stands_no_higher_than_chance():
     r = speakers.sync_offset(cues_at(cue_starts), speech)
     assert r["median_offset_ms"] is None
     assert r["verdict"].startswith("no clear offset")
+
+
+def weak_late_talk(seed, share):
+    """Fast talk 700 ms late with only `share` of the lines heard as speech
+    starts, among three times as many stray starts: the true offset wins,
+    but barely stands out from chance."""
+    rng = random.Random(seed)
+    t, cue_starts = 60_000, []
+    for _ in range(900):
+        t += rng.randint(400, 2000)
+        cue_starts.append(t)
+    speech = [c - 700 + rng.randint(-250, 250) for c in cue_starts if rng.random() < share]
+    speech += [rng.randint(50_000, t) for _ in range(len(speech) * 3)]
+    return cue_starts, sorted(speech)
+
+
+def test_sync_offset_takes_a_weak_peak_the_other_tracks_agree_with():
+    # As on Disclosure Day (2026): the best offset beat the runner-up by a
+    # few starts and was called no clear offset, while eight tracks put the
+    # file 650 to 900 ms late.
+    cue_starts, speech = weak_late_talk(1, 0.08)
+    alone = speakers.sync_offset(cues_at(cue_starts), speech)
+    assert alone["verdict"].startswith("no clear offset") and alone["best_offset_ms"] == 700
+    r = speakers.sync_offset(cues_at(cue_starts), speech, expect_ms=750)
+    assert r["agrees_with_tracks"] is True
+    assert abs(r["median_offset_ms"] - 700) <= 100 and r["verdict"].endswith("ms late")
+
+
+def test_sync_offset_never_takes_the_tracks_word_alone():
+    # The audio's best offset is far from the tracks' one: still unclear.
+    cue_starts, speech = weak_late_talk(0, 0.06)
+    r = speakers.sync_offset(cues_at(cue_starts), speech, expect_ms=700)
+    assert abs(r["best_offset_ms"] - 700) > speakers.SYNC_EXPECT_MS
+    assert r["verdict"].startswith("no clear offset") and r["agrees_with_tracks"] is False
+    assert r["median_offset_ms"] is None
 
 
 def test_sync_offset_leaves_an_in_sync_file_alone():
@@ -289,6 +325,25 @@ def test_run_writes_voices_with_models_faked(tmp_path: Path, monkeypatch, capsys
         "speakers: finding who speaks when (a few minutes on a GPU, about the film's length on a CPU)",
         "speakers: voices saved; checking sync with the audio",
     ]
+
+
+def test_the_tracks_offset_reaches_the_sync_check_from_the_command_line(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("HF_TOKEN", "hf_x")
+    (tmp_path / "timing.srt").write_text("1\n00:00:01,000 --> 00:00:02,000\nViens.\n", encoding="utf-8")
+    monkeypatch.setattr(speakers, "extract_audio", lambda video, dest: dest)
+    monkeypatch.setattr(speakers, "diarize", lambda wav, token: ([(900, 2100, "A")], {"A": [1.0]}))
+    monkeypatch.setattr(speakers, "speech_starts", lambda wav: [1000])
+    seen = []
+
+    def fake_sync_offset(cues, starts, expect_ms=None):
+        seen.append(expect_ms)
+        return {"verdict": "in sync"}
+
+    monkeypatch.setattr(speakers, "sync_offset", fake_sync_offset)
+    argv = ["--result", str(tmp_path / "r.json"), "run", "--video", str(tmp_path / "v.mkv"), "--work", str(tmp_path)]
+    speakers.main([*argv, "--config", str(tmp_path), "--expect-offset-ms", "650"])
+    speakers.main([*argv, "--config", str(tmp_path)])
+    assert seen == [650, None]
 
 
 def test_run_without_token_or_config_suggests_the_default_folder(tmp_path: Path, monkeypatch):

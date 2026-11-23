@@ -285,7 +285,8 @@ scripts/assemble.py             assemble, checks, review and listen parts, deliv
 scripts/learn.py                find user edits for learn mode
 scripts/compare.py              blind side-by-side comparison of two or three delivered files
 scripts/speakers.py             voices per cue from the audio, sync check
-scripts/transcribe.py           subtitles from the audio when no file exists, the last resort
+scripts/transcribe.py           subtitles from the audio when no file exists, the last resort;
+                                the check of the timing file against the speech
 scripts/screen.py               read the picture with ffmpeg: the cut to black after the story,
                                 the frames for on-screen text and the readers' lines
 scripts/settings.py             find the settings folder; move the one from before the rename

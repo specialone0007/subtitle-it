@@ -183,6 +183,33 @@ files, a hash match first, and stops at the first one that passes
 of the timing file's spoken cues. Then the run is a polish run (see
 steps 6–7).
 
+For a video, the step then checks the timing file against the film's
+speech, before anything cites a cue number:
+
+- It runs when the timing file is not "certain", or when the other tracks
+  hint that it is off: `build` reports `on_screen.tracks_offset`, and at
+  least three other tracks, more than half of those that fit, need a
+  shift past 300 ms the same way. Tracks in the timing file's own
+  language are left out, since a second English track usually shares the
+  first one's times. A built-in track is otherwise trusted.
+- `transcribe.py sync` transcribes six 3-minute stretches with Whisper
+  (about a minute on a GPU) and looks for each cue's first three words
+  near its start. The gap between the cue and those words, over every
+  cue matched once, gives the median offset, its spread and a per-stretch
+  offset. Matching words, not speech starts, keeps a neighbouring line
+  from passing for the right one in dense talk.
+- Whisper's word starts come about 150 ms before a subtitle that starts
+  with the voice (158 and 164 ms on two films in sync), so that much is
+  taken off the median before it is judged.
+- More than 300 ms off, with at least 30 lines matched, half of them
+  within 400 ms of the median, and no two stretches more than 700 ms
+  apart: the files are shifted with `srt.py shift` and `build` runs again.
+  An offset that changes through the film is a different cut or drift,
+  which no single shift fixes, so nothing moves.
+- The tracks alone never move the file. They only decide that the check
+  runs, and let the speakers check below accept a weak peak that agrees
+  with them.
+
 ### 3. Speaker hints (optional)
 
 `speakers.py` finds who speaks each line from the audio and checks the
@@ -194,6 +221,10 @@ film.
   stand well above chance (the median count over all offsets) and above
   the best other offset, so fast, overlapping talk, where many starts
   land near some cue whatever the offset, still gives a clear answer.
+  When the other tracks agree on an offset (`--expect-offset-ms`), a best
+  offset within 300 ms of theirs that beats every offset away from it is
+  taken even when it does not stand out on its own. When step 2's check
+  already measured the file, this check is skipped.
 - Subtitles more than 300 ms off are shifted with `srt.py shift`, and the
   voices are matched again. `build` runs again with `--shift-ms`: it moves
   the on-screen entries of `W/on_screen.json` by the same amount, rather

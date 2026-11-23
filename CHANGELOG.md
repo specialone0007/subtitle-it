@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.13.6 (2026-11-23)
+
+A subtitle built into the video can still sit a fraction of a second off
+the speech. The plugin now checks the timing file against the film's own
+speech when the other subtitle tracks hint that it is off, or when the
+file's timing is not certain (it is not a built-in track or an
+OpenSubtitles hash match), and moves it onto the speech before the
+translation starts. Disclosure Day (2026) was delivered 0.65 s late on
+every line; this check finds it and fixes it.
+
+- `transcribe.py sync --video V --timing T --language xx` transcribes six
+  3-minute stretches with Whisper large-v3-turbo and matches each timing
+  cue's first three words to where they are said within 20 s. A cue whose
+  opening the transcript says twice there, or that a nearby cue shares,
+  is left out. It reports the median gap less Whisper's 150 ms lead
+  (`offset_ms`), the middle half's spread, the share within 400 ms of the
+  median, the offset per stretch, a verdict and `shift_ms`. It shifts
+  only with 30 or more lines matched, half of them near the median, and
+  no two stretches with 15 or more matches over 700 ms apart.
+- Measured: Disclosure Day's built-in English track, 579 ms late (raw
+  median gap 729 ms, 103 lines, stretches 398 to 670 ms; shift −580).
+  Two films whose tracks are in sync: Sinners (2025), raw gap 158 ms;
+  Project Hail Mary (2026), 164 ms; both in sync. Whisper's own
+  transcript of Disclosure Day against the same audio: 5 ms. The 150 ms
+  lead comes from the two films in sync.
+- `prepare.py build` reports `on_screen.tracks_offset`: how many other
+  tracks fit, how many put the timing file more than 300 ms off the same
+  way, their median, and `check_audio` when at least three do and they
+  are more than half of those that fit. Forced tracks and tracks in the
+  timing file's own language are left out. A `--shift-ms` rebuild drops
+  the field, since the tracks were lined up with the unshifted file.
+- `speakers.py run --expect-offset-ms N` takes a best offset within
+  300 ms of N that beats every offset away from it, even when it does not
+  stand out from chance on its own, and sets `sync.agrees_with_tracks`.
+  On Disclosure Day its best offset, 700 ms, matched 58 speech starts
+  against 52 for the next and was thrown away. `sync.best_offset_ms` is
+  now always reported.
+- The translate skill runs the check after step 2's first `build`, before
+  the picture is read and before anything cites a cue number, so a shift
+  is a plain `build` again with the shifted files. It skips the speakers
+  sync check once this check has measured the file, and the report gives
+  the offset, the lines matched and whether the files were shifted.
+
 ## 0.13.5 (2026-11-21)
 
 The plugin now says plainly that it translates into Turkish, the README is

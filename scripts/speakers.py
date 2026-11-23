@@ -22,7 +22,7 @@
 """Speaker hints from the film's audio: which voice speaks each cue.
 
     uv run speakers.py setup --config CONFIG
-    uv run speakers.py run   --video V --work W [--config CONFIG] [--no-sync-check]
+    uv run speakers.py run   --video V --work W [--config CONFIG] [--no-sync-check] [--expect-offset-ms N]
 
 CONFIG defaults to ~/.config/subtitle-it.
 
@@ -43,7 +43,10 @@ cues, gives no voice to any cue; the result counts these in
 W/speakers.json and keeps every `label` and `name` already there. Unless
 --no-sync-check is given, faster-whisper finds where speech starts in five
 3-minute stretches spread over the film, and the script reports how far the
-subtitles sit from the audio. The first run
+subtitles sit from the audio. --expect-offset-ms is the offset the other
+subtitle tracks agree on (`prepare.py build`, `on_screen.tracks_offset`):
+an audio offset near it is taken even when it does not stand out on its
+own (sync_offset). The first run
 downloads the models (a few GB). Without a token it prints
 {"skipped": "token missing"} and exits with code 3.
 """
@@ -264,6 +267,15 @@ SYNC_MIN_MATCHED = 20
 SYNC_MIN_LEAD = 1.6
 SYNC_MIN_Z = 4.0
 SYNC_PEAK_GAP_MS = 1000
+# When the other subtitle tracks agree that the timing file is off by some
+# amount (`prepare.py build`, `on_screen.tracks_offset`), a best offset
+# within SYNC_EXPECT_MS of theirs that still beats every offset away from
+# it is taken, though it does not stand out from chance on its own. On
+# Disclosure Day (2026) the true offset, about 700 ms, matched 58 speech
+# starts, the best other one 52 and chance 34; eight tracks put the file
+# 650 to 900 ms late. The tracks never decide alone: the audio must point
+# the same way.
+SYNC_EXPECT_MS = 300
 
 
 def _offset_pairs(cue_starts: list[int], speech: list[int], offset: int) -> list[int]:
@@ -281,7 +293,7 @@ def _offset_pairs(cue_starts: list[int], speech: list[int], offset: int) -> list
     return out
 
 
-def sync_offset(cues: list[srt.Cue], speech_starts: list[int]) -> dict:
+def sync_offset(cues: list[srt.Cue], speech_starts: list[int], expect_ms: int | None = None) -> dict:
     """How far the subtitles sit from the speech, in ms. Positive: the
     subtitles come late.
 
@@ -297,7 +309,12 @@ def sync_offset(cues: list[srt.Cue], speech_starts: list[int]) -> dict:
     starts can land on one cue), `speech_starts` all of them,
     `runner_up_matched` the best count of an offset more than
     SYNC_PEAK_GAP_MS from the chosen one, and `chance_matched` the median
-    count over all offsets tried."""
+    count over all offsets tried. `best_offset_ms` is the offset tried that
+    matched most, whatever the verdict.
+
+    `expect_ms` is the offset the other subtitle tracks agree on, if any:
+    a best offset near it is taken when it does not stand out on its own
+    (SYNC_EXPECT_MS), and `agrees_with_tracks` says so."""
     speech = sorted(speech_starts)
     cue_starts = sorted(c.start for c in cues)
     base = {
@@ -306,6 +323,8 @@ def sync_offset(cues: list[srt.Cue], speech_starts: list[int]) -> dict:
         "runner_up_matched": 0,
         "chance_matched": 0,
         "median_offset_ms": None,
+        "best_offset_ms": None,
+        "agrees_with_tracks": False,
     }
     if not speech or not cue_starts:
         return {**base, "verdict": "no speech matched the cues"}
@@ -316,10 +335,15 @@ def sync_offset(cues: list[srt.Cue], speech_starts: list[int]) -> dict:
     spread = statistics.pstdev(scores.values())
     diffs = _offset_pairs(cue_starts, speech, best)
     base |= {"matched_cues": len(diffs), "runner_up_matched": runner_up, "chance_matched": round(chance, 1)}
+    base["best_offset_ms"] = best
     if len(diffs) < SYNC_MIN_MATCHED:
         return {**base, "verdict": f"too little speech to judge: {len(diffs)} starts matched a cue (needs {SYNC_MIN_MATCHED})"}
     lead = len(diffs) - chance
-    if lead < SYNC_MIN_LEAD * max(runner_up - chance, 0) or lead < SYNC_MIN_Z * spread:
+    unclear = lead < SYNC_MIN_LEAD * max(runner_up - chance, 0) or lead < SYNC_MIN_Z * spread
+    if unclear and expect_ms is not None and abs(best - expect_ms) <= SYNC_EXPECT_MS and len(diffs) > runner_up:
+        unclear = False
+        base["agrees_with_tracks"] = True
+    if unclear:
         verdict = f"no clear offset: best {best} ms matched {len(diffs)} starts, another {runner_up}, chance {round(chance)}"
         return {**base, "verdict": verdict}
     # The 100 ms grid leaves the matched window off-centre; centre it on the
@@ -457,7 +481,7 @@ CUDA_WORDS = ("cuda", "cudnn", "cublas", "nvrtc", "float16")
 DEFAULT_CONFIG = settings.default_folder()
 
 
-def run(video: Path, work: Path, config: Path | None, sync_check: bool) -> dict:
+def run(video: Path, work: Path, config: Path | None, sync_check: bool, expect_ms: int | None = None) -> dict:
     token = load_token(config)
     if not token:
         where = config or DEFAULT_CONFIG
@@ -483,7 +507,7 @@ def run(video: Path, work: Path, config: Path | None, sync_check: bool) -> dict:
         if sync_check:
             _say("speakers: voices saved; checking sync with the audio")
             try:
-                sync = sync_offset(cues, speech_starts(wav))
+                sync = sync_offset(cues, speech_starts(wav), expect_ms)
             except Exception as e:  # report, keep the voices
                 sync = {
                     "matched_cues": 0,
@@ -491,6 +515,8 @@ def run(video: Path, work: Path, config: Path | None, sync_check: bool) -> dict:
                     "runner_up_matched": 0,
                     "chance_matched": 0,
                     "median_offset_ms": None,
+                    "best_offset_ms": None,
+                    "agrees_with_tracks": False,
                     "verdict": f"sync check failed: {type(e).__name__}: {e}",
                 }
     counts: dict[str, int] = {}
@@ -518,13 +544,14 @@ def main(argv: list[str] | None = None) -> None:
     r.add_argument("--work", type=result.path, required=True)
     r.add_argument("--config", type=result.path, default=DEFAULT_CONFIG)
     r.add_argument("--no-sync-check", action="store_true")
+    r.add_argument("--expect-offset-ms", type=int, help="the offset the other subtitle tracks agree on")
     result.add_argument(p)
     a = result.parse(p, argv)
     a.config = settings.ensure_for(a.config)
     if a.cmd == "setup":
         setup(a.config)
     else:
-        out = run(a.video, a.work, a.config, not a.no_sync_check)
+        out = run(a.video, a.work, a.config, not a.no_sync_check, a.expect_offset_ms)
         result.emit(out, a.result)
         if out.get("skipped") == "token missing":
             raise SystemExit(TOKEN_MISSING)

@@ -98,6 +98,7 @@ import math
 import os
 import re
 import shutil
+import statistics
 import sys
 import time
 from functools import partial
@@ -569,6 +570,42 @@ def _under_timing(start: int, end: int, timing: list[srt.Cue]) -> bool:
     return bool(timing) and srt._coverage([span], timing)[0] >= GAP_MAX_COVERED
 
 
+# The other tracks hint that the timing file itself is off the speech when
+# at least TRACKS_MIN_AGREEING of them, and more than half of those that
+# fit, need a shift past TRACKS_OFF_MS the same way. A hint only: the
+# translate skill then checks the timing file against the audio, and never
+# shifts it on the tracks' word alone.
+TRACKS_MIN_AGREEING = 3
+TRACKS_OFF_MS = 300
+
+
+def tracks_offset(tracks: list[dict], timing_language: str | None = None) -> dict:
+    """Whether the other tracks agree that the timing file sits off them:
+    `fitting` counts the tracks that fit (forced ones and, when known, those
+    in the timing file's own language left out: a second track of one
+    language usually shares the timing file's times, right or wrong),
+    `agreeing` those off by more than TRACKS_OFF_MS the way most are,
+    `offset_ms` their median offset (positive: the timing file comes
+    later than they do), and `check_audio` whether that is enough to check
+    the timing file against the audio."""
+    own = (timing_language or "").strip().lower().split("-")[0]
+    offs = [
+        t["offset_ms"]
+        for t in tracks
+        if not t.get("forced") and t.get("fits") and not (own and t["language"].lower().split("-")[0] == own)
+    ]
+    late = [o for o in offs if o > TRACKS_OFF_MS]
+    early = [o for o in offs if o < -TRACKS_OFF_MS]
+    side = late if len(late) >= len(early) else early
+    check = len(side) >= TRACKS_MIN_AGREEING and 2 * len(side) > len(offs)
+    return {
+        "fitting": len(offs),
+        "agreeing": len(side),
+        "offset_ms": round(statistics.median(side)) if check else None,
+        "check_audio": check,
+    }
+
+
 def on_screen_counts(entries: list[dict]) -> dict:
     """The entries added as cues, and the count per state and per reason."""
     states: dict[str, int] = {}
@@ -769,6 +806,9 @@ def build(
             e["start"], e["end"] = max(start + shift_ms, 0), max(end + shift_ms, 0)
         if screen_summary is not None:
             screen_summary["shift_ms"] = shift_ms
+            # The tracks were lined up with the unshifted file: their hint
+            # no longer holds.
+            screen_summary.pop("tracks_offset", None)
             dropped_under = list(screen_summary.get("dropped_timing_cues", []))
     elif tracks or forced or picture is not None:
         entries, screen_summary = on_screen(kept, tracks or [], forced or [], picture, timing_language)
@@ -788,6 +828,8 @@ def build(
             c.n for c in timing if c.n not in kept_n and any(min(c.end, e["end"]) > max(c.start, e["start"]) for e in extra)
         ]
         screen_summary["dropped_timing_cues"] = dropped_under
+        # Whether the other tracks hint that the timing file is off the speech.
+        screen_summary["tracks_offset"] = tracks_offset(screen_summary["tracks"], timing_language)
         # Times as the build without --shift-ms found them, so a later
         # sync rebuild moves each entry from there, never twice. A picture
         # entry holds its reading's own time already.
