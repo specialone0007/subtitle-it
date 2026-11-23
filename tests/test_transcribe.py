@@ -176,3 +176,127 @@ def test_an_error_unrelated_to_the_gpu_is_raised_not_retried(tmp_path: Path, mon
     with pytest.raises(ValueError, match="large-v9"):
         transcribe.transcribe(tmp_path / "a.wav", "large-v9", None)
     assert devices == ["cuda"], "no slow CPU retry for an error the CPU would hit too"
+
+
+# --- sync check -------------------------------------------------------------
+
+
+def _cue(n, start, text):
+    return srt.Cue(n, start, start + 1500, "", text.split("\n"))
+
+
+def _lines(count=60, gap=2500, first=60_000):
+    """Cues with distinct opening words, `gap` ms apart."""
+    return [_cue(i, first + i * gap, f"Line number {i} says hello.") for i in range(count)]
+
+
+def _said(cues, lag_ms, jitter=None):
+    """Words a transcript would give for these cues, each cue's words spoken
+    `lag_ms` before the cue starts (plus jitter[i], when given)."""
+    out = []
+    for i, c in enumerate(cues):
+        at = (c.start - lag_ms + (jitter[i] if jitter else 0)) / 1000
+        for k, w in enumerate(c.plain.split()):
+            out.append(Word(at + k * 0.25, at + k * 0.25 + 0.2, " " + w))
+    return out
+
+
+def test_tokens_ignore_case_punctuation_and_curly_apostrophes():
+    assert transcribe.tokens("Don’t GO, Sam!") == ["don't", "go", "sam"]
+    assert transcribe.tokens("- Who? -Me.") == ["who", "me"]
+
+
+def test_cue_words_leave_out_sounds_labels_tags_and_songs():
+    assert transcribe.cue_words(_cue(1, 0, "[door slams]\nMARA: <i>Who is it?</i>")) == ["who", "is", "it"]
+    assert transcribe.cue_words(_cue(2, 0, "♪ Who is it ♪")) == []
+
+
+def test_text_offsets_pair_each_cue_with_where_its_first_words_are_said():
+    cues = _lines()
+    pairs = transcribe.text_offsets(cues, _said(cues, 650))
+    assert len(pairs) == len(cues)
+    assert {g for _, g in pairs} == {650}
+
+
+def test_text_offsets_skip_short_cues_and_anchors_that_could_pair_the_wrong_line():
+    cues = _lines(10)
+    cues.append(_cue(10, 200_000, "No."))  # too short to anchor
+    cues.append(_cue(11, 210_000, "I don't know what you mean."))
+    cues.append(_cue(12, 214_000, "I don't know, maybe."))  # same opening near the one before
+    words = _said(cues, 650)
+    # Line 3's opening said twice by the transcript, near its cue.
+    words += [Word(68.2, 68.4, "Line"), Word(68.45, 68.65, "number"), Word(68.7, 68.9, "3")]
+    starts = {s for s, _ in transcribe.text_offsets(cues, words)}
+    assert starts == {c.start for c in cues[:10]} - {cues[3].start}
+
+
+def test_text_offsets_find_a_shift_longer_than_the_gap_between_lines():
+    cues = _lines(gap=1800)
+    pairs = transcribe.text_offsets(cues, _said(cues, -4000))
+    assert len(pairs) == len(cues) and {g for _, g in pairs} == {-4000}
+
+
+def test_sync_verdict_says_how_late_and_how_to_shift():
+    pairs = [(i * 1000, 660 + (i % 7) * 10 - 30) for i in range(80)]
+    r = transcribe.sync_verdict(pairs, lead_ms=0)
+    assert r["verdict"] == "subtitles are 660 ms late" and r["shift_ms"] == -660
+    assert r["matches"] == 80 and r["agreeing"] == 1.0 and r["spread_ms"] <= 40
+    early = transcribe.sync_verdict([(i, -1234) for i in range(40)], lead_ms=0)
+    assert early["verdict"] == "subtitles are 1234 ms early" and early["shift_ms"] == 1230
+
+
+def test_sync_verdict_takes_whispers_lead_off_the_median():
+    r = transcribe.sync_verdict([(i, 700) for i in range(40)], lead_ms=100)
+    assert (r["median_gap_ms"], r["offset_ms"], r["shift_ms"]) == (700, 600, -600)
+    assert transcribe.sync_verdict([(i, 350) for i in range(40)], lead_ms=100)["verdict"] == "in sync"
+
+
+def test_sync_verdict_leaves_an_in_sync_file_alone():
+    pairs = [(i * 1000, (i * 37) % 400 - 200) for i in range(60)]
+    r = transcribe.sync_verdict(pairs, lead_ms=0)
+    assert r["verdict"] == "in sync" and r["shift_ms"] == 0
+
+
+def test_sync_verdict_needs_enough_lines():
+    r = transcribe.sync_verdict([(i, 700) for i in range(transcribe.SYNC_MIN_MATCHES - 1)])
+    assert r["verdict"].startswith("too little speech matched") and r["shift_ms"] == 0 and r["offset_ms"] is None
+
+
+def test_sync_verdict_will_not_shift_when_the_gaps_scatter():
+    pairs = [(i * 1000, (i * 7919) % 6000 - 3000) for i in range(60)]
+    r = transcribe.sync_verdict(pairs, lead_ms=0)
+    assert r["verdict"].startswith("no steady offset") and r["shift_ms"] == 0
+
+
+def test_sync_verdict_will_not_shift_an_offset_that_changes_through_the_film():
+    spans = [(0, 100_000), (100_000, 200_000), (200_000, 300_000)]
+    pairs = [(s * 1000, 600 if s < 100 else 900 if s < 200 else 1500) for s in range(0, 300, 5)]
+    r = transcribe.sync_verdict(pairs, spans, lead_ms=0)
+    assert [w["offset_ms"] for w in r["windows"]] == [600, 900, 1500]
+    assert r["verdict"].startswith("offset changes through the film") and r["shift_ms"] == 0
+
+
+def test_sync_check_finds_a_late_file_and_passes_one_in_sync():
+    cues = _lines(80)
+    jitter = [(i * 53) % 200 - 100 for i in range(80)]
+    late = transcribe.sync_verdict(transcribe.text_offsets(cues, _said(cues, 650, jitter)), lead_ms=0)
+    assert late["verdict"].endswith("ms late") and abs(late["shift_ms"] + 650) <= 30
+    ok = transcribe.sync_verdict(transcribe.text_offsets(cues, _said(cues, 0, jitter)), lead_ms=0)
+    assert ok["verdict"] == "in sync"
+
+
+def test_sync_verdict_gives_no_offset_to_a_stretch_with_few_matches():
+    spans = [(0, 100_000), (100_000, 200_000)]
+    few = transcribe.SYNC_WINDOW_MIN_MATCHES - 1
+    pairs = [(s * 1000, 700) for s in range(0, 100, 2)] + [(150_000 + i, 1500) for i in range(few)]
+    r = transcribe.sync_verdict(pairs, spans, lead_ms=0)
+    assert [w["offset_ms"] for w in r["windows"]] == [700, None]
+    assert r["verdict"] == "subtitles are 700 ms late"
+
+
+def test_sync_spans_spread_over_the_film_or_cover_a_short_one():
+    spans = transcribe.sync_spans(7_200_000)
+    assert len(spans) == transcribe.SYNC_WINDOWS
+    assert all(b - a == transcribe.SYNC_WINDOW_S * 1000 for a, b in spans)
+    assert spans[0][0] > 0 and spans[-1][1] < 7_200_000
+    assert transcribe.sync_spans(1_200_000) == [(0, 1_200_000)]

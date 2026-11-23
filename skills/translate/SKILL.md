@@ -241,19 +241,49 @@ subtitle file. In this order:
    that fails validation or does not fit) skips it: no setup flow, one
    line in the report. A `download` of null needs nothing.
 2. `prepare.py build` as above, with `--timing-language <the timing file's language>` added.
-3. `screen.py frames --work WORK --video V`. It saves the frames (about
+3. The timing file against the speech. A timing file can sit a constant
+   amount off the film's speech, even a built-in track (one 2026
+   film: 0.65 s late on every line). Check it when the timing file did not
+   come from the audio, its language is the one the film is spoken in, and
+   either its confidence is not "certain" or `build`'s
+   `on_screen.tracks_offset.check_audio` is true (at least three other
+   tracks, and more than half of those that fit, put it more than 300 ms
+   off the same way). Otherwise skip this item and say why in the report.
+   Run `transcribe.py sync --video V --timing T --language <the timing file's language>`.
+   It transcribes six 3-minute stretches (about a minute on a GPU, several
+   on a CPU; the first time it downloads the Whisper model that
+   `transcribe.py run` uses, about 1.6 GB) and matches each cue's first words to where
+   they are said. Keep its `offset_ms`, `matches`, `spread_ms` and
+   `verdict` for the report.
+   - `verdict` starting `subtitles are` (more than 300 ms off): shift every
+     file you passed to `build` as `--timing`, `--source`, `--en` or
+     `--forced-track`, and in a polish run the fitted Turkish file, by its
+     `shift_ms`:
+     `srt.py shift '<file>' 'WORK/sources/<name>_synced.srt' --ms <shift_ms>`.
+     Run `prepare.py build` again with the shifted files in their places
+     and every other option the same (the `--track` files stay as they
+     are: `build` lines them up itself). Nothing cites a cue number yet,
+     so this is a plain build, not the `--shift-ms` rebuild of step 3–5.
+     From here on the shifted files are the timing, source, English and
+     Turkish files. Say the shift in one line.
+   - `in sync`: nothing to change.
+   - Any other verdict (too little speech matched, no steady offset, an
+     offset that changes through the film) or a failure: say it in one
+     line, change nothing, and let the speakers check of step 3–5 judge.
+   Never shift on the other tracks' word alone.
+4. `screen.py frames --work WORK --video V`. It saves the frames (about
    2.5 minutes from each end, one every 1.5 s, 300 at most) and the batch
    files the readers read. With an `error`, say it in one line of the
    report and go on to `chunks`: the entries stay as `build` found them.
    Its `notes` go in the report.
-4. Start one `subtitle-it:screen-reader` subagent per item of its
+5. Start one `subtitle-it:screen-reader` subagent per item of its
    `readers`, all in one message. Each prompt: that item's `batches`
    paths, one per line, and nothing else.
-5. When they are done, run `screen.py collect --work WORK`. When its
+6. When they are done, run `screen.py collect --work WORK`. When its
    `redo` is set, start one more `subtitle-it:screen-reader` with that
    batch file, then run `collect` again; never a third time. Frames still
    in `missing` were not read: name the count in the report.
-6. `prepare.py build` again with exactly the same options plus
+7. `prepare.py build` again with exactly the same options plus
    `--screen 'WORK/screen/readings.json'`, then `prepare.py chunks --work WORK`,
    in one Bash call. It joins what the picture showed to the entries:
    an unsure entry the picture shows is added, and a story text that no
@@ -286,7 +316,12 @@ Mark `hints_bible` with this step's first command.
    in the background (the Bash tool's `run_in_background`), with its
    `--result` file as usual. Add `--no-sync-check` when the timing file came
    from the audio (`transcribe.py`): its times are the audio's own, so
-   there is nothing to check.
+   there is nothing to check. Add it too when step 2's check of the timing
+   file against the speech said `in sync` or shifted the files: the audio
+   has been checked already, and more closely. Otherwise, when `build`'s
+   `on_screen.tracks_offset.check_audio` was true, add
+   `--expect-offset-ms <its offset_ms>`: an audio offset near the tracks'
+   one is then taken even when it does not stand out on its own.
 2. Right away, without waiting for it, start one
    `subtitle-it:bible-writer` subagent. Its prompt: the paths (WORK, the preferences file), the film facts (title,
    year, original language, IMDb id), and, when audio hints are running,
@@ -301,7 +336,9 @@ Mark `hints_bible` with this step's first command.
 4. When the bible writer and the audio step are both done, read the audio step's result:
    - Exit code 3 with `"skipped": "token missing"`: see "Hugging Face token" in `setup.md`.
    - Any other failure: say so in one line and go on without voices.
-   - `sync.verdict` starting `subtitles are` (more than 300 ms off): move the
+   - `sync.verdict` starting `subtitles are` (more than 300 ms off; with
+     `sync.agrees_with_tracks` true, the audio and the other tracks agreed
+     on it, so say so in the report): move the
      subtitles to the audio. Shift every file you passed to `build` by minus
      `sync.median_offset_ms`, with
      `srt.py shift '<file>' 'WORK/sources/<name>_shifted.srt' --ms <minus median_offset_ms>`;
@@ -574,8 +611,10 @@ one Turkish file: the result lists each under `moved_earlier_deliveries`
 Write `WORK/report.md`: sources and timing confidence (for a file made
 from the audio, say so and name the model and device; in a polish run, the
 Turkish file it started from, how many cues the fixer and the reviewers
-changed, and how many lines are still softer than the source), any timing shift
-and sync verdict, whether each source file is hearing-impaired and how
+changed, and how many lines are still softer than the source), the check
+of the timing file against the speech (its `offset_ms`, `matches`,
+`spread_ms` and verdict, and whether the files were shifted and by how
+much; or why it did not run), any other timing shift and sync verdict, whether each source file is hearing-impaired and how
 many cues lost tags or labels and how many sound-only cues were left
 out, how many bare sounds were left out, where the goodbye went
 (`deliver`'s `goodbye`: `cut to black before the end cards`, `first end
