@@ -459,6 +459,22 @@ def test_check_rules_let_one_decision_take_either_form_of_a_word(tmp_path: Path)
     assert got["reshare"] == got["reshares"] == {"yeniden paylaşım", "yeniden paylaşmak"}
 
 
+def test_check_rules_keep_a_one_word_title_with_no_cues_out(tmp_path: Path):
+    extra = '## Titles and names\n- "Father" → "Peder"; "Sir" (4) → "Efendim"; "Mr. Chairman" → "Sayın Başkan"\n'
+    (tmp_path / "bible.md").write_text(extra, encoding="utf-8")
+    got = {r["term"]: r["cues"] for r in bible.check_rules(tmp_path)}
+    # "Father" may be a dad on another cue; a title with cues or of two words holds.
+    assert got == {"sir": {4}, "mr. chairman": None}
+
+
+def test_check_rules_keep_bible_terms_that_start_alike_apart(tmp_path: Path):
+    extra = '## Glossary\n- "pit" → "çukur"; "pitch" → "sunum"; "witness" → "tanık"; "witness stand" → "tanık kürsüsü"\n'
+    (tmp_path / "bible.md").write_text(extra, encoding="utf-8")
+    got = {r["term"]: r["renderings"] for r in bible.check_rules(tmp_path)}
+    assert got["pitch"] == {"sunum"} and got["pit"] == {"çukur"}
+    assert got["witness stand"] == {"tanık kürsüsü"}
+
+
 def test_check_flags_a_bible_term_on_every_cue_that_says_it(tmp_path: Path):
     english = [
         "I'm Deputy Otumbo.",
@@ -502,6 +518,13 @@ def test_same_word_groups_read_each_item_of_a_bible_line(tmp_path: Path):
     extra = '- "Ish" (12, 14) → "Sayılır" both times; "Wuss" (20) → "korkak"\n'
     (tmp_path / "bible.md").write_text(BIBLE + extra, encoding="utf-8")
     assert bible.same_word_groups(tmp_path) == [{1, 2, 7, 8}, {3, 9}, {12, 14}]
+
+
+def test_same_word_groups_skip_looser_words(tmp_path: Path):
+    # An address note over a long range is no repeated line.
+    note = "## sen / siz\n- Vincent says sen to Sandra every time they are alone (410-800); same way at 900-950\n"
+    (tmp_path / "bible.md").write_text(note, encoding="utf-8")
+    assert bible.same_word_groups(tmp_path) == []
 
 
 def repeat_work(tmp_path: Path) -> Path:
