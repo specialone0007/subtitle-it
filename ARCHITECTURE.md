@@ -125,12 +125,20 @@ Then it settles the timings:
   unsure frames are thinned first, down to one each, then the latest are
   dropped; the ends are never thinned. `W/screen/frames.json` lists each
   frame with its time, why it was picked and the entries within 3 s.
-  One `screen-reader` agent reads each 40 frames, 20 to a batch file,
-  and writes one line per frame: the text word for word, its kind
+  A frame with no pixel brighter than grey 20 of 255 is dark and not
+  read (stricter than the cut to black, so a faint title still is). A
+  frame whose 96x54 tiles are all within 4 grey levels of the frame that
+  opened its run repeats that frame and is not read either; one changed
+  digit on a card ("2020", "2021") moves a tile far more. The frame read
+  for a run lists the entries near any frame of it. On one test film this sent 241 of 300 frames, with the same readings.
+  One `screen-reader` agent reads each 40 frames sent, 20 to a batch
+  file, and writes one line per frame: the text word for word, its kind
   (title card, caption, sign, text message, letter, dedication, closing
   text, credits, logo, background), whether the film wants it read, and
-  the entry it shows, if any. `screen.py collect` checks one line per
-  frame, sends missing ones back once, and joins neighbouring frames
+  the entries it shows, if any (several when a track split one card into
+  two lines). `screen.py collect` checks one line per frame sent, reads
+  a dark frame as no text and gives a repeat its run's reading, sends
+  missing ones back once, and joins neighbouring frames
   with the same text into one reading (`W/screen/readings.json`). Case
   and punctuation do not count ("Dad's / shop" and "dad's shop" are
   one text), and two story kinds (a sign read as a caption) are one kind;

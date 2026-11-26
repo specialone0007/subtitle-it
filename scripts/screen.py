@@ -31,8 +31,7 @@ closing credit as it does without one.
 on-screen text, songs or sound descriptions. The head runs from 0:00 to
 the first spoken cue (2.5 minutes at most), the tail from story end (the
 end of the last spoken cue) to 2.5 minutes after it: one frame every
-1.5 s in both, fitted into 960x540, none skipped as black or as a repeat.
-HDR video is tone-mapped when this ffmpeg has zscale; otherwise the frames
+1.5 s in both, fitted into 960x540. HDR video is tone-mapped when this ffmpeg has zscale; otherwise the frames
 are saved as they are and `notes` says so. The entries left out as shown
 in too few languages become `unsure` in on_screen.json, and so do, when
 the tracks hold exactly one other language (build.json
@@ -47,13 +46,27 @@ and one batch file of 20 frames at a time, W/screen/batch_NN.json, with
 the file the reader writes its lines to; `readers` gives each reader's
 batches, one reader per 40 frames.
 
+Every frame is saved and listed, but not every one goes to a reader. A
+frame with no pixel brighter than grey 20 of 255 (DARK_LEVEL) is `dark`:
+stricter than `ends`, which lets 2% of the picture be lit, so a faint
+title fading in over black is still read. A frame whose 96x54 grid of
+tiles is within 4 grey levels (TILE_NOISE) of the frame that opened its
+run shows the same picture, so it is `same_as` that frame: one changed
+digit on a card moves a tile far more. The frame read for a run lists the
+entries near any frame of it, and its reader can name several. Only the
+other frames go into the batches (`sent` counts them). When ffmpeg cannot
+measure the frames, all of them are sent and `notes` says so.
+
 `collect` reads the readers' lines (agents/screen-reader.md) and writes
 W/screen/readings.json: neighbouring frames with the same text (case,
 punctuation, line breaks and spacing aside) joined into one reading, first
-and last seen, and when the next frame was saved. Every frame must have exactly one
-valid line. The first time some do not, it writes W/screen/batch_redo.json
-with those frames for one more reader and returns it in `redo`; after
-that, frames still without a line are listed in `missing`.
+and last seen, and when the next frame was saved. A dark frame counts as
+read with no text; a `same_as` frame takes the reading of its run's
+frame, so a held card keeps its full time on screen. Every frame sent
+must have exactly one valid line. The first time some do not, it writes
+W/screen/batch_redo.json with those frames for one more reader and
+returns it in `redo`; after that, frames still without a reading
+(a sent frame or a repeat of it) are listed in `missing`.
 `prepare.py build --screen W/screen/readings.json` then uses them.
 """
 
@@ -159,6 +172,21 @@ SCALE = f"scale={FRAME_W}:{FRAME_H}:force_original_aspect_ratio=decrease"
 FRAMES_DIR = Path("screen") / "frames"
 READINGS_FILE = Path("screen") / "readings.json"
 REDO = "redo"
+# A frame is dark, and not read, when no pixel of it is brighter than this
+# grey level (of 255), measured at full size. Stricter than the cut to black
+# (`ends`), which lets 2% of the picture be lit: one brighter pixel keeps
+# the frame, so a faint title fading in over black is still read. Black
+# frames saved as JPEG peak at about 15.
+DARK_LEVEL = 20
+# A frame repeats the frame that opened its run when no tile of a 96x54 grid
+# (10x10 pixels of a 960x540 frame) moved more than TILE_NOISE grey levels:
+# one changed digit on a card ("2020", "2021") moves a tile by 80 or more,
+# a held card moves none by more than 2 or 3.
+TILES_W, TILES_H = 96, 54
+TILE_NOISE = 4
+DARK = "dark"
+# What `collect` records for a dark frame: read, with no text.
+BLANK = {"text": "", "kind": "background", "wants_read": False, "shows_entry": []}
 
 
 def spoken_spans(rows: list[dict]) -> list[tuple[int, int]]:
@@ -327,6 +355,86 @@ def _save_one(exe: str, video: Path, ms: int, vf: str, dest: Path) -> None:
     _run(cmd)
 
 
+def _grey(exe: str, pattern: Path, count: int, scale: str, size: int, keep=bytes) -> list | None:
+    """`keep(frame)` for each of the `count` frames of `pattern` (numbered
+    from 1), each frame grey bytes of `size` after `scale`; None when
+    ffmpeg fails or gives fewer. Read one frame at a time and only what
+    `keep` returns is kept, so with `keep=max` 300 full-size frames never
+    sit in memory together."""
+    cmd = [exe, "-hide_banner", "-nostats", "-v", "error", "-start_number", "1", "-i", str(pattern)]
+    cmd += ["-frames:v", str(count), "-vf", f"{scale},format=gray", "-f", "rawvideo", "-"]
+    try:
+        proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    except (OSError, ValueError):
+        return None
+    out = []
+    try:
+        for _ in range(count):
+            chunk = proc.stdout.read(size)
+            if len(chunk) < size:
+                return None
+            out.append(keep(chunk))
+        return out if proc.wait(timeout=TIMEOUT_S) == 0 else None
+    except (OSError, subprocess.SubprocessError):
+        return None
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+        proc.stdout.close()
+
+
+def _measure(exe: str, out_dir: Path, count: int) -> list[tuple[int, bytes]] | None:
+    """Each saved frame's brightest grey level at full size and its 96x54
+    grid of tile means, or None when ffmpeg could not read them. Frames
+    fitted into less than 960x540 are stretched to it pixel by pixel, which
+    keeps their brightest pixel."""
+    pattern = out_dir / "frame_%04d.jpg"
+    peaks = _grey(exe, pattern, count, f"scale={FRAME_W}:{FRAME_H}:flags=neighbor", FRAME_W * FRAME_H, keep=max)
+    tiles = _grey(exe, pattern, count, f"scale={TILES_W}:{TILES_H}:flags=area", TILES_W * TILES_H) if peaks is not None else None
+    if peaks is None or tiles is None:
+        return None
+    return list(zip(peaks, tiles))
+
+
+def _same_picture(a: bytes, b: bytes) -> bool:
+    return len(a) == len(b) and all(abs(x - y) <= TILE_NOISE for x, y in zip(a, b))
+
+
+def plan_reads(stats: list[tuple[int, bytes]]) -> list[int | str | None]:
+    """For each frame in time order: DARK when no pixel is brighter than
+    DARK_LEVEL; the index of the frame that opened its run when every tile
+    is within TILE_NOISE of that frame's (it shows the same picture, so
+    the same text); None when it is read. A dark frame ends a run."""
+    out: list[int | str | None] = []
+    kept = None
+    for k, (peak, tiles) in enumerate(stats):
+        if peak <= DARK_LEVEL:
+            out.append(DARK)
+            kept = None
+        elif kept is not None and _same_picture(stats[kept][1], tiles):
+            out.append(kept)
+        else:
+            out.append(None)
+            kept = k
+    return out
+
+
+def mark_reads(listed: list[dict], plan: list[int | str | None]) -> list[dict]:
+    """Mark the frames.json frames per `plan_reads`: `dark: true`, or
+    `same_as` the file of the frame read for them. The frame read for a run
+    lists the entries near any frame of it, so its reader can name one the
+    later frames are near. Returns the frames the readers get."""
+    for f, p in zip(listed, plan):
+        if p == DARK:
+            f["dark"] = True
+        elif p is not None:
+            kept = listed[p]
+            f["same_as"] = kept["file"]
+            have = {e["id"] for e in kept["entries"]}
+            kept["entries"] += [e for e in f["entries"] if e["id"] not in have]
+    return [f for f in listed if not f.get("dark") and not f.get("same_as")]
+
+
 def _write_json(path: Path, data) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
@@ -426,10 +534,16 @@ def frames(work: Path, video: Path) -> dict:
     for leftover in out_dir.glob("*.jpg"):
         if not leftover.name.startswith("frame_"):
             leftover.unlink()
+    stats = _measure(exe, out_dir, len(listed))
+    if stats is None:
+        notes.append(f"the frames could not be measured for black or repeats, so all {len(listed)} go to the readers")
+        sent = listed
+    else:
+        sent = mark_reads(listed, plan_reads(stats))
     readers = []
     batch_no = 0
-    for r in range(math.ceil(len(listed) / PER_READER)):
-        mine = listed[r * PER_READER : (r + 1) * PER_READER]
+    for r in range(math.ceil(len(sent) / PER_READER)):
+        mine = sent[r * PER_READER : (r + 1) * PER_READER]
         batches = []
         for b in range(0, len(mine), BATCH):
             batch_no += 1
@@ -467,6 +581,9 @@ def frames(work: Path, video: Path) -> dict:
     return {
         "frames_file": str(work / prepare.FRAMES_FILE),
         "frames": len(listed),
+        "sent": len(sent),
+        "dark": sum(1 for f in listed if f.get("dark")),
+        "repeats": sum(1 for f in listed if f.get("same_as")),
         "head": sum(1 for f in listed if f["why"] == "head"),
         "tail": sum(1 for f in listed if f["why"] == "tail"),
         "unsure": len(unsure),
@@ -498,15 +615,19 @@ def parse_line(line: str, frames_by_name: dict[str, dict]) -> tuple[str | None, 
         return None, None
     name = item["frame"]
     text, kind, wants = item.get("text"), item.get("kind"), item.get("wants_read")
+    # One id, or a list of them when the text shows several entries (one
+    # card a track split into two lines).
     shows = item.get("shows_entry")
-    if shows in ("", "none", "None"):
-        shows = None
+    if shows in ("", "none", "None", None):
+        shows = []
+    elif isinstance(shows, str):
+        shows = [shows]
     listed = {e["id"] for e in frames_by_name[name].get("entries", [])}
     if not isinstance(text, str) or kind not in prepare.READER_KINDS or not isinstance(wants, bool):
         return name, None
-    if shows is not None and (not isinstance(shows, str) or shows not in listed):
+    if not isinstance(shows, list) or not all(isinstance(i, str) and i in listed for i in shows):
         return name, None
-    return name, {"text": _norm(text), "kind": kind, "wants_read": wants, "shows_entry": shows}
+    return name, {"text": _norm(text), "kind": kind, "wants_read": wants, "shows_entry": sorted(set(shows))}
 
 
 def _read_lines(path: Path, frames_by_name: dict[str, dict]) -> dict[str, list[dict | None]]:
@@ -569,7 +690,7 @@ def join_readings(listed: list[dict], read: dict[str, dict]) -> list[dict]:
         first, last = g[0][0], g[-1][0]
         kind = _most([r["kind"] for _, r in g])
         wants = any(r["wants_read"] for _, r in g)
-        shows = sorted({r["shows_entry"] for _, r in g if r["shows_entry"]})
+        shows = sorted({i for _, r in g for i in r["shows_entry"]})
         out.append(
             {
                 "text": _most([r["text"] for _, r in g]),
@@ -609,13 +730,21 @@ def collect(work: Path) -> dict:
         for name in by_name:
             if name not in read and (r := _one(redo_lines.get(name))) is not None:
                 read[name] = r
+    # Frames no reader got: a dark one is read with no text, a repeat takes
+    # the reading of the frame read for its run.
+    for f in listed:
+        if f.get("dark"):
+            read[f["file"]] = dict(BLANK)
+        elif f.get("same_as") in read:
+            read[f["file"]] = read[f["same_as"]]
     missing = [f["file"] for f in listed if f["file"] not in read]
     redo = None
-    if missing and not redo_batch.exists():
-        # Back to one reader, once.
+    resend = [by_name[n] for n in missing if not by_name[n].get("same_as")]
+    if resend and not redo_batch.exists():
+        # Back to one reader, once; a repeat follows its run's frame.
         _write_json(
             redo_batch,
-            {"batch": REDO, "out": str(screen / f"read_{REDO}.jsonl"), "frames": [by_name[n] for n in missing]},
+            {"batch": REDO, "out": str(screen / f"read_{REDO}.jsonl"), "frames": resend},
         )
         redo = str(redo_batch)
     readings = join_readings(listed, read)
