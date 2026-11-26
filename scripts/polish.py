@@ -27,7 +27,7 @@ So is a repeated line written two ways (`repeat drift`): the reviewer
 tells a callback from a stock phrase. A line the bible says is said word
 for word (`bible repeat`) goes to the fixer, with the wording to match.
 Every cue whose source says a term the bible decides and whose Turkish
-has none of its rendering goes to the fixer too (`term rendering`), as
+lacks a word of its rendering goes to the fixer too (`term rendering`), as
 the human file brings its own words for them.
 sen and siz are left out too: the human file's form is the evidence, and a
 reviewer changes it only where the English line itself shows the other.
