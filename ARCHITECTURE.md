@@ -375,7 +375,12 @@ line stays at the bottom of the screen.
   Italics on single words beside plain ones (`<i>To</i> all Marc Antony's
   cavalry`) are mostly a slip in the source file: the Turkish may leave
   them out, and a Turkish cue that keeps italics there only gets a `stray
-  italics` warning. Hard fails go back to the chunk's translator, and
+  italics` warning. A song cue (marked `song` by the build, or with a `♪`
+  in any source track) may be in italics where the source is plain, as
+  the pack's Songs rule asks. A `- ` that opens a cue right after one
+  ending with ` -`, and goes on in lower case, only carries the sentence on (the Danish, Norwegian and
+  Swedish habit) and is not counted as a dialogue dash; `polish` drops it
+  from a seeded Turkish cue too. Hard fails go back to the chunk's translator, and
   after two rounds one more round runs on a stronger model. Each round
   starts with `assemble.py fixround`, which writes every failing cue's
   checks, source and current Turkish (seed or chunk output with every fix
