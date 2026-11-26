@@ -140,6 +140,44 @@ def test_screen_frames_saves_real_frames_fitted_into_960x540(tmp_path: Path):
         assert probe.stdout.strip() == "960,540"
 
 
+def test_screen_frames_skip_black_and_send_one_frame_per_held_card(tmp_path: Path):
+    # Black to 2.25 s, then a faint grey title (level 48) on black, a card
+    # "2020" and the same card with its last digit changed, 3 s each, then
+    # black. One spoken line at 12-13 s: head frames at 0, 1.5 ... 10.5 s,
+    # two on each part, and one tail frame at 13 s on the black.
+    video = tmp_path / "Film.mkv"
+    digits = ",".join(f"drawbox=x={100 + 30 * k}:y=70:w=20:h=36:color=white:t=fill" for k in range(3))
+    parts = [
+        "color=c=black:s=320x180:r=4:d=2.25",
+        "color=c=black:s=320x180:r=4:d=3,drawbox=x=120:y=80:w=60:h=12:color=0x303030:t=fill",
+        f"color=c=black:s=320x180:r=4:d=3,{digits},drawbox=x=190:y=70:w=20:h=36:color=white:t=fill",
+        f"color=c=black:s=320x180:r=4:d=3,{digits},drawbox=x=190:y=70:w=20:h=36:color=white:t=4",
+        "color=c=black:s=320x180:r=4:d=2.75",
+    ]
+    inputs = [arg for p in parts for arg in ("-f", "lavfi", "-i", p)]
+    subprocess.run(
+        [
+            "ffmpeg", "-v", "error", "-y", *inputs,
+            "-filter_complex", "".join(f"[{k}:v]" for k in range(5)) + "concat=n=5:v=1:a=0",
+            "-c:v", "mpeg4", "-q:v", "2", "-g", "1", str(video),
+        ],
+        check=True,
+    )  # fmt: skip
+    timing = tmp_path / "en.srt"
+    timing.write_text("1\n00:00:12,000 --> 00:00:13,000\nGood morning.\n", encoding="utf-8")
+    w = tmp_path / "work"
+    prepare.build(w, timing, None, None)
+    out = screen.frames(w, video)
+    assert "error" not in out, out
+    assert (out["frames"], out["sent"], out["dark"], out["repeats"], out["notes"]) == (9, 3, 3, 3, [])
+    listed = json.loads((w / prepare.FRAMES_FILE).read_text(encoding="utf-8"))["frames"]
+    marks = [("dark" if f.get("dark") else f.get("same_as")) for f in listed]
+    assert marks == ["dark", "dark", None, "frame_0003.jpg", None, "frame_0005.jpg", None, "frame_0007.jpg", "dark"]
+    [batch] = [b for r in out["readers"] for b in r["batches"]]
+    sent = json.loads(Path(batch).read_text(encoding="utf-8"))["frames"]
+    assert [f["file"] for f in sent] == ["frame_0003.jpg", "frame_0005.jpg", "frame_0007.jpg"]
+
+
 def test_screen_ends_finds_black_with_a_small_title_on_it(tmp_path: Path, monkeypatch):
     # White to 6 s, then black from 6 s to 9 s with a white box of 1.5% of
     # the picture, as a title fading in over the cut to black, then white.
