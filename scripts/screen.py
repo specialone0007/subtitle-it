@@ -355,10 +355,12 @@ def _save_one(exe: str, video: Path, ms: int, vf: str, dest: Path) -> None:
     _run(cmd)
 
 
-def _grey(exe: str, pattern: Path, count: int, scale: str, size: int) -> list[bytes] | None:
-    """The `count` frames of `pattern` (numbered from 1) as grey bytes of
-    `size` each, after `scale`; None when ffmpeg fails or gives fewer. Read
-    one frame at a time, so 300 full-size frames never sit in memory."""
+def _grey(exe: str, pattern: Path, count: int, scale: str, size: int, keep=bytes) -> list | None:
+    """`keep(frame)` for each of the `count` frames of `pattern` (numbered
+    from 1), each frame grey bytes of `size` after `scale`; None when
+    ffmpeg fails or gives fewer. Read one frame at a time and only what
+    `keep` returns is kept, so with `keep=max` 300 full-size frames never
+    sit in memory together."""
     cmd = [exe, "-hide_banner", "-nostats", "-v", "error", "-start_number", "1", "-i", str(pattern)]
     cmd += ["-frames:v", str(count), "-vf", f"{scale},format=gray", "-f", "rawvideo", "-"]
     try:
@@ -371,7 +373,7 @@ def _grey(exe: str, pattern: Path, count: int, scale: str, size: int) -> list[by
             chunk = proc.stdout.read(size)
             if len(chunk) < size:
                 return None
-            out.append(chunk)
+            out.append(keep(chunk))
         return out if proc.wait(timeout=TIMEOUT_S) == 0 else None
     except (OSError, subprocess.SubprocessError):
         return None
@@ -387,11 +389,11 @@ def _measure(exe: str, out_dir: Path, count: int) -> list[tuple[int, bytes]] | N
     fitted into less than 960x540 are stretched to it pixel by pixel, which
     keeps their brightest pixel."""
     pattern = out_dir / "frame_%04d.jpg"
-    full = _grey(exe, pattern, count, f"scale={FRAME_W}:{FRAME_H}:flags=neighbor", FRAME_W * FRAME_H)
-    tiles = _grey(exe, pattern, count, f"scale={TILES_W}:{TILES_H}:flags=area", TILES_W * TILES_H) if full else None
-    if full is None or tiles is None:
+    peaks = _grey(exe, pattern, count, f"scale={FRAME_W}:{FRAME_H}:flags=neighbor", FRAME_W * FRAME_H, keep=max)
+    tiles = _grey(exe, pattern, count, f"scale={TILES_W}:{TILES_H}:flags=area", TILES_W * TILES_H) if peaks is not None else None
+    if peaks is None or tiles is None:
         return None
-    return [(max(f), t) for f, t in zip(full, tiles)]
+    return list(zip(peaks, tiles))
 
 
 def _same_picture(a: bytes, b: bytes) -> bool:
