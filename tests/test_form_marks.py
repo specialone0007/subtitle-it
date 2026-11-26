@@ -36,6 +36,11 @@ I was-
 6
 00:00:15,500 --> 00:00:17,000
 - Go on.
+
+7
+00:00:18,000 --> 00:00:20,000
+- Where are you?
+- At home.
 """
 
 GOOD = (
@@ -44,7 +49,8 @@ GOOD = (
     "3\n2021'de, onun belgeleriyle...\n\n"
     "4\n...gazete 17 makalenin\nilkini yayımladı.\n\n"
     "5\nBen...\n\n"
-    "6\n- Devam et.\n"
+    "6\n- Devam et.\n\n"
+    "7\n- Neredesin?\n- Evdeyim.\n"
 )
 
 
@@ -59,6 +65,9 @@ def work(tmp_path: Path) -> Path:
     for r in rows:
         if r["n"] == 1:
             r["en"] = ["♪ I know you well ♪"]
+        if r["n"] == 7:
+            # A chat on a phone screen, shown as on-screen text.
+            r["on_screen"] = {"en": r["source"]}
     (w / "cues.json").write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
     prepare.chunks(w, target=250)
     return w
@@ -101,6 +110,13 @@ def test_continuation_dash_is_not_a_speaker(work: Path):
     assert _hard(work, GOOD.replace("- Devam et.", "Devam et.")) == {(6, "dialogue dashes")}
 
 
+def test_on_screen_card_with_two_speakers_keeps_its_dash_check(work: Path):
+    # Only the continuation mark is skipped: a chat shown on screen with
+    # two speakers still needs both dashes.
+    plain = GOOD.replace("- Neredesin?\n- Evdeyim.", "Neredesin?\nEvdeyim.")
+    assert _hard(work, plain) == {(7, "dialogue dashes")}
+
+
 @pytest.mark.parametrize(
     ("prev", "lines", "dashes"),
     [
@@ -110,6 +126,11 @@ def test_continuation_dash_is_not_a_speaker(work: Path):
         (["Who's there?"], ["- Me.", "- And me."], 2),
         (["it runs on -"], ["- og så", "- Hvad?"], 1),
         (None, ["- Go on."], 1),
+        # An interruption with a space before its hyphen, then a new
+        # speaker in a capital: both dashes are speakers.
+        (["If you don't -"], ["- I won't.", "- Good."], 2),
+        (["If you don't -"], ["- I won't."], 1),
+        (["dokumenter, -"], ["- 17 artikler om Facebook."], 0),
     ],
 )
 def test_dialogue_dashes(prev, lines, dashes):
@@ -125,3 +146,19 @@ def test_match_form_keeps_song_italics_and_drops_continuation_dash():
     src = ["- publicerede Wall Street Journal", "den første af 17 artikler."]
     out = polish.match_form(src, ["- gazete 17 makalenin", "ilkini yayımladı."], prev=["dokumenter, -"])
     assert out == (["gazete 17 makalenin", "ilkini yayımladı."], True)
+
+
+def test_seed_keeps_song_italics_and_drops_a_continuation_dash(work: Path, tmp_path: Path):
+    tr = tmp_path / "tr.srt"
+    tr.write_text(
+        "1\n00:00:01,000 --> 00:00:03,000\n<i>♪ Seni iyi tanırım ♪</i>\n\n"
+        "2\n00:00:03,500 --> 00:00:06,000\n<i>Düz satır.</i>\n\n"
+        "3\n00:00:07,000 --> 00:00:09,000\n2021'de, onun belgeleriyle...\n\n"
+        "4\n00:00:09,500 --> 00:00:12,000\n- gazete 17 makalenin\nilkini yayımladı.\n",
+        encoding="utf-8",
+    )
+    polish.seed(work, tr)
+    texts, _ = assemble.load_translation(work)
+    assert texts[1] == ["<i>♪ Seni iyi tanırım ♪</i>"]
+    assert texts[2] == ["Düz satır."]
+    assert texts[4] == ["gazete 17 makalenin", "ilkini yayımladı."]

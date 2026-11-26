@@ -378,7 +378,7 @@ line stays at the bottom of the screen.
   italics` warning. A song cue (marked `song` by the build, or with a `♪`
   in any source track) may be in italics where the source is plain, as
   the pack's Songs rule asks. A `- ` that opens a cue right after one
-  ending with ` -` only carries the sentence on (the Danish, Norwegian and
+  ending with ` -`, and goes on in lower case, only carries the sentence on (the Danish, Norwegian and
   Swedish habit) and is not counted as a dialogue dash; `polish` drops it
   from a seeded Turkish cue too. Hard fails go back to the chunk's translator, and
   after two rounds one more round runs on a stronger model. Each round
