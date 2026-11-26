@@ -112,8 +112,9 @@ def match_form(src: list[str], tr: list[str], song: bool = False, prev: list[str
     file in these marks often, and they are not a translation question.
     A song keeps the italics the Turkish gives it (`song`), and a "- " that
     only carries on the sentence of the cue before (`prev`, ending with
-    " -") is no speaker's dash. Anything mixed is left for the checks to
-    flag. Returns the lines and whether they changed."""
+    " -"), with words that go on in lower case, is no speaker's dash.
+    Anything mixed is left for the checks to flag. Returns the lines and
+    whether they changed."""
     out = list(tr)
     src_italic = bool(assemble.ITALIC_RE.search("".join(src)))
     tr_italic = bool(assemble.ITALIC_RE.search("".join(out)))
