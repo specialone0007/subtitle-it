@@ -36,7 +36,7 @@ import result  # noqa: E402
 import settings  # noqa: E402
 
 API = "https://api.opensubtitles.com/api/v1"
-USER_AGENT = "SubtitleIt v0.13.7"
+USER_AGENT = "SubtitleIt v0.13.8"
 TOKEN_MAX_AGE = 20 * 3600  # tokens last 24 h; renew a bit early
 
 
