@@ -679,10 +679,12 @@ def run_checks(work: Path, texts: dict[int, list[str]] | None = None, write: boo
                     w(n, "term variant", f"'{alt}' used; glossary says '{preferred}'")
 
     # One rendering per term across the film: the bible's Turkish for each
-    # source term it decided, and one spelling for words that have two.
+    # source term it decided, on every cue that says it, and one spelling
+    # for words that have two. A human file in a polish run brings its own
+    # words; this is what sends them back to the bible's.
     drafted = {c.n: texts[c.n] for c in kept if c.n in texts}
     renderings = bible.term_renderings(work)
-    rules = bible.term_rules(work)
+    rules = bible.check_rules(work)
     order = [c.n for c in kept if c.n in drafted]
     for i, n in enumerate(order):
         said = " ".join(_source_lines(rows[n])).casefold()
@@ -705,7 +707,9 @@ def run_checks(work: Path, texts: dict[int, list[str]] | None = None, write: boo
             if not applies:
                 continue
             answers = set().union(*(r["renderings"] for r in applies))
-            if not any(turkish.has_rendering(text, a) for a in answers | cited):
+            # Every word of a rendering: "Liman Meclisi Başkanı" is not
+            # the bible's "Liman Kurulu Başkanı".
+            if not any(turkish.has_rendering(text, a, every=True) for a in answers | cited):
                 w(n, "term rendering", f"'{term}' is '{' or '.join(sorted(answers))}' in the bible; this cue has no form of it")
     bible_words = " ".join(a for answers in renderings.values() for a in answers)
     for n, used, usual, count in turkish.family_drift(drafted, bible_words):
@@ -713,9 +717,21 @@ def run_checks(work: Path, texts: dict[int, list[str]] | None = None, write: boo
 
     # A line the film says again (a chant, a saying, a callback) is said
     # the same way each time. The note quotes the wording to match first:
-    # the reviewer of this cue may not have that part.
+    # the reviewer of this cue may not have that part. Where the bible
+    # says the line is said word for word, it is a `bible repeat`, which
+    # the polish fixer gets too: no scene can make it a stock phrase.
+    same = bible.same_word_groups(work)
     for n, ref in repeat_drift(drafted, rows, order):
-        w(n, "repeat drift", f'"{" / ".join(drafted[ref])}" at cue {ref}: same source line, say it this way here too')
+        wording = " / ".join(drafted[ref])
+        if any(n in g and ref in g for g in same):
+            w(
+                n,
+                "bible repeat",
+                f'"{wording}" at cue {ref}: the bible says this line is said word for word; write it so here',
+                ref=ref,
+            )
+        else:
+            w(n, "repeat drift", f'"{wording}" at cue {ref}: same source line, say it this way here too', ref=ref)
 
     # A sentence spread over several cues: each part must appear exactly once.
     for group in sentence_groups(kept, rows):
@@ -791,6 +807,8 @@ PART_SLACK = 20
 # A note in a part file is cut to this many characters: the reviewer
 # needs the kind of problem and its key words, not the whole detail.
 NOTE_CHARS = 100
+# A repeated line written two ways: the note names the cue to match (`ref`).
+REPEAT_CHECKS = {"repeat drift", "bible repeat"}
 FLAG_LINE_RE = re.compile(r"^(\d+)(?:\s*-\s*(\d+))?\s*:\s*(.+)$")
 
 
@@ -876,6 +894,7 @@ def review_parts(work: Path, size: int = PART_CUES) -> dict:
     if not rows:
         raise SystemExit("no spoken cues to review")
     notes: dict[int, list[str]] = {}
+    matched: dict[int, list[int]] = {}
     seeded = (work / "polish_placement.json").exists()
     checks_file = work / "checks.json"
     if checks_file.exists():
@@ -892,6 +911,16 @@ def review_parts(work: Path, size: int = PART_CUES) -> dict:
                         continue
                     label = x["check"] + (f": {x['detail']}" if x.get("detail") else "")
                     notes.setdefault(x["cue"], []).append(("HARD " if hard else "") + label)
+                    if x["check"] in REPEAT_CHECKS and x.get("ref") is not None:
+                        matched.setdefault(x["ref"], []).append(x["cue"])
+    # The cue a repeated line is told to match gets a note too, so both
+    # sides of the pair are in view and its own reviewer keeps that wording
+    # instead of moving it while the other cue moves to it.
+    for ref, cues in matched.items():
+        others = ", ".join(map(str, sorted(set(cues))))
+        notes.setdefault(ref, []).append(
+            f"repeat match: keep this wording; cue {others} says this line again and is told to match it"
+        )
     for n, fl in _fixer_flags(work).items():
         notes.setdefault(n, []).extend(f"fixer: {f}" for f in fl if not f.startswith("cue count: missing"))
     for n, fl in _translator_flags(work).items():
@@ -984,7 +1013,7 @@ LISTEN_PART_CUES = 480
 GATE_FILE = "gate.json"
 # New warnings of these kinds, on an edited cue, its sentence group or its
 # repeat pair, drop the edit. Reading speed is held by the budget instead.
-GATE_WARNINGS = {"repeat drift", "split sentence", "address form", "term rendering", "term variant", "term drift"}
+GATE_WARNINGS = {"repeat drift", "bible repeat", "split sentence", "address form", "term rendering", "term variant", "term drift"}
 # Kinds a change on one cue can raise on another cue anywhere in the film.
 FILM_WIDE = {"term drift", "term variant"}
 QUOTE_RE = re.compile(r"'([^']+)'")
