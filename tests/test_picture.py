@@ -209,9 +209,15 @@ def test_a_frame_lists_the_entries_within_3_s():
 # --- saving the frames, ffmpeg faked ------------------------------------------
 
 
-def _fake_ffmpeg(monkeypatch, duration=600_000, hdr=False, zscale=True, tone_fails=False, short=0) -> list:
+def _distinct(count: int) -> list[tuple[int, bytes]]:
+    """Measurements of `count` lit frames, each a new picture."""
+    return [(255, bytes([k * 10 % 250]) * (screen.TILES_W * screen.TILES_H)) for k in range(count)]
+
+
+def _fake_ffmpeg(monkeypatch, duration=600_000, hdr=False, zscale=True, tone_fails=False, short=0, measure=_distinct) -> list:
     """`tone_fails`: a window with the tone map saves nothing. `short`: each
-    window saves that many files fewer than asked."""
+    window saves that many files fewer than asked. `measure(count)` gives
+    the frames' measurements, None when ffmpeg could not read them."""
     calls = []
 
     def window(exe, video, a, b, vf, pattern):
@@ -232,6 +238,7 @@ def _fake_ffmpeg(monkeypatch, duration=600_000, hdr=False, zscale=True, tone_fai
     monkeypatch.setattr(screen, "_has_zscale", lambda exe: zscale)
     monkeypatch.setattr(screen, "_save_window", window)
     monkeypatch.setattr(screen, "_save_one", one)
+    monkeypatch.setattr(screen, "_measure", lambda exe, out_dir, count: measure(count))
     return calls
 
 
@@ -257,8 +264,10 @@ def test_frames_writes_the_list_the_batches_and_marks_the_unsure_entries(tmp_pat
     batch = _json(Path(data["readers"][-1]["batches"][-1]))
     assert len(batch["frames"]) == 12 and batch["out"] == str(w / "screen" / "read_06.jsonl")
     assert [c[0] for c in calls].count("one") == 5
-    # Fitted into 960x540, nothing else: no frame is dropped as black.
+    # Fitted into 960x540, nothing else; every frame here is a new picture,
+    # so every one is sent.
     assert all(c[-1] == screen.SCALE for c in calls)
+    assert (out["sent"], out["dark"], out["repeats"]) == (112, 0, 0)
 
 
 def test_frames_split_readers_at_40_frames(tmp_path: Path, monkeypatch):
@@ -322,6 +331,92 @@ def test_frames_never_fail_a_run(tmp_path: Path, monkeypatch):
     assert (w / prepare.ON_SCREEN_FILE).read_text(encoding="utf-8") == before
 
 
+# --- dark frames and repeats -------------------------------------------------
+
+TILES = screen.TILES_W * screen.TILES_H
+
+
+def _card(digit_tile: int = 0) -> bytes:
+    """The tiles of a card: grey 30 with one tile (one digit) at
+    `digit_tile`."""
+    tiles = bytearray([30]) * TILES
+    tiles[2000] = digit_tile
+    return bytes(tiles)
+
+
+def test_only_a_frame_with_no_lit_pixel_is_dark():
+    black = bytes(TILES)
+    plan = screen.plan_reads(
+        [
+            (0, black),  # black
+            (14, black),  # black, saved as JPEG
+            (40, bytes([1]) * TILES),  # a faint title fading in: a few pixels at 40
+            (screen.DARK_LEVEL + 1, bytes([60]) * TILES),  # one pixel just above the bar
+            (screen.DARK_LEVEL, black),
+        ]
+    )
+    assert plan == [screen.DARK, screen.DARK, None, None, screen.DARK]
+
+
+def test_two_cards_one_digit_apart_are_both_read():
+    # "2020" then "2021": one tile of 5184 moves, by far more than noise.
+    stats = [(255, _card(200)), (255, _card(120)), (255, _card(121)), (255, _card(124)), (255, _card(125))]
+    assert screen.plan_reads(stats) == [None, None, 1, 1, None]
+
+
+def test_a_run_is_measured_against_its_first_frame_and_ends_at_black():
+    # Each frame 3 levels on from the one before: the third is 6 from the
+    # first, so a slow fade is never one run. Black ends a run, so the
+    # same card after it is read again.
+    stats = [(255, _card(100)), (255, _card(103)), (255, _card(106)), (0, bytes(TILES)), (255, _card(106))]
+    assert screen.plan_reads(stats) == [None, 0, None, screen.DARK, None]
+
+
+def test_the_frame_read_for_a_run_lists_every_entry_near_the_run():
+    listed = [
+        {"file": "frame_0001.jpg", "entries": [{"id": "4:1338"}]},
+        {"file": "frame_0002.jpg", "entries": [{"id": "4:1338"}, {"id": "4:1339"}]},
+        {"file": "frame_0003.jpg", "entries": [{"id": "4:1339"}]},
+        {"file": "frame_0004.jpg", "entries": []},
+    ]
+    sent = screen.mark_reads(listed, [None, 0, 0, screen.DARK])
+    assert [f["file"] for f in sent] == ["frame_0001.jpg"]
+    assert [e["id"] for e in listed[0]["entries"]] == ["4:1338", "4:1339"]
+    assert listed[1]["same_as"] == listed[2]["same_as"] == "frame_0001.jpg" and listed[3]["dark"] is True
+    # The repeats keep their own entries.
+    assert [e["id"] for e in listed[2]["entries"]] == ["4:1339"]
+
+
+def test_frames_send_no_dark_frame_and_one_frame_per_run(tmp_path: Path, monkeypatch):
+    w = _one_language_build(tmp_path)
+    card = _card(200)
+
+    def measure(count):
+        stats = _distinct(count)
+        # The head: black, then the card held for three frames.
+        stats[0] = (3, bytes(TILES))
+        stats[1:4] = [(255, card)] * 3
+        return stats
+
+    _fake_ffmpeg(monkeypatch, measure=measure)
+    out = screen.frames(w, tmp_path / "Film.mkv")
+    assert (out["frames"], out["sent"], out["dark"], out["repeats"]) == (112, 109, 1, 2)
+    data = _json(w / prepare.FRAMES_FILE)
+    assert len(data["frames"]) == 112 and data["frames"][0]["dark"] is True
+    assert [f.get("same_as") for f in data["frames"][1:5]] == [None, "frame_0002.jpg", "frame_0002.jpg", None]
+    sent = [f["file"] for r in data["readers"] for b in r["batches"] for f in _json(Path(b))["frames"]]
+    assert len(sent) == 109 and not {"frame_0001.jpg", "frame_0003.jpg", "frame_0004.jpg"} & set(sent)
+    assert [(r["frames"], len(r["batches"])) for r in data["readers"]] == [(40, 2), (40, 2), (29, 2)]
+
+
+def test_frames_send_every_frame_when_they_cannot_be_measured(tmp_path: Path, monkeypatch):
+    w = _one_language_build(tmp_path)
+    _fake_ffmpeg(monkeypatch, measure=lambda count: None)
+    out = screen.frames(w, tmp_path / "Film.mkv")
+    assert (out["frames"], out["sent"], out["dark"], out["repeats"]) == (112, 112, 0, 0)
+    assert out["notes"] == ["the frames could not be measured for black or repeats, so all 112 go to the readers"]
+
+
 # --- the readers' lines ------------------------------------------------------
 
 
@@ -379,10 +474,12 @@ def test_collect_sends_missing_doubled_and_bad_frames_back_once(tmp_path: Path):
 
 
 def test_collect_sends_back_a_line_with_a_list_where_a_name_belongs(tmp_path: Path):
+    # A list of entry ids is fine (see the split card below); a number in
+    # it, or a list for the frame's name, is not.
     w = tmp_path / "work"
     outs = _frames_file(w, [(0, ["1:1"]), (1_500, ["1:1"]), (3_000, [])])
     bad_frame = json.dumps({"frame": ["frame_0003.jpg"], "text": "", "kind": "background", "wants_read": False})
-    Path(outs[0]).write_text("\n".join([_line(1), _line(2, "A", "sign", True, ["1:1"]), bad_frame]), encoding="utf-8")
+    Path(outs[0]).write_text("\n".join([_line(1), _line(2, "A", "sign", True, [1]), bad_frame]), encoding="utf-8")
     out = screen.collect(w)
     assert out["missing"] == ["frame_0002.jpg", "frame_0003.jpg"] and out["redo"]
     assert [f["file"] for f in _json(Path(out["redo"]))["frames"]] == out["missing"]
@@ -412,6 +509,73 @@ def test_collect_joins_neighbouring_frames_with_the_same_text(tmp_path: Path):
         (13_500, 13_500, [], False),
     ]
     assert readings[0]["frames"] == ["frame_0001.jpg", "frame_0002.jpg", "frame_0003.jpg"] and readings[0]["text"] == "THE CARD"
+
+
+def _marked_frames_file(w: Path, frames: list[tuple[int, list[str]]], plan: list) -> str:
+    """frames.json for frames at these times marked per `plan` (as
+    screen.plan_reads gives it) and one batch of the frames sent; returns
+    its out file."""
+    _frames_file(w, frames)
+    data = _json(w / prepare.FRAMES_FILE)
+    sent = screen.mark_reads(data["frames"], plan)
+    (w / prepare.FRAMES_FILE).write_text(json.dumps(data), encoding="utf-8")
+    out = str(w / "screen" / "read_01.jsonl")
+    (w / "screen" / "batch_01.json").write_text(json.dumps({"batch": 1, "out": out, "frames": sent}), encoding="utf-8")
+    return out
+
+
+def test_collect_reads_dark_frames_as_blank_and_copies_a_run_reading(tmp_path: Path):
+    w = tmp_path / "work"
+    times = [0, 1_500, 3_000, 4_500, 6_000]
+    out = _marked_frames_file(w, [(ms, []) for ms in times], [screen.DARK, None, 1, 1, screen.DARK])
+    Path(out).write_text(_line(2, "THE CARD", "title card", True), encoding="utf-8")
+    got = screen.collect(w)
+    # Neither missing nor sent back: a dark frame is read, with no text.
+    assert got["missing"] == [] and got["redo"] is None and got["read"] == 5
+    [card] = _json(w / screen.READINGS_FILE)["readings"]
+    # The card keeps its full time: on until the dark frame after the run.
+    assert card["frames"] == ["frame_0002.jpg", "frame_0003.jpg", "frame_0004.jpg"]
+    assert (card["first_ms"], card["last_ms"], card["next_ms"]) == (1_500, 4_500, 6_000)
+
+
+def test_collect_sends_back_only_the_frame_read_for_a_run(tmp_path: Path):
+    w = tmp_path / "work"
+    _marked_frames_file(w, [(0, []), (1_500, []), (3_000, [])], [None, 0, 0])
+    first = screen.collect(w)
+    assert first["missing"] == ["frame_0001.jpg", "frame_0002.jpg", "frame_0003.jpg"]
+    redo = _json(Path(first["redo"]))
+    assert [f["file"] for f in redo["frames"]] == ["frame_0001.jpg"]
+    Path(redo["out"]).write_text(_line(1, "THE CARD", "title card", True), encoding="utf-8")
+    second = screen.collect(w)
+    assert second["missing"] == [] and second["read"] == 3
+    assert _json(w / screen.READINGS_FILE)["readings"][0]["frames"] == ["frame_0001.jpg", "frame_0002.jpg", "frame_0003.jpg"]
+
+
+def test_a_card_a_track_split_in_two_names_both_entries(tmp_path: Path):
+    # The Social Reckoning: one closing card held for 6 s, which the Danish
+    # track splits into two lines, 4:1338 and 4:1339. The frame read for
+    # the run lists both and its reader names both; every frame of the run
+    # carries them, and the build sees both as story text.
+    w = tmp_path / "work"
+    frames = [(6_274_000, ["4:1338"]), (6_275_500, ["4:1338", "4:1339"]), (6_277_000, ["4:1339"]), (6_278_500, ["4:1339"])]
+    out = _marked_frames_file(w, frames, [None, 0, 0, 0])
+    assert [e["id"] for e in _json(w / prepare.FRAMES_FILE)["frames"][0]["entries"]] == ["4:1338", "4:1339"]
+    Path(out).write_text(
+        _line(1, "In 2021, using Frances Haugen's trove", "closing text", True, ["4:1339", "4:1338"]), encoding="utf-8"
+    )
+    assert screen.collect(w)["missing"] == []
+    [card] = _json(w / screen.READINGS_FILE)["readings"]
+    assert card["shows_entry"] == ["4:1338", "4:1339"] and len(card["frames"]) == 4
+    assert prepare.read_picture(w, w / screen.READINGS_FILE)["story"] == {"4:1338", "4:1339"}
+
+
+def test_an_answer_naming_one_entry_as_a_string_still_reads():
+    by_name = {"frame_0001.jpg": {"entries": [{"id": "2:14"}]}}
+    name, reading = screen.parse_line(_line(1, "A", "sign", True, "2:14"), by_name)
+    assert name == "frame_0001.jpg" and reading["shows_entry"] == ["2:14"]
+    assert screen.parse_line(_line(1, "A", "sign", True, None), by_name)[1]["shows_entry"] == []
+    # Every id in a list must be one listed for the frame.
+    assert screen.parse_line(_line(1, "A", "sign", True, ["2:14", "9:9"]), by_name) == ("frame_0001.jpg", None)
 
 
 # --- the build with what the picture showed ---------------------------------

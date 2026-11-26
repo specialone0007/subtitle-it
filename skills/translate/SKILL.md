@@ -273,12 +273,15 @@ subtitle file. In this order:
    Never shift on the other tracks' word alone.
 4. `screen.py frames --work WORK --video V`. It saves the frames (about
    2.5 minutes from each end, one every 1.5 s, 300 at most) and the batch
-   files the readers read. With an `error`, say it in one line of the
+   files the readers read. Fully dark frames and repeats of a held
+   picture are not sent: `sent` says how many of `frames` the readers
+   get. With an `error`, say it in one line of the
    report and go on to `chunks`: the entries stay as `build` found them.
    Its `notes` go in the report.
 5. Start one `subtitle-it:screen-reader` subagent per item of its
    `readers`, all in one message. Each prompt: that item's `batches`
-   paths, one per line, and nothing else.
+   paths, one per line, and nothing else. When `readers` is empty (every
+   frame was dark), start none and go on to `collect`.
 6. When they are done, run `screen.py collect --work WORK`. When its
    `redo` is set, start one more `subtitle-it:screen-reader` with that
    batch file, then run `collect` again; never a third time. Frames still
