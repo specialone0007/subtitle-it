@@ -101,6 +101,26 @@ def dash_lines(lines: list[str]) -> int:
     return sum(1 for ln in lines if is_dash_line(ln))
 
 
+# Danish, Norwegian and Swedish files show a sentence that runs on into
+# the next cue with " -" at the end of the cue, and "- " at the start of
+# the next one ("Den gamle mole lukkede, -" / "- og færgen
+# sejlede"). That opening "-" is not a speaker's turn. A cut-off
+# word ("I was-") has no space before its "-" and is not this mark.
+CONTINUED_RE = re.compile(r"\s-\s*$")
+
+
+def continues_from(prev: list[str] | None, lines: list[str]) -> bool:
+    """The cue opens with the "- " that only carries on the sentence the
+    cue before it ends with " -"."""
+    return bool(prev and lines) and is_dash_line(lines[0]) and bool(CONTINUED_RE.search(strip_tags(prev[-1])))
+
+
+def dialogue_dashes(lines: list[str], prev: list[str] | None = None) -> int:
+    """The cue's dash lines that open a speaker's turn: a continuation
+    "- " after a cue that ends with " -" does not count."""
+    return dash_lines(lines) - continues_from(prev, lines)
+
+
 def turns(lines: list[str]) -> list[list[str]]:
     """A cue's lines grouped by speaker: a dash line starts a turn, and a
     line without a dash continues the turn above it. A cue with fewer than
