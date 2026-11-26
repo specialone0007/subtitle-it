@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.13.7 (2026-11-26)
+
+Two of the automatic checks fought the translation rules. Songs the pack
+puts in italics failed the italics check when the source file showed the
+lyric plain, so a fix round took the italics off again. And Danish,
+Norwegian and Swedish files mark a sentence that runs on into the next
+cue with " -" at the end of one cue and "- " at the start of the next;
+the dash check took that "- " for a speaker, so closing cards in Turkish
+started with a dash and read like dialogue. Both now pass as they
+should. The Social Reckoning (2026) hit both: song cues 853 to 857 and
+the closing cards 2091, 2094 and 2098.
+
+- The `italic tags` check lets a song cue be in italics where the source
+  is plain. A cue is a song when the build marked it `song`, or when any
+  source track (the timing file, the source or the English track) shows
+  a ♪ or ♫ on it. Italics added to speech still fail.
+- The `dialogue dashes` check no longer counts a leading `- ` when the
+  cue before it, in time order, ends with ` -` and the words after the
+  `- ` go on in lower case (`srt.continues_from`, `srt.dialogue_dashes`).
+  A cut-off word (`I was-`), an interruption followed by a new speaker in
+  a capital (`If you don't -` / `- I won't.`) and an on-screen card with
+  two real speakers keep their dash check.
+- `polish` follows both rules when it seeds a delivered Turkish file: it
+  keeps a song's italics and drops a continuation `- `.
+- The Turkish pack, the translator and polish-fixer prompts and
+  `ARCHITECTURE.md` state both exceptions.
+
 ## 0.13.6 (2026-11-23)
 
 A subtitle built into the video can still sit a fraction of a second off
