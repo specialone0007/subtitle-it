@@ -104,14 +104,16 @@ def _all_italic(lines: list[str]) -> bool:
     return bool(lines) and all(re.fullmatch(r"\s*<i>.*</i>\s*", ln, re.I) and ln.lower().count("<i>") == 1 for ln in lines)
 
 
-def match_form(src: list[str], tr: list[str]) -> tuple[list[str], bool]:
+def match_form(src: list[str], tr: list[str], song: bool = False, prev: list[str] | None = None) -> tuple[list[str], bool]:
     """Give the Turkish lines the source cue's italics and dialogue dashes
     when that is a mechanical change: italics on the same whole lines,
     dashes on two lines where the source has two speakers, or no dashes
     where the source has none. Professional files differ from the timing
     file in these marks often, and they are not a translation question.
-    Anything mixed is left for the checks to flag. Returns the lines and
-    whether they changed."""
+    A song keeps the italics the Turkish gives it (`song`), and a "- " that
+    only carries on the sentence of the cue before (`prev`, ending with
+    " -") is no speaker's dash. Anything mixed is left for the checks to
+    flag. Returns the lines and whether they changed."""
     out = list(tr)
     src_italic = bool(assemble.ITALIC_RE.search("".join(src)))
     tr_italic = bool(assemble.ITALIC_RE.search("".join(out)))
@@ -120,11 +122,12 @@ def match_form(src: list[str], tr: list[str]) -> tuple[list[str], bool]:
             out = [f"<i>{ln.strip()}</i>" for ln in out]
         elif len(src) == len(out):
             out = [f"<i>{t.strip()}</i>" if _all_italic([s]) else t for s, t in zip(src, out)]
-    elif tr_italic and not src_italic:
+    elif tr_italic and not src_italic and not song:
         out = [assemble.ITALIC_RE.sub("", ln).strip() for ln in out]
-    if srt.dash_lines(src) == 2 and len(out) == 2 and srt.dash_lines(out) == 0:
+    src_dashes = srt.dialogue_dashes(src, prev)
+    if src_dashes == 2 and len(out) == 2 and srt.dash_lines(out) == 0:
         out = [re.sub(r"^(<i>)?", lambda m: (m.group(1) or "") + "- ", ln, count=1) for ln in out]
-    elif srt.dash_lines(src) == 0 and srt.dash_lines(out):
+    elif src_dashes == 0 and srt.dash_lines(out):
         out = [re.sub(r"^(<i>)?\s*-\s*", lambda m: m.group(1) or "", ln, count=1) for ln in out]
     return out, out != tr
 
@@ -178,7 +181,7 @@ def seed(work: Path, tr_path: Path) -> dict:
     out.mkdir(exist_ok=True)
     seeded = joined = rewrapped = reformed = 0
     with open(out / SEED_FILE, "w", encoding="utf-8") as f:
-        for c in timing:
+        for i, c in enumerate(timing):
             parts = pairs[c.n]
             if not parts:
                 continue
@@ -193,7 +196,8 @@ def seed(work: Path, tr_path: Path) -> dict:
                 elif len(lines) > 2:
                     lines = srt.wrap(" ".join(ln.strip() for ln in lines), assemble.MAX_LINE, lang="tr")
                     rewrapped += 1
-            lines, changed = match_form(c.lines, lines)
+            prev = timing[i - 1].lines if i else None
+            lines, changed = match_form(c.lines, lines, assemble.song_cue(rows.get(c.n, {})), prev)
             reformed += changed
             seeded += 1
             f.write(f"{c.n}\n" + "\n".join(lines) + "\n\n")

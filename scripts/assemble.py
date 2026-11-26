@@ -125,6 +125,14 @@ def word_italics(lines: list[str]) -> bool:
     return bool(WORDISH_RE.search(srt.strip_tags(ITALIC_SPAN_RE.sub(" ", text))))
 
 
+def song_cue(row: dict) -> bool:
+    """The cue is a song lyric: the build marked it one, or a track of the
+    source shows a ♪ on it. The English track often has the ♪ where the
+    timing file shows the lyric as plain text."""
+    lines = [*(row.get("timing_lines") or []), *(row.get("source") or []), *(row.get("en") or [])]
+    return bool(row.get("song")) or any("♪" in ln or "♫" in ln for ln in lines)
+
+
 REVIEW_FIX_RE = re.compile(r"^fix_review(?:_\d+)?\.txt$")
 LISTEN_FIX_RE = re.compile(r"^fix_listen_\d+\.txt$")
 LISTEN_CHECK_FIX = "fix_listencheck.txt"
@@ -580,6 +588,7 @@ def run_checks(work: Path, texts: dict[int, list[str]] | None = None, write: boo
     gap = layout.usual_gap(kept)
     by_start = sorted(kept, key=lambda c: (c.start, c.n))
     next_start = {a.n: b.start for a, b in zip(by_start, by_start[1:])}
+    prev_lines = {b.n: a.lines for a, b in zip(by_start, by_start[1:])}
     parts: dict[int, list[layout.Part]] = {}
     extended = 0
     for c in kept:
@@ -599,10 +608,13 @@ def run_checks(work: Path, texts: dict[int, list[str]] | None = None, write: boo
                     "stray italics",
                     "the source has italics on one word only, mostly a slip in its file: drop them unless that word is stressed",
                 )
-        elif src_italic != tr_italic:
+        elif src_italic != tr_italic and not (tr_italic and song_cue(rows[c.n])):
+            # A song is in italics in Turkish (the pack's Songs rule), also
+            # where the source file shows it plain.
             h(c.n, "italic tags", "source and Turkish differ")
-        if srt.dash_lines(src) != srt.dash_lines(tr):
-            h(c.n, "dialogue dashes", f"source {srt.dash_lines(src)}, Turkish {srt.dash_lines(tr)}")
+        src_dashes = srt.dialogue_dashes(src, prev_lines.get(c.n))
+        if src_dashes != srt.dash_lines(tr):
+            h(c.n, "dialogue dashes", f"source {src_dashes}, Turkish {srt.dash_lines(tr)}")
         if any(LINE_JOIN_RE.search(srt.strip_tags(ln)) for ln in tr) and not any(
             LINE_JOIN_RE.search(srt.strip_tags(ln)) for ln in [*src, *(rows[c.n]["en"] or [])]
         ):
