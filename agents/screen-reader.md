@@ -64,7 +64,11 @@ and nothing else in the file. Each line begins with the frame's file name:
   in any of its languages, or `null`. Name an entry only when the frame
   shows that same text; being close in time is not enough. A dedication
   a second after a title card is its own text. Only an `id` listed for
-  this frame can be named.
+  this frame can be named. When the text shows more than one listed
+  entry (a track split one long card into two lines, each its own
+  entry), name them all in a list: `["4:12", "4:13"]`. A frame often
+  stands for the same picture held for several seconds, so its `entries`
+  can span that whole time.
 
 Credits and logos are written down like any text, with their kind, so
 nothing is lost; they are never added to the subtitles. The film's own
