@@ -350,7 +350,10 @@ also runs at medium effort.
   the wrong cue. sen and siz are not among them: the human file is the
   evidence for them (below). Nor is `repeat drift`: a human file words a
   stock phrase ("What the fuck?") for each scene, and only a reviewer
-  reading the scene can tell that from a callback.
+  reading the scene can tell that from a callback. A line the bible says
+  is said word for word is no stock phrase, so `bible repeat` does go to
+  the fixer. So does `term rendering`, on every cue whose source says a
+  bible term: the human file brings its own words for them.
 - One polish fixer subagent changes only those.
 - The step 10 reviewers start in the same message and read the film while
   the fixer works. Where the fixer and a reviewer change the same cue, the
@@ -407,16 +410,27 @@ line stays at the bottom of the screen.
   Turkish come first: a reviewer reaches 17 only by a shorter natural
   wording or by dropping filler, and otherwise keeps the line, fast.
   Some keep the film consistent: a cue whose source says a term the bible
-  decided but whose Turkish has none of the bible's rendering (`term
-  rendering`), a second form of a word the rest of the film writes one way
-  ("ağabey" among "abi", `term drift`), a TDK spelling slip ("sağol" for
-  "sağ ol"), and a name suffix that does not fit how the name sounds
+  decided but whose Turkish lacks a word of the bible's rendering (`term
+  rendering`; "Kıdemli Muhalefet Üyesi" is not "Kıdemli Azınlık Üyesi",
+  while any ending and a singular for a plural pass). Its rules are the
+  term decisions, the name decisions on the cues they cite (the rank
+  "Deputy" there, not "her deputy" in another scene), and the
+  '"term" → "rendering"' lines of the bible's World, Glossary and Titles
+  sections that no decision covers, kept to the cues a line names in
+  parentheses. Others warn on a second form of a word the rest of the
+  film writes one way ("ağabey" among "abi", `term drift`), a TDK
+  spelling slip ("sağol" for "sağ ol"), and a name suffix that does not fit how the name sounds
   ("Joey'in" for "Joey'nin"). `repeat drift` warns when a line the film says
   again in the same words (a chant, a saying, a callback) is written two
   ways in Turkish, and quotes the other wording, since the two cues often
-  sit in different review parts. The check cannot tell such a line from a
-  stock phrase anyone says ("Come on!", "What the fuck?"); the reviewer
-  does, and words a stock phrase for its scene. `split sentence` looks at
+  sit in different review parts; the cue it is told to match gets a
+  `repeat match` note in the review part, so its own reviewer keeps that
+  wording. The check cannot tell such a line from a stock phrase anyone
+  says ("Come on!", "What the fuck?"); the reviewer does, and words a
+  stock phrase for its scene. Where both cues sit in one group the bible
+  says is said word for word (a line with "identical", "word for word",
+  "same words" or "both times", one group per ";" item, by the cue
+  numbers it names), the warning is `bible repeat` instead. `split sentence` looks at
   each run of cues whose source sentence goes on without a full stop, and
   warns when the
   Turkish writes a part twice, leaves a cue with nothing of its own, or

@@ -1085,40 +1085,45 @@ def term_rules(work: Path) -> list[dict]:
         data = load_decisions(work)
     except SystemExit:
         return []
-    rules = []
-    for d in _term_decisions(data):
-        answer, exceptions = _rendering_and_exceptions(d["answer"])
-        if not answer or re.search(r"\bfor\b", answer):
-            continue
-        terms = _quoted_terms(d)
-        parts = [p.strip() for p in answer.split(" / ")]
-        if len(parts) == len(terms):
-            pairs = list(zip(terms, parts))
-        elif len(parts) == 1:
-            pairs = [(t, answer) for t in terms]
-        else:
-            continue
-        evidence = {n for n in d.get("evidence", []) if isinstance(n, int)}
-        scope = parse_applies_to(d["applies_to"]) if "applies_to" in d else False
-        if scope is False:
-            scope = evidence if _evidence_scoped(d, terms) else None
-        for term, rendering in pairs:
-            if rendering.casefold() != term.casefold():
-                rules.append(
-                    {
-                        "id": d["id"],
-                        "term": term.casefold(),
-                        "key": term_key(term),
-                        "renderings": {rendering},
-                        "cues": scope,
-                        "except": exceptions,
-                        "evidence": evidence,
-                    }
-                )
+    rules = [r for d in _term_decisions(data) for r in _decision_rules(d)]
     family = family_words(data)
     for r in rules:
         r["renderings"] = r["renderings"] | family.get(r["key"], set())
     return rules
+
+
+def _decision_rules(d: dict, evidence_only: bool = False) -> list[dict]:
+    """The rules one term or name decision gives (see `term_rules`).
+    `evidence_only` keeps a decision without `applies_to` to its evidence
+    cues, whatever its question says."""
+    answer, exceptions = _rendering_and_exceptions(d["answer"])
+    if not answer or re.search(r"\bfor\b", answer):
+        return []
+    terms = _quoted_terms(d)
+    parts = [p.strip() for p in answer.split(" / ")]
+    if len(parts) == len(terms):
+        pairs = list(zip(terms, parts))
+    elif len(parts) == 1:
+        pairs = [(t, answer) for t in terms]
+    else:
+        return []
+    evidence = {n for n in d.get("evidence", []) if isinstance(n, int)}
+    scope = parse_applies_to(d["applies_to"]) if "applies_to" in d else False
+    if scope is False:
+        scope = evidence if evidence_only or _evidence_scoped(d, terms) else None
+    return [
+        {
+            "id": d["id"],
+            "term": term.casefold(),
+            "key": term_key(term),
+            "renderings": {rendering},
+            "cues": scope,
+            "except": exceptions,
+            "evidence": evidence,
+        }
+        for term, rendering in pairs
+        if rendering.casefold() != term.casefold()
+    ]
 
 
 def term_renderings(work: Path) -> dict[str, set[str]]:
@@ -1128,13 +1133,163 @@ def term_renderings(work: Path) -> dict[str, set[str]]:
     with an article ("the loft") and the other without ("loft"). A family
     word ("brother") also takes every Turkish word the bible's family-word
     decisions give it ("abi" for one pair, "kardeş" for another). The
-    `term rendering` check uses `term_rules`, which also knows which cues
+    `term rendering` check uses `check_rules`, which also knows which cues
     each decision covers."""
     rules = term_rules(work)
     by_key: dict[str, set[str]] = {}
     for r in rules:
         by_key.setdefault(r["key"], set()).update(r["renderings"])
     return {r["term"]: by_key[r["key"]] for r in rules}
+
+
+# --- bible.md renderings and repeats -----------------------------------------
+
+# Sections of bible.md whose "English" → "Turkish" lines are renderings for
+# the whole film, or for the cues they name. Slang and tone notes give a
+# meaning or a scene, not a word to look for.
+TEXT_RULE_SECTIONS = {"world and register", "glossary", "titles and names"}
+ARROW_RE = re.compile(r"[\"“]([^\"”]+)[\"”]\s*(?:\(([^)]*)\))?\s*→\s*[\"“]([^\"”]+)[\"”]")
+CUE_SPAN_RE = re.compile(r"\b(\d{1,5})\s*-\s*(\d{1,5})\b|\b(\d{1,5})\b")
+# A rendering longer than this is a line for one scene, not a term.
+TEXT_RULE_WORDS = 4
+# bible.md words that say a repeated line keeps the same Turkish. Looser
+# words ("every time", "same way") also turn up in address notes over long
+# cue ranges, so they do not count.
+SAME_WORDS_RE = re.compile(
+    r"\bidentical\b|\bword for word\b|\bsame words\b|\bboth times\b",
+    re.I,
+)
+
+
+def cue_spans(text: str) -> set[int]:
+    """The cue numbers a bible note names: "676, 1373" and "1855-1856"."""
+    out: set[int] = set()
+    for m in CUE_SPAN_RE.finditer(text):
+        if m.group(3):
+            out.add(int(m.group(3)))
+        elif int(m.group(1)) <= int(m.group(2)) <= int(m.group(1)) + 500:
+            out.update(range(int(m.group(1)), int(m.group(2)) + 1))
+    return out
+
+
+def _bible_lines(work: Path) -> list[tuple[str, str]]:
+    """bible.md as (its section's title in lower case, line) pairs."""
+    path = work / "bible.md"
+    if not path.exists():
+        return []
+    section, out = "", []
+    for ln in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if ln.startswith("## "):
+            section = ln[3:].strip().casefold()
+        else:
+            out.append((section, ln))
+    return out
+
+
+def _scene_line(rendering: str) -> bool:
+    """A rendering that is a line of one scene, not a term: it ends a
+    sentence ("Kadın alkollü. Kokusunu alıyorum.") or runs long."""
+    return len(rendering.split()) > TEXT_RULE_WORDS or rendering.rstrip().endswith((".", "!", "?", "…"))
+
+
+def _without_notes(s: str) -> str:
+    return " ".join(re.sub(r"\([^)]*\)", "", s).split())
+
+
+def text_rules(work: Path, known: set[str]) -> list[dict]:
+    """Rules, shaped as `term_rules` gives them, from bible.md lines that
+    give a source term its Turkish ('"insurrection" (2002) → "ayaklanma"')
+    when no decision covers that term (its key is not in `known`). The
+    bible writer puts most of these in decisions.json too; this catches
+    the ones it left in the text. Cue numbers in parentheses after the
+    term keep the rule to those cues. A rendering split by " / " gives
+    each part as an answer. A rendering of more than TEXT_RULE_WORDS words
+    is a scene's line, not a term, and is left out, and so is a one-word
+    title that names no cues."""
+    rules: list[dict] = []
+    for section, ln in _bible_lines(work):
+        if section not in TEXT_RULE_SECTIONS:
+            continue
+        for m in ARROW_RE.finditer(ln):
+            term, note = _without_notes(m.group(1)), m.group(2) or ""
+            key = term_key(term)
+            renderings = {a.strip() for a in _without_notes(m.group(3)).split(" / ") if a.strip()}
+            if not key or key in known or not renderings:
+                continue
+            if any(_scene_line(a) or a.casefold() == term.casefold() for a in renderings):
+                continue
+            scope = cue_spans(note) or None
+            # A one-word title with no cues ("Father" → "Peder") may mean
+            # something else on another cue (a dad), as name decisions may.
+            if scope is None and section == "titles and names" and len(key.split()) < 2:
+                continue
+            known.add(key)
+            rules.append(
+                {
+                    "id": "bible.md",
+                    "term": term.casefold(),
+                    "key": key,
+                    "renderings": renderings,
+                    "cues": scope,
+                    "except": set(),
+                    "evidence": scope or set(),
+                }
+            )
+    return rules
+
+
+def check_rules(work: Path) -> list[dict]:
+    """Every rule the `term rendering` check follows, shaped as
+    `term_rules` gives them: the term decisions; the name decisions on
+    their evidence cues (the rank "Deputy" where the film calls the
+    deputies so, not "her deputy" in another scene; "Father" may be a
+    priest in one cue and a dad in another); and the bible.md renderings no
+    decision covers (`text_rules`)."""
+    rules = term_rules(work)
+    names: list[dict] = []
+    if (work / "decisions.json").exists():
+        try:
+            data = load_decisions(work)
+        except SystemExit:
+            data = {}
+        for d in data.get("decisions", []):
+            if d.get("kind") == "name" and isinstance(d.get("answer"), str):
+                names += _decision_rules(d, evidence_only=True)
+    known = {r["key"] for r in rules}
+    names = [r for r in names if r["key"] not in known]
+    known |= {r["key"] for r in names}
+    out = rules + names + text_rules(work, known)
+    # One decision that gives forms of one word ("reshare" / "reshares" →
+    # "yeniden paylaşım / yeniden paylaşmak") accepts each form on any cue:
+    # the noun's cue may say "Yeniden paylaş." as a verb. bible.md lines all
+    # share one id, so they never merge.
+    for r in out:
+        for o in out:
+            if o is not r and o["id"] == r["id"] != "bible.md" and _word_forms(r["key"], o["key"]):
+                r["renderings"] = r["renderings"] | o["renderings"]
+    return out
+
+
+def _word_forms(a: str, b: str) -> bool:
+    """Two keys that are one word with and without a plural ending."""
+    short, long_ = sorted((a, b), key=len)
+    return long_[len(short) :] in ("s", "es") and long_.startswith(short)
+
+
+def same_word_groups(work: Path) -> list[set[int]]:
+    """The cue groups bible.md says take the same Turkish each time: each
+    ";"-separated item of a line that says so, as the cues it names.
+    'Repeated lines take identical Turkish: the video (102-152, 535-542);
+    "Who does this?" (1430, 1438)' gives two groups. A repeated line
+    written two ways inside one group is a `bible repeat`."""
+    groups = []
+    for _, ln in _bible_lines(work):
+        if SAME_WORDS_RE.search(ln):
+            for item in ln.split(";"):
+                cues = cue_spans(item)
+                if len(cues) > 1:
+                    groups.append(cues)
+    return groups
 
 
 def main(argv: list[str] | None = None) -> None:

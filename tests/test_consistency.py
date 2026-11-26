@@ -397,6 +397,172 @@ def test_repeat_drift_keeps_apart_a_line_that_runs_on(tmp_path: Path):
     assert warned(w, "repeat drift") == {}
 
 
+# --- bible terms on every cue ----------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("text", "answer", "found"),
+    [
+        ("Sayın Kıdemli Muhalefet Üyesi", "Sayın Kıdemli Azınlık Üyesi", False),
+        ("Sayın Kıdemli Azınlık Üyesine sorayım.", "Sayın Kıdemli Azınlık Üyesi", True),
+        # A plural rendering holds for one of them, with any ending.
+        ("Birden fazla risk vektörüne giren gruplar.", "risk vektörleri", True),
+        ("Risk kategorisine giren gruplar.", "risk vektörleri", False),
+        ("Zincirleme MSI'ı kısarsak", "zincirleme MSI", True),
+        ("Alt aşamadaki MSI'ı kısarsak", "zincirleme MSI", False),
+    ],
+)
+def test_has_rendering_with_every_word(text, answer, found):
+    assert turkish.has_rendering(text, answer, every=True) is found
+
+
+BIBLE = """# Film (2026), original language: English
+## World and register
+- Hearing words: "witness" → "tanık"; "insurrection" (5) → "ayaklanma".
+## Glossary
+- "downstream MSI" → "alt aşama MSI"; "Signal 1" (3) → "Kadın alkollü. Kokusunu alıyorum."
+## Slang and idioms
+- "beat" → "muhabirlik alanı"
+## Titles and names
+- "Madam Ranking Member" → "Sayın Kıdemli Azınlık Üyesi"
+## Tone notes
+- Repeated lines take identical Turkish: the video (1-2, 7-8); "Who does this?" (3, 9).
+- "kerosene" → "gazyağı"
+"""
+
+
+def test_check_rules_add_name_decisions_and_the_bibles_own_renderings(tmp_path: Path):
+    (tmp_path / "bible.md").write_text(BIBLE, encoding="utf-8")
+    data = term_decisions(
+        scoped("term:downstream", 'Turkish for "downstream MSI"?', "zincirleme MSI", [4], applies_to="film"),
+        scoped("name:deputy", 'How is the rank "Deputy" rendered?', "Şerif Yardımcısı", [1, 2], kind="name"),
+    )
+    (tmp_path / "decisions.json").write_text(json.dumps(data), encoding="utf-8")
+    got = {r["term"]: r for r in bible.check_rules(tmp_path)}
+    # A name decision holds on the cues it cites: "her deputy" elsewhere is another sense.
+    assert got["deputy"]["cues"] == {1, 2} and got["deputy"]["renderings"] == {"Şerif Yardımcısı"}
+    # The decision wins over the bible's text for the same term.
+    assert got["downstream msi"]["renderings"] == {"zincirleme MSI"}
+    assert got["insurrection"]["cues"] == {5} and got["insurrection"]["renderings"] == {"ayaklanma"}
+    assert got["witness"]["cues"] is None
+    assert got["madam ranking member"]["renderings"] == {"Sayın Kıdemli Azınlık Üyesi"}
+    # Slang, tone notes and a scene's whole line are no terms to look for.
+    assert not {"beat", "kerosene", "signal 1"} & set(got)
+    # The term listing the family-word check reads stays as it was.
+    assert "deputy" not in bible.term_renderings(tmp_path)
+
+
+def test_check_rules_let_one_decision_take_either_form_of_a_word(tmp_path: Path):
+    data = term_decisions(term("term:reshare", 'Turkish for "reshare" / "reshares"?', "yeniden paylaşım / yeniden paylaşmak"))
+    (tmp_path / "decisions.json").write_text(json.dumps(data), encoding="utf-8")
+    got = {r["term"]: r["renderings"] for r in bible.check_rules(tmp_path)}
+    assert got["reshare"] == got["reshares"] == {"yeniden paylaşım", "yeniden paylaşmak"}
+
+
+def test_check_rules_keep_a_one_word_title_with_no_cues_out(tmp_path: Path):
+    extra = '## Titles and names\n- "Father" → "Peder"; "Sir" (4) → "Efendim"; "Mr. Chairman" → "Sayın Başkan"\n'
+    (tmp_path / "bible.md").write_text(extra, encoding="utf-8")
+    got = {r["term"]: r["cues"] for r in bible.check_rules(tmp_path)}
+    # "Father" may be a dad on another cue; a title with cues or of two words holds.
+    assert got == {"sir": {4}, "mr. chairman": None}
+
+
+def test_check_rules_keep_bible_terms_that_start_alike_apart(tmp_path: Path):
+    extra = '## Glossary\n- "pit" → "çukur"; "pitch" → "sunum"; "witness" → "tanık"; "witness stand" → "tanık kürsüsü"\n'
+    (tmp_path / "bible.md").write_text(extra, encoding="utf-8")
+    got = {r["term"]: r["renderings"] for r in bible.check_rules(tmp_path)}
+    assert got["pitch"] == {"sunum"} and got["pit"] == {"çukur"}
+    assert got["witness stand"] == {"tanık kürsüsü"}
+
+
+def test_check_flags_a_bible_term_on_every_cue_that_says_it(tmp_path: Path):
+    english = [
+        "I'm Deputy Otumbo.",
+        "And this is Deputy Diaz.",
+        "Madam Ranking Member.",
+        "My bureau chief and her deputy.",
+        "Insurrection or no insurrection.",
+        "Madam Ranking Member, thank you.",
+    ]
+    tr = [
+        "Ben polis memuru Otumbo.",
+        "Bu da Şerif Yardımcısı Diaz.",
+        "Sayın Kıdemli Muhalefet Üyesi.",
+        "Büro şefim ve yardımcısı.",
+        "Kalkışma olsun ya da olmasın.",
+        "Sayın Kıdemli Azınlık Üyesi, teşekkürler.",
+    ]
+    w = make_work(tmp_path, english, tr)
+    (w / "bible.md").write_text(BIBLE, encoding="utf-8")
+    data = term_decisions(scoped("name:deputy", 'How is the rank "Deputy" rendered?', "Şerif Yardımcısı", [1, 2], kind="name"))
+    (w / "decisions.json").write_text(json.dumps(data), encoding="utf-8")
+    got = warned(w, "term rendering")
+    # Cue 4's "her deputy" is not the rank; cue 6 has every word of the rendering.
+    assert sorted(got) == [1, 3, 5]
+    assert got[5] == "'insurrection' is 'ayaklanma' in the bible; this cue has no form of it"
+
+
+def test_polish_flags_send_bible_terms_to_the_fixer(tmp_path: Path):
+    english = ["Hello.", "Sit down.", "Wait.", "Go on.", "Insurrection or no insurrection."]
+    w = make_work(tmp_path, english, ["Merhaba.", "Otur.", "Bekle.", "Devam et.", "Kalkışma olsun ya da olmasın."])
+    (w / "bible.md").write_text(BIBLE, encoding="utf-8")
+    out = polish.flags(w)
+    assert out["by_check"].get("term rendering") == 1
+    assert "flag: term rendering: 'insurrection' is 'ayaklanma'" in (w / polish.FLAG_FILE).read_text(encoding="utf-8")
+
+
+# --- a line the bible says is said word for word ---------------------------
+
+
+def test_same_word_groups_read_each_item_of_a_bible_line(tmp_path: Path):
+    extra = '- "Ish" (12, 14) → "Sayılır" both times; "Wuss" (20) → "korkak"\n'
+    (tmp_path / "bible.md").write_text(BIBLE + extra, encoding="utf-8")
+    assert bible.same_word_groups(tmp_path) == [{1, 2, 7, 8}, {3, 9}, {12, 14}]
+
+
+def test_same_word_groups_skip_looser_words(tmp_path: Path):
+    # An address note over a long range is no repeated line.
+    note = "## sen / siz\n- Vincent says sen to Sandra every time they are alone (410-800); same way at 900-950\n"
+    (tmp_path / "bible.md").write_text(note, encoding="utf-8")
+    assert bible.same_word_groups(tmp_path) == []
+
+
+def repeat_work(tmp_path: Path) -> Path:
+    english = ["You're under arrest.", "Calm down.", "Who does this?", "Hold on.", "Thank you.", "Okay.", "Calm down.",
+               "You're under arrest.", "Who does this?", "Thank you."]  # fmt: skip
+    tr = ["Tutuklusunuz.", "Sakin olun.", "Bunu kim yapar?", "Dur.", "Teşekkürler.", "Peki.", "Sakin olun.",
+          "Tutuklusun.", "Bunu kim yapar ya?", "Sağ ol."]  # fmt: skip
+    w = make_work(tmp_path, english, tr)
+    (w / "bible.md").write_text(BIBLE, encoding="utf-8")
+    return w
+
+
+def test_a_repeat_the_bible_names_is_a_bible_repeat(tmp_path: Path):
+    warnings = assemble.run_checks(repeat_work(tmp_path))["warnings"]
+    bound = {x["cue"]: x for x in warnings if x["check"] == "bible repeat"}
+    loose = {x["cue"]: x for x in warnings if x["check"] == "repeat drift"}
+    assert sorted(bound) == [8, 9] and bound[8]["ref"] == 1
+    assert bound[8]["detail"].startswith('"Tutuklusunuz." at cue 1: the bible says this line is said word for word')
+    # "Thank you." is in no bible group: the reviewer tells it from a callback.
+    assert sorted(loose) == [10] and loose[10]["ref"] == 5
+
+
+def test_polish_sends_a_bible_repeat_to_the_fixer_and_both_sides_to_the_reviewer(tmp_path: Path):
+    w = repeat_work(tmp_path)
+    out = polish.flags(w)
+    assert out["by_check"].get("bible repeat") == 2 and "repeat drift" not in out["by_check"]
+    flags = (w / polish.FLAG_FILE).read_text(encoding="utf-8")
+    entry = flags.split("#8 ")[1].split("\n\n")[0]
+    # Both wordings side by side: this cue's tr: line and the one to match.
+    assert "tr: Tutuklusun." in entry and 'flag: bible repeat: "Tutuklusunuz." at cue 1' in entry
+    part = Path(assemble.review_parts(w)["parts"][0]["file"]).read_text(encoding="utf-8")
+    rows = {int(ln.split("\t")[0]): ln for ln in part.splitlines() if ln[:1].isdigit()}
+    # The cue to match is told to keep its wording; the other to match it.
+    assert "repeat match: keep this wording; cue 10 says this line again" in rows[5]
+    assert "repeat match: keep this wording; cue 8 says this line again" in rows[1]
+    assert 'repeat drift: "Teşekkürler." at cue 5' in rows[10]
+
+
 # --- split sentences -------------------------------------------------------
 
 
