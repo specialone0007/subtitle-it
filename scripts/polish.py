@@ -23,8 +23,12 @@ one timing cue are joined and, when that makes more than two lines, rewrapped.
 need a fix, with their English and Turkish text, in W/polish_flags.txt for
 the fixer, who writes W/out/fix_polish.txt. Reading speed is left to the
 reviewer, as in a full run, since a professional file exceeds it often.
-So is a repeated line written two ways: the reviewer tells a callback
-from a stock phrase.
+So is a repeated line written two ways (`repeat drift`): the reviewer
+tells a callback from a stock phrase. A line the bible says is said word
+for word (`bible repeat`) goes to the fixer, with the wording to match.
+Every cue whose source says a term the bible decides and whose Turkish
+lacks a word of its rendering goes to the fixer too (`term rendering`), as
+the human file brings its own words for them.
 sen and siz are left out too: the human file's form is the evidence, and a
 reviewer changes it only where the English line itself shows the other.
 
@@ -59,7 +63,8 @@ SOFT_FIX_FILE = "fix_soft.txt"
 # line written two ways is one of them: only a reader of the scene can tell
 # a line the film says again on purpose from a stock phrase ("What the
 # fuck?") that the human file worded for each scene, and a fixer told to
-# match copied one wording over all of them.
+# match copied one wording over all of them. A `bible repeat`, a line the
+# bible says is said word for word, is no stock phrase: the fixer gets it.
 REVIEWER_ONLY = {"reading speed", "ve opening", "repeat drift"}
 # Text for a sound-only cue is never delivered: nothing for the fixer to do.
 # The human file's sen and siz are the evidence in a polish run: a seeded
