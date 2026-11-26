@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.13.8 (2026-11-26)
+
+Two changes from The Social Reckoning (2026). Reading the text on screen
+cost about a fifth of that run's tokens, mostly on frames that were black
+or showed the same card again. Those frames now go to no reader, and they
+still keep their reading. The run also shipped terms written two ways
+("polis memuru" next to the bible's "Şerif Yardımcısı") and 22 repeated
+lines worded two ways. The term check now covers more of the bible and
+needs every word of a rendering. Lines the bible says are said word for
+word now go to the fixer.
+
+- `screen.py frames` marks a frame `dark` when no pixel is brighter than
+  grey 20 of 255. It marks a frame `same_as` the frame that opened its run
+  when every tile of a 96x54 grid stays within 4 grey levels of it.
+  Neither is sent to a reader; `collect` gives a dark frame no text and a
+  repeat its run's reading. On The Social Reckoning, 241 of 300 frames
+  were sent (21 dark, 38 repeats), and the readings came out the same.
+- The screen reader may answer `shows_entry` with a list when one card
+  shows several entries. A single id or `null` still parses.
+- `term rendering` also checks name decisions on the cues each one cites,
+  and the bible's own `"term" → "rendering"` lines in World, Glossary and
+  Titles. It now needs every word of a rendering in any form, so
+  "Kıdemli Muhalefet Üyesi" fails where the bible says "Kıdemli Azınlık
+  Üyesi".
+- A repeated line in a group the bible says is said word for word is a
+  `bible repeat` warning. `polish.py flags` sends it to the polish fixer
+  with the wording to match. Each repeat warning records the cue it should
+  match, and `reviewparts` tells that cue's reviewer to keep its wording.
+
 ## 0.13.7 (2026-11-26)
 
 Two of the automatic checks fought the translation rules. Songs the pack
