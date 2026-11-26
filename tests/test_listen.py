@@ -122,6 +122,19 @@ def test_listen_gate_drops_each_edit_that_breaks_a_check_and_keeps_the_rest(tmp_
     assert texts[2] == ["Selam."] and texts[1] == ["Gemi tabibini çağırın."] and texts[6] == ["<i>Hava soğuk.</i>"]
 
 
+def test_listen_gate_drops_an_edit_that_breaks_a_bible_repeat(tmp_path: Path):
+    w = film(tmp_path, GATE_EN, GATE_TR)
+    (w / "bible.md").write_text("## Tone notes\n- Repeated lines take identical Turkish: the doctor (1, 3)\n", encoding="utf-8")
+    assemble.listen_parts(w, size=50)
+    # The bible says cues 1 and 3 are said word for word: cue 1 alone may not move.
+    _listen(w, "1\nGemi doktorunu çağırın.\n\n2\nSelam.\n\n")
+
+    gate = assemble.listen_gate(w)
+
+    assert gate["dropped"] == {"bible repeat": [1]}
+    assert gate["kept_cues"] == [2]
+
+
 def test_listen_gate_checks_again_after_dropping(tmp_path: Path):
     english = ["Hello.", "Fine.", "My brother is here.", "<i>Where's your brother?</i>", "Brother, wait."]
     turkish = ["Merhaba.", "İyi.", "Ağabeyim burada.", "<i>Abin nerede?</i>", "Abi, bekle."]

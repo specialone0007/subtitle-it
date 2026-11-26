@@ -1133,7 +1133,7 @@ def term_renderings(work: Path) -> dict[str, set[str]]:
     with an article ("the bridge") and the other without ("bridge"). A family
     word ("brother") also takes every Turkish word the bible's family-word
     decisions give it ("abi" for one pair, "kardeş" for another). The
-    `term rendering` check uses `term_rules`, which also knows which cues
+    `term rendering` check uses `check_rules`, which also knows which cues
     each decision covers."""
     rules = term_rules(work)
     by_key: dict[str, set[str]] = {}
@@ -1152,9 +1152,11 @@ ARROW_RE = re.compile(r"[\"“]([^\"”]+)[\"”]\s*(?:\(([^)]*)\))?\s*→\s*[\"
 CUE_SPAN_RE = re.compile(r"\b(\d{1,5})\s*-\s*(\d{1,5})\b|\b(\d{1,5})\b")
 # A rendering longer than this is a line for one scene, not a term.
 TEXT_RULE_WORDS = 4
-# bible.md words that say a repeated line keeps the same Turkish.
+# bible.md words that say a repeated line keeps the same Turkish. Looser
+# words ("every time", "same way") also turn up in address notes over long
+# cue ranges, so they do not count.
 SAME_WORDS_RE = re.compile(
-    r"\bidentical\b|\bword for word\b|\bsame (?:words|wording|way)\b|\bone wording\b|\b(?:both|every|each) times?\b",
+    r"\bidentical\b|\bword for word\b|\bsame words\b|\bboth times\b",
     re.I,
 )
 
@@ -1202,7 +1204,8 @@ def text_rules(work: Path, known: set[str]) -> list[dict]:
     the ones it left in the text. Cue numbers in parentheses after the
     term keep the rule to those cues. A rendering split by " / " gives
     each part as an answer. A rendering of more than TEXT_RULE_WORDS words
-    is a scene's line, not a term, and is left out."""
+    is a scene's line, not a term, and is left out, and so is a one-word
+    title that names no cues."""
     rules: list[dict] = []
     for section, ln in _bible_lines(work):
         if section not in TEXT_RULE_SECTIONS:
@@ -1215,8 +1218,12 @@ def text_rules(work: Path, known: set[str]) -> list[dict]:
                 continue
             if any(_scene_line(a) or a.casefold() == term.casefold() for a in renderings):
                 continue
-            known.add(key)
             scope = cue_spans(note) or None
+            # A one-word title with no cues ("Father" → "Peder") may mean
+            # something else on another cue (a dad), as name decisions may.
+            if scope is None and section == "titles and names" and len(key.split()) < 2:
+                continue
+            known.add(key)
             rules.append(
                 {
                     "id": "bible.md",
@@ -1254,12 +1261,19 @@ def check_rules(work: Path) -> list[dict]:
     out = rules + names + text_rules(work, known)
     # One decision that gives forms of one word ("reload" / "reloads" →
     # "yeniden yükleme / yeniden yüklemek") accepts each form on any cue:
-    # the noun's cue may say "Yeniden yükle." as a verb.
+    # the noun's cue may say "Yeniden yükle." as a verb. bible.md lines all
+    # share one id, so they never merge.
     for r in out:
         for o in out:
-            if o["id"] == r["id"] and o is not r and (o["key"].startswith(r["key"]) or r["key"].startswith(o["key"])):
+            if o is not r and o["id"] == r["id"] != "bible.md" and _word_forms(r["key"], o["key"]):
                 r["renderings"] = r["renderings"] | o["renderings"]
     return out
+
+
+def _word_forms(a: str, b: str) -> bool:
+    """Two keys that are one word with and without a plural ending."""
+    short, long_ = sorted((a, b), key=len)
+    return long_[len(short) :] in ("s", "es") and long_.startswith(short)
 
 
 def same_word_groups(work: Path) -> list[set[int]]:

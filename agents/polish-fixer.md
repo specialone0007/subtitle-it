@@ -35,7 +35,7 @@ check that every number is in your file.
 ## Fix, by flag
 
 - `term variant`: use the glossary's preferred term.
-- `term rendering`: the source says a term the bible decides, and the Turkish has none of the bible's rendering. Use it, unless the cue means the word in another sense (a "net" that is not the fisher's tool); then leave the cue out.
+- `term rendering`: the source says a term the bible decides, and the Turkish lacks a word of the bible's rendering (any ending is fine). Use it, unless the cue means the word in another sense (a "bridge" that is the card game, not the ship's); then leave the cue out.
 - `bible repeat`: the film says this line again, and the bible says it is said word for word each time (a replayed video, an oath, a quote). The flag quotes the Turkish of the cue to match and its number: write this cue in those words, as they are ("Tutuklusunuz." both times, not "Tutuklusun." once).
 - `term drift`: the cue writes a word in a second form the rest of the film does not use ("ağabey" where the film says "abi"). Use the form the flag names.
 - `spelling` and `name suffix`: write what the flag gives ("sağ ol", "Casey'nin"). Change nothing else.
