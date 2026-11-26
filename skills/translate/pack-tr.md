@@ -46,7 +46,7 @@ rewrite it, keeping everything said. Three principles:
 - English grammar words do not carry over. "a/an" is "bir" only when it means one, some, any or a new one, never a possessive: "I've already lost a husband" → "Kocamı zaten kaybettim". Drop "my", "your", "I" and "you" where the ending already says them, unless stressed.
 - Hear the word as daily speech hears it: "Artık bir erkeğim" is heard as "my man" ("Artık erkek oldum"). Small words carry a shade: "ancak" says barely enough.
 - Words fit the film's world (the bible's "World and register"): no word whose tone belongs to another religion, period or culture.
-- A line the film says again (a chant, a saying, a line thrown back) is said the same way each time (`repeat drift`). A stock phrase anyone says ("Come on!", "Thank you.") is not one: word it for its scene.
+- A line the film says again (a chant, a saying, a line thrown back) is said the same way each time (`repeat drift`). A stock phrase anyone says ("Come on!", "Thank you.") is not one: word it for its scene. A line the bible says is said word for word is always one (`bible repeat`).
 
 English habits that give a translation away, one per line:
 
@@ -130,6 +130,6 @@ Turkish names the side of the family that English leaves open (I.22). "Uncle" is
 - Write the circumflex wherever it changes the meaning or the sound (I.22): "hâlâ" (still) vs "hala" (aunt), "âşık" (in love) vs "aşık", "kâr" (profit) vs "kar" (snow), "hâl" (state) vs "hal" (market hall), "resmî", "millî", "dinî" (the adjective forms). The check warns about a plain "hala" or "aşık" it finds; a "hala" that really means aunt stays.
 - Apostrophe before suffixes on proper names: "Sandra'nın", "Paris'te". The suffix follows how the name sounds, not how it is spelled: "Joey" ends in an "i" sound, so "Joey'nin", "Joey'yi", "Joey'ye", never "Joey'in"; "Ray" ends in a consonant sound, so "Ray'in". The check warns about a suffix that does not fit (`name suffix`).
 - One spelling per word for the whole film, as the TDK writes it: "sağ ol", "her şey", "bir şey", "bir arada", "şu an", "ya da", "yine de", "birçok", "hiçbir", "herhangi", "yalnız", "yanlış", "pekâlâ". Pick one of two accepted forms ("abi" or "ağabey") and keep it. The check warns about the common slips (`spelling`) and about a second form of a word (`term drift`).
-- One Turkish rendering for each term the bible decides, in every cue that says it (`term rendering` when a cue has none of it).
+- One Turkish rendering for each term the bible decides, in every cue that says it, every word of it, with any ending (`term rendering` when a cue has none of it). A title or rank the bible names ("Deputy" → "Şerif Yardımcısı") counts on the cues the bible cites for it, and a rendering the bible gives only in its text ('"insurrection" → "ayaklanma"') counts as well.
 - Numbers: write small numbers as words in speech ("iki gün"), times and years in digits.
 - Ellipsis as three dots "...", no space before "?" or "!".

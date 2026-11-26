@@ -256,13 +256,23 @@ def stem(word: str) -> str:
     return w[:-1] if len(w) >= 4 and w[-1] in "pçtkaeıioöuü" else w
 
 
-def has_rendering(text: str, answer: str) -> bool:
-    """`text` holds a form of `answer`, by the stem of any of its words of
-    three letters or more. An answer with no such word ("S ve D") cannot
-    be checked and always passes."""
-    stems = [stem(w) for w in WORD_RE.findall(answer) if len(w) >= 3]
+def _word_stems(word: str) -> list[str]:
+    out = [stem(word)]
     # The last word of a compound name carries a possessive ending that
     # another ending replaces: "Sakagami Mahallesi", "Mahallelerinden".
-    stems += [stem(w[:-2]) for w in WORD_RE.findall(answer) if len(w) >= 7 and lower(w).endswith(POSSESSIVE_ENDINGS)]
+    if len(word) >= 7 and lower(word).endswith(POSSESSIVE_ENDINGS):
+        out.append(stem(word[:-2]))
+    # A plural answer holds for one of them too: "risk vektörleri", "vektörüne".
+    out += [s[:-3] for s in out if len(s) >= 6 and s.endswith(("ler", "lar"))]
+    return out
+
+
+def has_rendering(text: str, answer: str, every: bool = False) -> bool:
+    """`text` holds a form of `answer`, by the stem of any of its words of
+    three letters or more, or with `every` of each of them: "Kıdemli
+    Muhalefet Üyesi" is no form of "Kıdemli Azınlık Üyesi". An answer with
+    no such word ("S ve D") cannot be checked and always passes."""
+    wanted = [_word_stems(w) for w in WORD_RE.findall(answer) if len(w) >= 3]
     words = [lower(w) for w in WORD_RE.findall(TAG_RE.sub("", text))]
-    return not stems or any(w.startswith(s) for s in stems for w in words)
+    found = [any(w.startswith(s) for s in stems for w in words) for stems in wanted]
+    return not wanted or (all(found) if every else any(found))
