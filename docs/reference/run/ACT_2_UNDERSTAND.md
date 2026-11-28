@@ -78,7 +78,7 @@ translator must share.
 | File | Holds |
 | --- | --- |
 | `bible.md` | The characters, the film's world and how its people talk, who says *sen* or *siz* to whom, fixed terms |
-| `glossary.json` | The terms and their Turkish |
+| `glossary.json` | Each preferred Turkish term, with the wrong variants to avoid |
 | `decisions.json` | Each decision as a question, its answer, the cues that support it, and how sure it is |
 | `songs.json` | The songs that carry the story, by cue range. Written when the film has song cues |
 
