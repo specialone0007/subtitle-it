@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 530" width="1280" height="530" role="img" aria-labelledby="t d">
+<title id="t">Two kinds of run</title><desc id="d">Two panels side by side. A translate run happens when no usable Turkish subtitle exists: it starts from the source subtitles, and the language work is translators, then reviewers, then listeners. A polish run happens when a human-made Turkish subtitle fits the video: it starts from the human file, placed on the timing file's cues, and the language work is one polish fixer with reviewers at the same time, then listeners.</desc>
+<rect width="1280" height="530" fill="#0b0b0d"/>
+<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c1c25"/><stop offset="1" stop-color="#0f0f13"/></linearGradient></defs>
+<rect x="24" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="24" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="496" width="22" height="20" rx="4" fill="#1d1d22"/>
+<text x="640.0" y="70" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="4" fill="#c9a227">TWO KINDS OF RUN</text>
+<rect x="40" y="92" width="590" height="388" rx="10" fill="#141418" stroke="#2a2a31"/>
+<rect x="40" y="92" width="590" height="6" rx="3" fill="#c9a227"/>
+<text x="72" y="146" text-anchor="start" font-family="Georgia, 'Times New Roman', Times, serif" font-size="32" fill="#f4efe1">Translate run</text>
+<text x="72" y="176" text-anchor="start" font-family="Georgia, 'Times New Roman', Times, serif" font-size="18" font-style="italic" fill="#c9a227">when no usable Turkish subtitle exists</text>
+<line x1="72" y1="196" x2="598" y2="196" stroke="#2a2a31" stroke-width="1"/>
+<text x="72" y="228" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="3" fill="#8a8578">STARTS FROM</text>
+<rect x="72" y="242" width="250" height="104" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<text x="88" y="274" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="16" fill="#8a8578">00:41:07</text>
+<rect x="73" y="300" width="248" height="45" fill="#0c0c10" opacity="0.85"/>
+<text x="197.0" y="330" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" fill="#f4efe1">You're coming, right?</text>
+<rect x="72" y="242" width="250" height="6" rx="3" fill="#c9a227"/>
+<text x="346" y="284" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#f4efe1">The source subtitles</text>
+<text x="72" y="380" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="3" fill="#8a8578">LANGUAGE WORK</text>
+<rect x="72" y="394" width="150" height="46" rx="6" fill="#141418" stroke="#2a2a31"/>
+<rect x="72" y="394" width="5" height="46" rx="2" fill="#d9534f"/>
+<text x="149.0" y="423.46" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" fill="#f4efe1">Translators</text>
+<rect x="260" y="394" width="150" height="46" rx="6" fill="#141418" stroke="#2a2a31"/>
+<rect x="260" y="394" width="5" height="46" rx="2" fill="#d9534f"/>
+<text x="337.0" y="423.46" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" fill="#f4efe1">Reviewers</text>
+<line x1="226" y1="417" x2="244" y2="417" stroke="#8a8578" stroke-width="2.5"/>
+<path d="M242 408 l14 9 l-14 9 z" fill="#8a8578"/>
+<rect x="448" y="394" width="150" height="46" rx="6" fill="#141418" stroke="#2a2a31"/>
+<rect x="448" y="394" width="5" height="46" rx="2" fill="#d9534f"/>
+<text x="525.0" y="423.46" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" fill="#f4efe1">Listeners</text>
+<line x1="414" y1="417" x2="432" y2="417" stroke="#8a8578" stroke-width="2.5"/>
+<path d="M430 408 l14 9 l-14 9 z" fill="#8a8578"/>
+<rect x="650" y="92" width="590" height="388" rx="10" fill="#141418" stroke="#2a2a31"/>
+<rect x="650" y="92" width="590" height="6" rx="3" fill="#c9a227"/>
+<text x="682" y="146" text-anchor="start" font-family="Georgia, 'Times New Roman', Times, serif" font-size="32" fill="#f4efe1">Polish run</text>
+<text x="682" y="176" text-anchor="start" font-family="Georgia, 'Times New Roman', Times, serif" font-size="18" font-style="italic" fill="#c9a227">when a human-made Turkish subtitle fits the video</text>
+<line x1="682" y1="196" x2="1208" y2="196" stroke="#2a2a31" stroke-width="1"/>
+<text x="682" y="228" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="3" fill="#8a8578">STARTS FROM</text>
+<rect x="682" y="242" width="250" height="104" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<text x="698" y="274" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="16" fill="#c9a227">00:41:07</text>
+<rect x="799.4" y="255" width="117.2" height="26" rx="13.0" fill="#0b0b0d" stroke="#c9a227" stroke-width="1.2"/>
+<text x="858" y="274" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#c9a227">human-made</text>
+<rect x="683" y="300" width="248" height="45" fill="#0c0c10" opacity="0.85"/>
+<text x="807.0" y="330" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" fill="#f4efe1">Geliyorsun, değil mi?</text>
+<rect x="682" y="242" width="250" height="6" rx="3" fill="#c9a227"/>
+<text x="956" y="284" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#f4efe1">The human file</text>
+<text x="956" y="310" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">placed on the timing</text>
+<text x="956" y="333" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">file's cues</text>
+<text x="682" y="380" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="3" fill="#8a8578">LANGUAGE WORK</text>
+<rect x="672" y="386" width="342" height="62" rx="8" fill="none" stroke="#c9a227" stroke-dasharray="6 5"/>
+<rect x="682" y="394" width="170" height="46" rx="6" fill="#141418" stroke="#2a2a31"/>
+<rect x="682" y="394" width="5" height="46" rx="2" fill="#d9534f"/>
+<text x="769.0" y="423.46" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" fill="#f4efe1">One polish fixer</text>
+<rect x="864" y="394" width="140" height="46" rx="6" fill="#141418" stroke="#2a2a31"/>
+<rect x="864" y="394" width="5" height="46" rx="2" fill="#d9534f"/>
+<text x="936.0" y="423.46" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" fill="#f4efe1">Reviewers</text>
+<text x="843" y="468" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="16" font-style="italic" fill="#cfc8b4">at the same time</text>
+<line x1="1022" y1="417" x2="1044" y2="417" stroke="#8a8578" stroke-width="2.5"/>
+<path d="M1042 408 l14 9 l-14 9 z" fill="#8a8578"/>
+<rect x="1060" y="394" width="140" height="46" rx="6" fill="#141418" stroke="#2a2a31"/>
+<rect x="1060" y="394" width="5" height="46" rx="2" fill="#d9534f"/>
+<text x="1132.0" y="423.46" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" fill="#f4efe1">Listeners</text>
+</svg>

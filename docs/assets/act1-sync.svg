@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 482" width="1280" height="482" role="img" aria-labelledby="t d">
+<title id="t">The timing file against the speech</title><desc id="d">Three lines of an invented film on a timeline: You came back. I said I would. Cast off. The top track is the speech as a local model hears it. Before, every subtitle cue starts a little late. After, one shift has moved every cue under its words. How: a local model transcribes 6 stretches of the film, 3 minutes each. A script looks for each cue's first 3 words near where the cue starts. When the cues are off by more than 300 ms, and by a steady amount through the film, every cue moves.</desc>
+<rect width="1280" height="482" fill="#0b0b0d"/>
+<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c1c25"/><stop offset="1" stop-color="#0f0f13"/></linearGradient></defs>
+<rect x="24" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="24" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="448" width="22" height="20" rx="4" fill="#1d1d22"/>
+<text x="640.0" y="70" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="4" fill="#c9a227">DOES EACH LINE SIT UNDER ITS WORDS?</text>
+<text x="40" y="142" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" letter-spacing="3" fill="#3fb27f">THE SPEECH</text>
+<text x="40" y="167" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">what the model hears</text>
+<text x="40" y="210" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" letter-spacing="3" fill="#8a8578">BEFORE</text>
+<text x="40" y="235" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">every cue a little late</text>
+<text x="40" y="276" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" letter-spacing="3" fill="#c9a227">AFTER</text>
+<text x="40" y="301" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">one shift moves them all</text>
+<text x="280" y="112" text-anchor="start" font-family="Georgia, 'Times New Roman', Times, serif" font-size="22" font-style="italic" fill="#f4efe1">You came back.</text>
+<rect x="280" y="147.0" width="6" height="10" rx="3" fill="#3fb27f"/>
+<rect x="290" y="141.0" width="6" height="22" rx="3" fill="#3fb27f"/>
+<rect x="300" y="134.0" width="6" height="36" rx="3" fill="#3fb27f"/>
+<rect x="310" y="143.0" width="6" height="18" rx="3" fill="#3fb27f"/>
+<rect x="320" y="132.0" width="6" height="40" rx="3" fill="#3fb27f"/>
+<rect x="330" y="138.0" width="6" height="28" rx="3" fill="#3fb27f"/>
+<rect x="340" y="145.0" width="6" height="14" rx="3" fill="#3fb27f"/>
+<rect x="350" y="135.0" width="6" height="34" rx="3" fill="#3fb27f"/>
+<rect x="360" y="131.0" width="6" height="42" rx="3" fill="#3fb27f"/>
+<rect x="370" y="142.0" width="6" height="20" rx="3" fill="#3fb27f"/>
+<rect x="380" y="137.0" width="6" height="30" rx="3" fill="#3fb27f"/>
+<rect x="390" y="146.0" width="6" height="12" rx="3" fill="#3fb27f"/>
+<rect x="400" y="133.0" width="6" height="38" rx="3" fill="#3fb27f"/>
+<rect x="410" y="140.0" width="6" height="24" rx="3" fill="#3fb27f"/>
+<rect x="420" y="144.0" width="6" height="16" rx="3" fill="#3fb27f"/>
+<rect x="430" y="136.0" width="6" height="32" rx="3" fill="#3fb27f"/>
+<rect x="440" y="142.0" width="6" height="20" rx="3" fill="#3fb27f"/>
+<rect x="450" y="147.0" width="6" height="10" rx="3" fill="#3fb27f"/>
+<line x1="270" y1="126" x2="270" y2="312" stroke="#c9a227" stroke-width="1.5" stroke-dasharray="5 5"/>
+<rect x="326" y="188" width="244" height="50" rx="6" fill="#101014" stroke="#2a2a31"/>
+<text x="448.0" y="220" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" fill="#8a8578">You came back.</text>
+<text x="299.0" y="219" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="17" font-style="italic" fill="#cfc8b4">late</text>
+<rect x="270" y="254" width="244" height="50" rx="6" fill="#101014" stroke="#c9a227" stroke-width="1.5"/>
+<text x="392.0" y="286" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" fill="#f4efe1">You came back.</text>
+<text x="606" y="112" text-anchor="start" font-family="Georgia, 'Times New Roman', Times, serif" font-size="22" font-style="italic" fill="#f4efe1">I said I would.</text>
+<rect x="606" y="138.0" width="6" height="28" rx="3" fill="#3fb27f"/>
+<rect x="616" y="145.0" width="6" height="14" rx="3" fill="#3fb27f"/>
+<rect x="626" y="135.0" width="6" height="34" rx="3" fill="#3fb27f"/>
+<rect x="636" y="131.0" width="6" height="42" rx="3" fill="#3fb27f"/>
+<rect x="646" y="142.0" width="6" height="20" rx="3" fill="#3fb27f"/>
+<rect x="656" y="137.0" width="6" height="30" rx="3" fill="#3fb27f"/>
+<rect x="666" y="146.0" width="6" height="12" rx="3" fill="#3fb27f"/>
+<rect x="676" y="133.0" width="6" height="38" rx="3" fill="#3fb27f"/>
+<rect x="686" y="140.0" width="6" height="24" rx="3" fill="#3fb27f"/>
+<rect x="696" y="144.0" width="6" height="16" rx="3" fill="#3fb27f"/>
+<rect x="706" y="136.0" width="6" height="32" rx="3" fill="#3fb27f"/>
+<rect x="716" y="142.0" width="6" height="20" rx="3" fill="#3fb27f"/>
+<rect x="726" y="147.0" width="6" height="10" rx="3" fill="#3fb27f"/>
+<rect x="736" y="147.0" width="6" height="10" rx="3" fill="#3fb27f"/>
+<rect x="746" y="141.0" width="6" height="22" rx="3" fill="#3fb27f"/>
+<rect x="756" y="134.0" width="6" height="36" rx="3" fill="#3fb27f"/>
+<rect x="766" y="143.0" width="6" height="18" rx="3" fill="#3fb27f"/>
+<rect x="776" y="132.0" width="6" height="40" rx="3" fill="#3fb27f"/>
+<line x1="596" y1="126" x2="596" y2="312" stroke="#c9a227" stroke-width="1.5" stroke-dasharray="5 5"/>
+<rect x="652" y="188" width="244" height="50" rx="6" fill="#101014" stroke="#2a2a31"/>
+<text x="774.0" y="220" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" fill="#8a8578">I said I would.</text>
+<text x="625.0" y="219" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="17" font-style="italic" fill="#cfc8b4">late</text>
+<rect x="596" y="254" width="244" height="50" rx="6" fill="#101014" stroke="#c9a227" stroke-width="1.5"/>
+<text x="718.0" y="286" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" fill="#f4efe1">I said I would.</text>
+<text x="932" y="112" text-anchor="start" font-family="Georgia, 'Times New Roman', Times, serif" font-size="22" font-style="italic" fill="#f4efe1">Cast off.</text>
+<rect x="932" y="137.0" width="6" height="30" rx="3" fill="#3fb27f"/>
+<rect x="942" y="146.0" width="6" height="12" rx="3" fill="#3fb27f"/>
+<rect x="952" y="133.0" width="6" height="38" rx="3" fill="#3fb27f"/>
+<rect x="962" y="140.0" width="6" height="24" rx="3" fill="#3fb27f"/>
+<rect x="972" y="144.0" width="6" height="16" rx="3" fill="#3fb27f"/>
+<rect x="982" y="136.0" width="6" height="32" rx="3" fill="#3fb27f"/>
+<rect x="992" y="142.0" width="6" height="20" rx="3" fill="#3fb27f"/>
+<rect x="1002" y="147.0" width="6" height="10" rx="3" fill="#3fb27f"/>
+<rect x="1012" y="147.0" width="6" height="10" rx="3" fill="#3fb27f"/>
+<rect x="1022" y="141.0" width="6" height="22" rx="3" fill="#3fb27f"/>
+<rect x="1032" y="134.0" width="6" height="36" rx="3" fill="#3fb27f"/>
+<line x1="922" y1="126" x2="922" y2="312" stroke="#c9a227" stroke-width="1.5" stroke-dasharray="5 5"/>
+<rect x="978" y="188" width="244" height="50" rx="6" fill="#101014" stroke="#2a2a31"/>
+<text x="1100.0" y="220" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" fill="#8a8578">Cast off.</text>
+<text x="951.0" y="219" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="17" font-style="italic" fill="#cfc8b4">late</text>
+<rect x="922" y="254" width="244" height="50" rx="6" fill="#101014" stroke="#c9a227" stroke-width="1.5"/>
+<text x="1044.0" y="286" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" fill="#f4efe1">Cast off.</text>
+<line x1="40" y1="334" x2="1240" y2="334" stroke="#2a2a31" stroke-width="1"/>
+<circle cx="62" cy="374" r="22" fill="#0b0b0d" stroke="#3fb27f" stroke-width="1.5"/>
+<text x="62" y="382" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="24" fill="#f4efe1">1</text>
+<text x="100" y="376" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="24" font-weight="600" fill="#f4efe1">Listen</text>
+<text x="100" y="402" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">A local model transcribes 6 stretches</text>
+<text x="100" y="425" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">of the film, 3 minutes each.</text>
+<circle cx="472" cy="374" r="22" fill="#0b0b0d" stroke="#4a90d9" stroke-width="1.5"/>
+<text x="472" y="382" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="24" fill="#f4efe1">2</text>
+<text x="510" y="376" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="24" font-weight="600" fill="#f4efe1">Match</text>
+<text x="510" y="402" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">A script looks for each cue's first</text>
+<text x="510" y="425" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">3 words near where the cue starts.</text>
+<circle cx="882" cy="374" r="22" fill="#0b0b0d" stroke="#4a90d9" stroke-width="1.5"/>
+<text x="882" y="382" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="24" fill="#f4efe1">3</text>
+<text x="920" y="376" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="24" font-weight="600" fill="#f4efe1">Shift</text>
+<text x="920" y="402" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">Off by more than 300 ms, and steady</text>
+<text x="920" y="425" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">through the film? Every cue moves.</text>
+</svg>

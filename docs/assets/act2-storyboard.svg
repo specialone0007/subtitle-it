@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 440" width="1280" height="440" role="img" aria-labelledby="t d">
+<title id="t">Act 2 in four frames</title><desc id="d">Four film frames, one for each part of act 2. Step 3, speaker hints: a local model hears which voice speaks each line, such as voice 1 for the line You're late, Joe. It is optional and runs on your machine. Step 4, film bible: one agent reads the film once and writes the shared decisions, such as Mara says sen to Joe, Joe says siz to the Captain, and the watch is nöbet. Step 5, a second reader answers the same questions without seeing the bible. Step 5, a judge reads the cited cues where the two differ, and decides.</desc>
+<rect width="1280" height="440" fill="#0b0b0d"/>
+<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c1c25"/><stop offset="1" stop-color="#0f0f13"/></linearGradient></defs>
+<rect x="24" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="24" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<text x="640.0" y="70" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="4" fill="#c9a227">ACT 2  ·  THE STORYBOARD</text>
+<rect x="40" y="100" width="285" height="170" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<circle cx="124" cy="162" r="20" fill="#34343f"/>
+<path d="M82 224 q42 -68 84 0 z" fill="#34343f"/>
+<circle cx="246" cy="162" r="20" fill="#22222b"/>
+<path d="M204 224 q42 -68 84 0 z" fill="#22222b"/>
+<circle cx="124" cy="162" r="24" fill="none" stroke="#3fb27f" stroke-width="2"/>
+<path d="M158 153 q9 9 0 18" fill="none" stroke="#3fb27f" stroke-width="2.5" stroke-linecap="round"/>
+<path d="M166 147 q15 15 0 30" fill="none" stroke="#3fb27f" stroke-width="2.5" stroke-linecap="round"/>
+<rect x="82.44999999999999" y="109" width="83.10000000000001" height="25" rx="12.5" fill="#0b0b0d" stroke="#3fb27f" stroke-width="1.2"/>
+<text x="124" y="127" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#3fb27f">voice 1</text>
+<rect x="204.45" y="109" width="83.10000000000001" height="25" rx="12.5" fill="#0b0b0d" stroke="#8a8578" stroke-width="1.2"/>
+<text x="246" y="127" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#8a8578">voice 2</text>
+<rect x="41" y="224" width="283" height="45" fill="#0c0c10" opacity="0.85"/>
+<text x="182.5" y="254" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" fill="#f4efe1">You're late, Joe.</text>
+<rect x="40" y="100" width="285" height="6" rx="3" fill="#3fb27f"/>
+<text x="42" y="302" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="3" fill="#3fb27f">STEP 3 · LOCAL MODEL</text>
+<text x="42" y="332" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">Speaker hints</text>
+<text x="42" y="358" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">Which voice speaks each line.</text>
+<text x="42" y="381" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">Optional, on your machine.</text>
+<rect x="345" y="100" width="285" height="170" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<clipPath id="arm365120"><rect x="365" y="120" width="245" height="16" rx="4"/></clipPath>
+<g clip-path="url(#arm365120)"><rect x="365" y="120" width="245" height="16" fill="#f4efe1"/>
+<path d="M343 136 l16 -16 h36 l-16 16 z" fill="#0b0b0d"/>
+<path d="M415 136 l16 -16 h36 l-16 16 z" fill="#0b0b0d"/>
+<path d="M487 136 l16 -16 h36 l-16 16 z" fill="#0b0b0d"/>
+<path d="M559 136 l16 -16 h36 l-16 16 z" fill="#0b0b0d"/>
+</g>
+<text x="369" y="162" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="3" fill="#c9a227">FILM BIBLE</text>
+<text x="369" y="192" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#f4efe1">Mara → Joe</text>
+<rect x="560.0999999999999" y="174" width="45.900000000000006" height="25" rx="12.5" fill="#0b0b0d" stroke="#c9a227" stroke-width="1.2"/>
+<text x="583.05" y="192" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#c9a227">sen</text>
+<text x="369" y="222" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#f4efe1">Joe → the Captain</text>
+<rect x="560.0999999999999" y="204" width="45.900000000000006" height="25" rx="12.5" fill="#0b0b0d" stroke="#c9a227" stroke-width="1.2"/>
+<text x="583.05" y="222" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#c9a227">siz</text>
+<text x="369" y="252" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#8a8578">the watch</text>
+<rect x="504.29999999999995" y="234" width="101.7" height="25" rx="12.5" fill="#0b0b0d" stroke="#c9a227" stroke-width="1.2"/>
+<text x="555.15" y="252" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#c9a227">nöbet</text>
+<rect x="345" y="100" width="285" height="6" rx="3" fill="#d9534f"/>
+<text x="347" y="302" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="3" fill="#d9534f">STEP 4 · CLAUDE</text>
+<text x="347" y="332" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">Film bible</text>
+<text x="347" y="358" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">One agent reads the film once</text>
+<text x="347" y="381" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">and writes the shared decisions.</text>
+<rect x="650" y="100" width="285" height="170" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<rect x="676" y="126" width="104" height="100" rx="5" fill="#23232d" stroke="#cfc8b4" stroke-width="1.5"/>
+<rect x="688" y="146" width="30" height="6" rx="3" fill="#cfc8b4" opacity="0.7"/>
+<rect x="726" y="140" width="42" height="18" rx="3" fill="#0b0b0d" stroke="#8a8578"/>
+<rect x="688" y="174" width="30" height="6" rx="3" fill="#cfc8b4" opacity="0.7"/>
+<rect x="726" y="168" width="42" height="18" rx="3" fill="#0b0b0d" stroke="#8a8578"/>
+<rect x="688" y="202" width="30" height="6" rx="3" fill="#cfc8b4" opacity="0.7"/>
+<rect x="726" y="196" width="42" height="18" rx="3" fill="#0b0b0d" stroke="#8a8578"/>
+<text x="728" y="252" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="16" font-style="italic" fill="#cfc8b4">answers hidden</text>
+<circle cx="846" cy="207" r="20" fill="#34343f"/>
+<path d="M804 269 q42 -68 84 0 z" fill="#34343f"/>
+<rect x="824" y="201" width="44" height="9" rx="2" fill="#c9a227"/>
+<path d="M868 205 l10 -6 M868 206 l11 5" stroke="#c9a227" stroke-width="3" stroke-linecap="round"/>
+<rect x="868.12" y="133" width="47.76" height="26" rx="13.0" fill="#0b0b0d" stroke="#c9a227" stroke-width="1.2"/>
+<text x="892" y="152" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#c9a227">sen</text>
+<rect x="650" y="100" width="285" height="6" rx="3" fill="#d9534f"/>
+<text x="652" y="302" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="3" fill="#d9534f">STEP 5 · CLAUDE</text>
+<text x="652" y="332" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">A second reader</text>
+<text x="652" y="358" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">Answers the same questions</text>
+<text x="652" y="381" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">without seeing the bible.</text>
+<rect x="955" y="100" width="285" height="170" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<line x1="1097.5" y1="136" x2="1097.5" y2="222" stroke="#8a8578" stroke-width="4"/>
+<rect x="1071.5" y="220" width="52" height="6" rx="3" fill="#8a8578"/>
+<line x1="1025.5" y1="152" x2="1169.5" y2="136" stroke="#cfc8b4" stroke-width="3" stroke-linecap="round"/>
+<circle cx="1097.5" cy="144" r="5" fill="#c9a227"/>
+<line x1="1025.5" y1="152" x2="1025.5" y2="170" stroke="#cfc8b4" stroke-width="1.5"/>
+<line x1="1169.5" y1="136" x2="1169.5" y2="154" stroke="#cfc8b4" stroke-width="1.5"/>
+<rect x="1000.69" y="172" width="49.62" height="27" rx="13.5" fill="#0b0b0d" stroke="#c9a227" stroke-width="1.2"/>
+<text x="1025.5" y="192" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#c9a227">sen</text>
+<rect x="1144.69" y="156" width="49.62" height="27" rx="13.5" fill="#0b0b0d" stroke="#8a8578" stroke-width="1.2"/>
+<text x="1169.5" y="176" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#8a8578">siz</text>
+<text x="1097.5" y="252" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="16" font-style="italic" fill="#cfc8b4">decided from the cited cues</text>
+<rect x="955" y="100" width="285" height="6" rx="3" fill="#d9534f"/>
+<text x="957" y="302" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="3" fill="#d9534f">STEP 5 · CLAUDE</text>
+<text x="957" y="332" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">A judge</text>
+<text x="957" y="358" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">Reads the cited cues where the</text>
+<text x="957" y="381" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">two differ, and decides.</text>
+</svg>

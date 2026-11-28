@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 460" width="1280" height="460" role="img" aria-labelledby="t d">
+<title id="t">From nothing to your first subtitle</title><desc id="d">A storyboard of four film frames. Install the plugin with two commands in your shell. Install uv, which runs the scripts, and ffmpeg, which reads the tracks inside videos. Type one command in a new Claude Code session, with a film's name or its path. When the run ends the subtitle, Harbour Lights.srt, sits next to the video under exactly the video's name. The first time you give a name, the plugin asks for the folder that holds your films.</desc>
+<rect width="1280" height="460" fill="#0b0b0d"/>
+<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c1c25"/><stop offset="1" stop-color="#0f0f13"/></linearGradient></defs>
+<rect x="24" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="24" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="426" width="22" height="20" rx="4" fill="#1d1d22"/>
+<text x="640.0" y="70" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="4" fill="#c9a227">FROM NOTHING TO YOUR FIRST SUBTITLE</text>
+<rect x="40" y="100" width="285" height="170" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<rect x="54" y="134" width="242" height="100" rx="8" fill="#0c0c10" stroke="#2a2a31" stroke-width="1"/>
+<circle cx="72" cy="150" r="4.5" fill="#3a3a44"/>
+<circle cx="87" cy="150" r="4.5" fill="#3a3a44"/>
+<circle cx="102" cy="150" r="4.5" fill="#3a3a44"/>
+<text x="68" y="188" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="16" fill="#f4efe1">$ claude plugin install</text>
+<rect x="68" y="202" width="9" height="17" fill="#c9a227"/>
+<rect x="40" y="100" width="285" height="6" rx="3" fill="#c9a227"/>
+<line x1="319" y1="185.0" x2="331" y2="185.0" stroke="#8a8578" stroke-width="2.5"/>
+<path d="M329 176.0 l14 9 l-14 9 z" fill="#8a8578"/>
+<text x="42" y="308" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">Install the plugin</text>
+<text x="42" y="334" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">Two commands, in your shell.</text>
+<rect x="350" y="100" width="285" height="170" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<rect x="370" y="150" width="104" height="76" rx="8" fill="#1f1f27" stroke="#4a90d9" stroke-width="1.5"/>
+<text x="422" y="197" text-anchor="middle" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="24" fill="#f4efe1">uv</text>
+<rect x="496" y="150" width="104" height="76" rx="8" fill="#1f1f27" stroke="#cfc8b4" stroke-width="1.5"/>
+<text x="548" y="197" text-anchor="middle" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="24" fill="#f4efe1">ffmpeg</text>
+<text x="485" y="197" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="26" fill="#8a8578">+</text>
+<rect x="350" y="100" width="285" height="6" rx="3" fill="#c9a227"/>
+<line x1="629" y1="185.0" x2="641" y2="185.0" stroke="#8a8578" stroke-width="2.5"/>
+<path d="M639 176.0 l14 9 l-14 9 z" fill="#8a8578"/>
+<text x="352" y="308" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">Install uv and ffmpeg</text>
+<text x="352" y="334" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">uv runs the scripts. ffmpeg reads</text>
+<text x="352" y="357" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">the tracks inside videos.</text>
+<rect x="660" y="100" width="285" height="170" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<text x="676" y="138" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="3" fill="#c9a227">A NEW SESSION</text>
+<rect x="674" y="152" width="242" height="86" rx="12" fill="#1f1f27" stroke="#2a2a31" stroke-width="1"/>
+<text x="688" y="188" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="16" fill="#c9a227">/subtitle-it:translate</text>
+<text x="688" y="216" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="16" fill="#f4efe1">Harbour Lights</text>
+<rect x="660" y="100" width="285" height="6" rx="3" fill="#c9a227"/>
+<line x1="939" y1="185.0" x2="951" y2="185.0" stroke="#8a8578" stroke-width="2.5"/>
+<path d="M949 176.0 l14 9 l-14 9 z" fill="#8a8578"/>
+<text x="662" y="308" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">Type one command</text>
+<text x="662" y="334" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">In a new Claude Code session:</text>
+<text x="662" y="357" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">a film's name, or its path.</text>
+<rect x="970" y="100" width="285" height="170" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<circle cx="1007" cy="150" r="13" fill="#23232d" stroke="#c9a227" stroke-width="1.5"/>
+<circle cx="1007" cy="150" r="2.08" fill="#c9a227"/>
+<circle cx="1007" cy="142.85" r="2.73" fill="#0b0b0d"/>
+<circle cx="1013.76" cy="147.92" r="2.73" fill="#0b0b0d"/>
+<circle cx="1011.16" cy="155.85" r="2.73" fill="#0b0b0d"/>
+<circle cx="1002.84" cy="155.85" r="2.73" fill="#0b0b0d"/>
+<circle cx="1000.24" cy="147.92" r="2.73" fill="#0b0b0d"/>
+<text x="1032" y="156" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="17" fill="#cfc8b4">Harbour Lights.mkv</text>
+<rect x="984" y="178" width="242" height="42" rx="6" fill="#1f1f27" stroke="#c9a227" stroke-width="1.5"/>
+<path d="M996 184 h6 l16 16 v14 h-22 z" fill="#23232d" stroke="#c9a227" stroke-width="1.5"/>
+<path d="M1002 184 v16 h16" fill="none" stroke="#c9a227" stroke-width="1.5"/>
+<text x="1032" y="205" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="17" fill="#f4efe1">Harbour Lights.srt</text>
+<text x="1105.0" y="250" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="16" font-style="italic" fill="#8a8578">when the run ends</text>
+<rect x="970" y="100" width="285" height="6" rx="3" fill="#c9a227"/>
+<text x="972" y="308" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">The subtitle appears</text>
+<text x="972" y="334" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">Next to the video, under exactly</text>
+<text x="972" y="357" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">the video's name.</text>
+<text x="640.0" y="402" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="18" font-style="italic" fill="#8a8578">The first time you give a name, it asks for the folder that holds your films.</text>
+</svg>

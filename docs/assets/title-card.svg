@@ -55,9 +55,9 @@
 <rect x="1224" y="366" width="22" height="20" rx="4" fill="#1d1d22"/>
 <rect x="40" y="56" width="1200" height="288" fill="none" stroke="#c9a227" stroke-width="2"/>
 <rect x="50" y="66" width="1180" height="268" fill="none" stroke="#c9a227" stroke-width="0.75" opacity="0.6"/>
-<text x="640.0" y="128" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="6" fill="#c9a227">A CLAUDE CODE PLUGIN</text>
+<text x="640.0" y="128" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" letter-spacing="6" fill="#c9a227">A CLAUDE CODE PLUGIN</text>
 <line x1="500.0" y1="148" x2="780.0" y2="148" stroke="#c9a227" stroke-width="1" opacity="0.7"/>
 <text x="640.0" y="222" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="72" letter-spacing="10" fill="#f4efe1">SUBTITLE IT</text>
 <text x="640.0" y="274" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-style="italic" font-size="24" fill="#cfc8b4">Any film's subtitles, carried into natural Turkish</text>
-<text x="640.0" y="318" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" letter-spacing="4" fill="#8a8578">FROM ANY LANGUAGE · INTO TURKISH</text>
+<text x="640.0" y="318" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="4" fill="#8a8578">FROM ANY LANGUAGE · INTO TURKISH</text>
 </svg>

@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 570" width="1280" height="570" role="img" aria-labelledby="t d">
+<title id="t">The call sheet: every setting at its default</title><desc id="d">A settings card for preferences.md, read at the start of every run. Media folders: asked on the first run. Translator model: session, the model of your conversation. Audio hints: auto, which runs them when an NVIDIA GPU is found. Hearing-impaired tags: remove. Songs: story, only the songs that carry the story. Swearing: match the source. Titles: Bay/Bayan + surname, as in Bayan Kaya. Credit: on. Learned rules: empty until learn mode adds them, after your yes.</desc>
+<rect width="1280" height="570" fill="#0b0b0d"/>
+<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c1c25"/><stop offset="1" stop-color="#0f0f13"/></linearGradient></defs>
+<rect x="24" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="24" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="536" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="40" y="56" width="1200" height="460" rx="10" fill="#141418" stroke="#c9a227" stroke-width="1.5"/>
+<text x="76" y="102" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="3" fill="#c9a227">CALL SHEET  ·  EVERY SETTING AT ITS DEFAULT</text>
+<text x="76" y="150" text-anchor="start" font-family="Georgia, 'Times New Roman', Times, serif" font-size="38" fill="#f4efe1">preferences.md</text>
+<text x="1204" y="150" text-anchor="end" font-family="Georgia, 'Times New Roman', Times, serif" font-size="18" font-style="italic" fill="#8a8578">read at the start of every run</text>
+<line x1="76" y1="174" x2="1204" y2="174" stroke="#2a2a31" stroke-width="1"/>
+<text x="76" y="218" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="3" fill="#c9a227">MEDIA FOLDERS</text>
+<text x="76" y="252" text-anchor="start" font-family="Georgia, 'Times New Roman', Times, serif" font-size="23" font-style="italic" fill="#cfc8b4">asked on the first run</text>
+<text x="76" y="280" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">Where a film is searched by name.</text>
+<text x="468" y="218" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="3" fill="#c9a227">TRANSLATOR MODEL</text>
+<text x="468" y="252" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="23" fill="#f4efe1">session</text>
+<text x="468" y="280" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">The model of your conversation.</text>
+<text x="860" y="218" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="3" fill="#c9a227">AUDIO HINTS</text>
+<text x="860" y="252" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="23" fill="#f4efe1">auto</text>
+<text x="860" y="280" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">Runs when an NVIDIA GPU is found.</text>
+<text x="76" y="324" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="3" fill="#c9a227">HEARING-IMPAIRED TAGS</text>
+<text x="76" y="358" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="23" fill="#f4efe1">remove</text>
+<text x="76" y="386" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">Sound descriptions and labels go.</text>
+<text x="468" y="324" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="3" fill="#c9a227">SONGS</text>
+<text x="468" y="358" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="23" fill="#f4efe1">story</text>
+<text x="468" y="386" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">Only the songs that carry the story.</text>
+<text x="860" y="324" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="3" fill="#c9a227">SWEARING</text>
+<text x="860" y="358" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="23" fill="#f4efe1">match the source</text>
+<text x="860" y="386" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">As strong in Turkish as in the source.</text>
+<text x="76" y="430" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="3" fill="#c9a227">TITLES</text>
+<text x="76" y="464" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="23" fill="#f4efe1">Bay/Bayan + surname</text>
+<text x="76" y="492" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">“Bayan Kaya”, not “Ayşe Hanım”.</text>
+<text x="468" y="430" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="3" fill="#c9a227">CREDIT</text>
+<text x="468" y="464" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="23" fill="#f4efe1">on</text>
+<text x="468" y="492" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">Two credit lines, with your name if set.</text>
+<text x="860" y="430" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="3" fill="#c9a227">LEARNED RULES</text>
+<text x="860" y="464" text-anchor="start" font-family="Georgia, 'Times New Roman', Times, serif" font-size="23" font-style="italic" fill="#cfc8b4">empty</text>
+<text x="860" y="492" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#cfc8b4">Learn mode adds them, after your yes.</text>
+<line x1="76" y1="300" x2="1204" y2="300" stroke="#2a2a31" stroke-width="1"/>
+<line x1="76" y1="406" x2="1204" y2="406" stroke="#2a2a31" stroke-width="1"/>
+<line x1="432" y1="192" x2="432" y2="498" stroke="#2a2a31" stroke-width="1"/>
+<line x1="824" y1="192" x2="824" y2="498" stroke="#2a2a31" stroke-width="1"/>
+</svg>

@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 690" width="1280" height="690" role="img" aria-labelledby="t d">
+<title id="t">How a cue is laid out</title><desc id="d">Two cues from an invented film, before and after the layout script. First, a two-line cue that breaks badly: the second line starts with the word diye, which leans on the word before it, so the script moves the break. Second, a cue with two speakers whose first line runs past 42 characters: the script splits it at the speaker change into one cue per speaker, and each part gets its share of the time, 1 second at least. A cue that reads too fast stays on screen a little longer, half a second at most.</desc>
+<rect width="1280" height="690" fill="#0b0b0d"/>
+<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c1c25"/><stop offset="1" stop-color="#0f0f13"/></linearGradient></defs>
+<rect x="24" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="24" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="656" width="22" height="20" rx="4" fill="#1d1d22"/>
+<text x="640.0" y="70" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="4" fill="#c9a227">LAYOUT · ONE CUE, BEFORE AND AFTER</text>
+<rect x="40" y="96" width="540" height="170" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<rect x="470" y="120" width="60" height="72" rx="2" fill="#23232d"/>
+<line x1="500.0" y1="120" x2="500.0" y2="192" stroke="#15151b" stroke-width="3"/>
+<line x1="470" y1="156.0" x2="530" y2="156.0" stroke="#15151b" stroke-width="3"/>
+<circle cx="150" cy="138" r="20" fill="#22222b"/>
+<path d="M108 200 q42 -68 84 0 z" fill="#22222b"/>
+<rect x="41" y="200" width="538" height="65" fill="#0c0c10" opacity="0.85"/>
+<text x="310.0" y="227" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#f4efe1">Fırtına dinene kadar limanda bekleyelim</text>
+<text x="310.0" y="251" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#f4efe1"></text>
+<text x="310.0" y="251" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" xml:space="preserve"><tspan fill="#c9a227">diye</tspan><tspan fill="#f4efe1"> düşündüm.</tspan></text>
+<line x1="248.0" y1="256" x2="280.0" y2="256" stroke="#c9a227" stroke-width="2"/>
+<rect x="40" y="96" width="540" height="6" rx="3" fill="#8a8578"/>
+<rect x="593.1" y="140" width="73.80000000000001" height="25" rx="12.5" fill="#0b0b0d" stroke="#4a90d9" stroke-width="1.2"/>
+<text x="630" y="158" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#4a90d9">script</text>
+<line x1="592" y1="184" x2="658" y2="184" stroke="#4a90d9" stroke-width="2.5"/>
+<path d="M656 175 l14 9 l-14 9 z" fill="#4a90d9"/>
+<rect x="680" y="96" width="560" height="170" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<rect x="1130" y="120" width="60" height="72" rx="2" fill="#23232d"/>
+<line x1="1160.0" y1="120" x2="1160.0" y2="192" stroke="#15151b" stroke-width="3"/>
+<line x1="1130" y1="156.0" x2="1190" y2="156.0" stroke="#15151b" stroke-width="3"/>
+<circle cx="790" cy="138" r="20" fill="#22222b"/>
+<path d="M748 200 q42 -68 84 0 z" fill="#22222b"/>
+<rect x="681" y="200" width="558" height="65" fill="#0c0c10" opacity="0.85"/>
+<text x="960.0" y="227" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#f4efe1">Fırtına dinene kadar limanda</text>
+<text x="960.0" y="251" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#f4efe1">bekleyelim diye düşündüm.</text>
+<rect x="680" y="96" width="560" height="6" rx="3" fill="#4a90d9"/>
+<text x="42" y="302" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">A bad break</text>
+<text x="42" y="328" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">“diye” leans on the word before it, so it cannot start a line.</text>
+<text x="682" y="302" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">Rewrapped</text>
+<text x="682" y="328" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">The break moves to where Turkish reads well.</text>
+<rect x="40" y="360" width="540" height="170" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<circle cx="190" cy="402" r="20" fill="#22222b"/>
+<path d="M148 464 q42 -68 84 0 z" fill="#22222b"/>
+<circle cx="430" cy="402" r="20" fill="#22222b"/>
+<path d="M388 464 q42 -68 84 0 z" fill="#22222b"/>
+<text x="62" y="398" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="16" fill="#cfc8b4">00:41:07</text>
+<rect x="41" y="464" width="538" height="65" fill="#0c0c10" opacity="0.85"/>
+<text x="310.0" y="491" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#f4efe1"></text>
+<text x="310.0" y="515" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#f4efe1"></text>
+<text x="85.6" y="491" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" textLength="448.8" lengthAdjust="spacing" fill="#f4efe1">- Fener sönerse tekneler limanı nasıl bulacak, Joe?</text>
+<text x="85.6" y="515" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" textLength="123.2" lengthAdjust="spacing" fill="#f4efe1">- Bulamayacak.</text>
+<line x1="455.20000000000005" y1="446" x2="455.20000000000005" y2="526" stroke="#c9a227" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="447.20000000000005" y="456" text-anchor="end" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#c9a227">42 characters</text>
+<rect x="40" y="360" width="540" height="6" rx="3" fill="#8a8578"/>
+<rect x="593.1" y="404" width="73.80000000000001" height="25" rx="12.5" fill="#0b0b0d" stroke="#4a90d9" stroke-width="1.2"/>
+<text x="630" y="422" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#4a90d9">script</text>
+<line x1="592" y1="448" x2="658" y2="448" stroke="#4a90d9" stroke-width="2.5"/>
+<path d="M656 439 l14 9 l-14 9 z" fill="#4a90d9"/>
+<rect x="680" y="360" width="270.0" height="170" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<circle cx="756" cy="402" r="20" fill="#22222b"/>
+<path d="M714 464 q42 -68 84 0 z" fill="#22222b"/>
+<text x="932.0" y="398" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="16" fill="#cfc8b4">00:41:07</text>
+<rect x="681" y="464" width="268.0" height="65" fill="#0c0c10" opacity="0.85"/>
+<text x="815.0" y="491" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#f4efe1">Fener sönerse tekneler</text>
+<text x="815.0" y="515" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#f4efe1">limanı nasıl bulacak, Joe?</text>
+<rect x="680" y="360" width="270.0" height="6" rx="3" fill="#4a90d9"/>
+<rect x="970.0" y="360" width="270.0" height="170" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<circle cx="1046.0" cy="422" r="20" fill="#22222b"/>
+<path d="M1004.0 484 q42 -68 84 0 z" fill="#22222b"/>
+<text x="1222.0" y="398" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="16" fill="#cfc8b4">00:41:11</text>
+<rect x="971.0" y="484" width="268.0" height="45" fill="#0c0c10" opacity="0.85"/>
+<text x="1105.0" y="514" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" fill="#f4efe1">Bulamayacak.</text>
+<rect x="970.0" y="360" width="270.0" height="6" rx="3" fill="#4a90d9"/>
+<text x="42" y="566" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">Two speakers, one too long</text>
+<text x="42" y="592" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">One line per speaker, and the first is over 42 characters.</text>
+<text x="682" y="566" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">Split at the speaker change</text>
+<text x="682" y="592" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">Each part gets its share of the time, 1 second at least.</text>
+<text x="640.0" y="636" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="17" font-style="italic" fill="#8a8578">A cue that reads too fast stays on screen a little longer: half a second at most.</text>
+</svg>

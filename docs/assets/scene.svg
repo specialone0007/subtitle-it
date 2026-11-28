@@ -57,8 +57,8 @@
 <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c1c25"/><stop offset="1" stop-color="#0f0f13"/></linearGradient></defs>
 <rect x="40" y="96" width="376" height="252" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
 <rect x="40" y="96" width="376" height="6" rx="3" fill="#8a8578"/>
-<text x="58" y="130" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" letter-spacing="3" fill="#8a8578">THE LINE</text>
-<text x="398" y="130" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="12" fill="#55535c">00:41:07</text>
+<text x="58" y="130" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="3" fill="#8a8578">THE LINE</text>
+<text x="398" y="130" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="15" fill="#55535c">00:41:07</text>
 <rect x="276" y="152" width="92" height="104" rx="2" fill="#23232d"/>
 <line x1="322" y1="152" x2="322" y2="256" stroke="#15151b" stroke-width="3"/>
 <line x1="276" y1="204" x2="368" y2="204" stroke="#15151b" stroke-width="3"/>
@@ -66,11 +66,11 @@
 <path d="M96 290 q48 -76 96 0 z" fill="#22222b"/>
 <rect x="41" y="290" width="374" height="57" fill="#0c0c10" opacity="0.85"/>
 <text x="228" y="326" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" fill="#f4efe1">Well... you're coming, right?</text>
-<text x="228" y="380" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#8a8578">The English source.</text>
+<text x="228" y="380" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#8a8578">The English source.</text>
 <rect x="452" y="96" width="376" height="252" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
 <rect x="452" y="96" width="376" height="6" rx="3" fill="#d9534f"/>
-<text x="470" y="130" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" letter-spacing="3" fill="#d9534f">WORD FOR WORD</text>
-<text x="810" y="130" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="12" fill="#55535c">00:41:07</text>
+<text x="470" y="130" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="3" fill="#d9534f">WORD FOR WORD</text>
+<text x="810" y="130" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="15" fill="#55535c">00:41:07</text>
 <rect x="688" y="152" width="92" height="104" rx="2" fill="#23232d"/>
 <line x1="734" y1="152" x2="734" y2="256" stroke="#15151b" stroke-width="3"/>
 <line x1="688" y1="204" x2="780" y2="204" stroke="#15151b" stroke-width="3"/>
@@ -78,12 +78,12 @@
 <path d="M508 290 q48 -76 96 0 z" fill="#22222b"/>
 <rect x="453" y="290" width="374" height="57" fill="#0c0c10" opacity="0.85"/>
 <text x="640" y="326" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" fill="#e7b3b0">Kuyu... geliyorsun, sağ?</text>
-<text x="640" y="380" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#8a8578">“Kuyu” is a water well.</text>
-<text x="640" y="400" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#8a8578">“Sağ” is the right-hand side.</text>
+<text x="640" y="380" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#8a8578">“Kuyu” is a water well.</text>
+<text x="640" y="400" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#8a8578">“Sağ” is the right-hand side.</text>
 <rect x="864" y="96" width="376" height="252" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
 <rect x="864" y="96" width="376" height="6" rx="3" fill="#c9a227"/>
-<text x="882" y="130" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" letter-spacing="3" fill="#c9a227">SUBTITLE IT</text>
-<text x="1222" y="130" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="12" fill="#55535c">00:41:07</text>
+<text x="882" y="130" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="3" fill="#c9a227">SUBTITLE IT</text>
+<text x="1222" y="130" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="15" fill="#55535c">00:41:07</text>
 <rect x="1100" y="152" width="92" height="104" rx="2" fill="#23232d"/>
 <line x1="1146" y1="152" x2="1146" y2="256" stroke="#15151b" stroke-width="3"/>
 <line x1="1100" y1="204" x2="1192" y2="204" stroke="#15151b" stroke-width="3"/>
@@ -91,5 +91,5 @@
 <path d="M920 290 q48 -76 96 0 z" fill="#22222b"/>
 <rect x="865" y="290" width="374" height="57" fill="#0c0c10" opacity="0.85"/>
 <text x="1052" y="326" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" fill="#f4efe1">Şey... geliyorsun, değil mi?</text>
-<text x="1052" y="380" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#8a8578">What a Turkish speaker would say.</text>
+<text x="1052" y="380" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#8a8578">What a Turkish speaker would say.</text>
 </svg>

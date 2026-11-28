@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.13.9 (2026-11-28)
+
+The docs are easier to read, and nothing in the repository points at a
+real film any more. Every doc page now opens with a picture and a short
+summary, with the exact rules folded below it. Runs behave as before:
+this release changes how no script or check behaves.
+
+- Every page under `docs/`, and the README, puts a picture and a short
+  summary first. The long rules sit in collapsed sections below it.
+- The root `ARCHITECTURE.md` moved to `docs/reference/ARCHITECTURE.md`.
+  Its steps are split over four act pages under `docs/reference/run/`
+  with new headings, and the README has fewer sections, so an old link
+  to a section of either file no longer lands on it.
+- Examples and test text use an invented film, "Harbour Lights", with
+  invented people and lines. This covers the agent briefs, the Turkish
+  pack, script comments and the test fixtures.
+- `AGENTS.md` and `CONTRIBUTING.md` state the rule: never name a film, and
+  never borrow a film's character names, lines, song words or plot.
+- `tests/test_no_film_names.py` fails when a doc or a code comment gives a
+  title followed by its year in brackets.
+- Download figures in the docs are totals only.
+
 ## 0.13.8 (2026-11-26)
 
 Two changes from one 2026 film. Reading the text on screen
