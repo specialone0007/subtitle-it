@@ -1,52 +1,61 @@
 # Security
 
+## Reporting a problem
+
 Please report a security problem privately through GitHub's
 [private vulnerability reporting](https://github.com/specialone0007/subtitle-it/security/advisories/new),
 not in a public issue.
 
-What the plugin keeps and sends:
+## Your credentials
 
-- Your OpenSubtitles key and login, and your Hugging Face token, are typed
-  into a setup command in your own terminal, never into the chat. They are
-  saved in `~/.config/subtitle-it/credentials.json` with owner-only
-  permissions where the system supports it, and only the scripts read them.
-  The OpenSubtitles key and login are sent only to OpenSubtitles, to log in,
-  and the Hugging Face token only to Hugging Face, to download the speaker
-  models.
-- The credentials file is plain text. It holds your OpenSubtitles API key,
+The plugin can hold an OpenSubtitles API key and login, and a Hugging
+Face token.
+
+- **You type them into a setup command in your own terminal,** never into
+  the chat.
+- **They are saved in `~/.config/subtitle-it/credentials.json`,** with
+  owner-only permissions where the system supports it. Only the scripts
+  read the file.
+- **The file is plain text.** It holds your OpenSubtitles API key,
   username and password, the login token, and your Hugging Face token,
   none of them encrypted. Anyone who can read files as your user, or a
   backup of your home folder, can read them.
-- Audio hints load the pyannote model checkpoints with PyTorch's full
-  pickle loading (`TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1` in
-  `scripts/speakers.py`), because those checkpoints do not load in its
-  weights-only mode. Full loading can run code stored in a checkpoint, so
-  the plugin trusts the files from pyannote's own repositories on Hugging
-  Face. A tampered checkpoint there or in your Hugging Face cache could run
-  code on your machine.
-- Subtitle text is sent to Claude as part of your Claude Code session.
-- For a video input, at most 300 frames from the video (960x540 at most)
-  are sent to Claude the same way, to read on-screen text. They are saved
-  in the film's work folder. The video itself never leaves.
-- OpenSubtitles receives your OpenSubtitles username and password when the
-  plugin logs in. A search sends the video's hash, the title or IMDb id,
-  the year when it is known, and the subtitle languages wanted.
-  The subtitle file itself is fetched from the https address OpenSubtitles
-  links to, which can be another host, with no key or token. API requests
-  that carry the key or token follow a redirect only to opensubtitles.com
-  over https.
-- A web search receives the film's title and year: the skill looks them up
-  once when it does not know them, and the bible writer and second reader
-  search for the cast and plot.
-- Audio hints run on your machine. They download the pyannote models from
-  Hugging Face with your Hugging Face token, and no audio leaves your
-  machine.
-- Speech-to-text, the last resort when no subtitle file exists, runs on your
-  machine too. It downloads its Whisper model from Hugging Face once and
-  sends no audio anywhere. The download needs no token and sends none,
-  unless `HF_TOKEN` is set in your environment or you have logged in with
-  the Hugging Face command line tool: the Hugging Face library then sends
-  that token with it. The token in `credentials.json` is never used for it.
-- The first run of each script downloads its Python packages from PyPI,
-  and PyTorch from download.pytorch.org on Windows and Linux. When no
-  installed Python fits a script, uv may also download a Python build.
+
+| Credential | Sent only to | For |
+| --- | --- | --- |
+| OpenSubtitles key and login | OpenSubtitles | Logging in and searching |
+| Hugging Face token | Hugging Face | Downloading the speaker models |
+
+API requests that carry the OpenSubtitles key or token follow a redirect
+only to opensubtitles.com over https. The subtitle file itself is
+fetched from the https address OpenSubtitles links to, which can be
+another host, with no key or token.
+
+## Model files run as code
+
+Audio hints load the pyannote model checkpoints with PyTorch's full
+pickle loading (`TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1` in
+`scripts/speakers.py`). Those checkpoints do not load in its weights-only
+mode.
+
+Full loading can run code stored in a checkpoint. So the plugin trusts
+the files from pyannote's own repositories on Hugging Face. A tampered
+checkpoint there, or in your Hugging Face cache, could run code on your
+machine.
+
+## The speech model and your Hugging Face login
+
+Speech-to-text downloads its Whisper model from Hugging Face once. The
+download needs no token and sends none, with one exception: when
+`HF_TOKEN` is set in your environment, or you have logged in with the
+Hugging Face command line tool, the Hugging Face library sends that
+token with it. The token in `credentials.json` is never used for it.
+
+## What leaves your machine
+
+![The video, the audio and your credentials file stay on your machine. Subtitle text and a capped number of still frames go to Claude, in your own session. Your film folder gets one new file, the subtitle](docs/assets/stays-home.svg)
+
+Subtitle text and a capped number of still frames go to Claude as part
+of your Claude Code session. The video and the audio never leave.
+[Files and privacy](docs/reference/PRIVACY.md) lists everything that is
+sent, to whom, and when.

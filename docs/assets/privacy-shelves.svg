@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 500" width="1280" height="500" role="img" aria-labelledby="t d">
+<title id="t">Where files go</title><desc id="d">Three sets of shelves. Next to the video: the film Harbour Lights.mkv and one new file, Harbour Lights.srt, and nothing else; it is never deleted by the plugin. Your settings folder, ~/.config/subtitle-it/: preferences.md, credentials.json and backups/; it is kept when the plugin is uninstalled. The plugin's data folder, ~/.claude/plugins/data/subtitle-it-.../: one work folder per film, the download cache and each script's last result; it is deleted when you uninstall the plugin.</desc>
+<rect width="1280" height="500" fill="#0b0b0d"/>
+<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c1c25"/><stop offset="1" stop-color="#0f0f13"/></linearGradient></defs>
+<rect x="24" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="24" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="466" width="22" height="20" rx="4" fill="#1d1d22"/>
+<text x="640.0" y="70" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="4" fill="#c9a227">WHERE FILES GO</text>
+<rect x="40" y="92" width="386" height="358" rx="10" fill="#141418" stroke="#c9a227" stroke-width="1.5"/>
+<text x="68" y="132" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="3" fill="#c9a227">NEXT TO THE VIDEO</text>
+<text x="68" y="160" text-anchor="start" font-family="Georgia, 'Times New Roman', Times, serif" font-size="17" font-style="italic" fill="#8a8578">your film folder</text>
+<circle cx="92" cy="234" r="20" fill="#23232d" stroke="#c9a227" stroke-width="1.5"/>
+<circle cx="92" cy="234" r="3.2" fill="#c9a227"/>
+<circle cx="92" cy="223.0" r="4.2" fill="#0b0b0d"/>
+<circle cx="102.4" cy="230.8" r="4.2" fill="#0b0b0d"/>
+<circle cx="98.4" cy="243.0" r="4.2" fill="#0b0b0d"/>
+<circle cx="85.6" cy="243.0" r="4.2" fill="#0b0b0d"/>
+<circle cx="81.6" cy="230.8" r="4.2" fill="#0b0b0d"/>
+<text x="136" y="240" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="18" fill="#8a8578">Harbour Lights.mkv</text>
+<line x1="60" y1="264" x2="406" y2="264" stroke="#3a3a44" stroke-width="3"/>
+<path d="M75 274 h18 l16 16 v28 h-34 z" fill="#23232d" stroke="#c9a227" stroke-width="1.5"/>
+<path d="M93 274 v16 h16" fill="none" stroke="#c9a227" stroke-width="1.5"/>
+<rect x="87" y="300" width="10" height="4" rx="2" fill="#c9a227" opacity="0.7"/>
+<rect x="87" y="312" width="-2" height="4" rx="2" fill="#c9a227" opacity="0.7"/>
+<text x="136" y="302" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="18" fill="#f4efe1">Harbour Lights.srt</text>
+<line x1="60" y1="326" x2="406" y2="326" stroke="#3a3a44" stroke-width="3"/>
+<text x="68" y="364" text-anchor="start" font-family="Georgia, 'Times New Roman', Times, serif" font-size="19" font-style="italic" fill="#cfc8b4">Nothing else is written here.</text>
+<line x1="60" y1="388" x2="406" y2="388" stroke="#3a3a44" stroke-width="3"/>
+<text x="68" y="428" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#cfc8b4">Never deleted by the plugin</text>
+<rect x="447" y="92" width="386" height="358" rx="10" fill="#141418" stroke="#2a2a31"/>
+<text x="475" y="132" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="3" fill="#c9a227">YOUR SETTINGS FOLDER</text>
+<text x="475" y="160" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="16" fill="#8a8578">~/.config/subtitle-it/</text>
+<path d="M482 212 h18 l16 16 v28 h-34 z" fill="#23232d" stroke="#cfc8b4" stroke-width="1.5"/>
+<path d="M500 212 v16 h16" fill="none" stroke="#cfc8b4" stroke-width="1.5"/>
+<rect x="494" y="238" width="10" height="4" rx="2" fill="#cfc8b4" opacity="0.7"/>
+<rect x="494" y="250" width="-2" height="4" rx="2" fill="#cfc8b4" opacity="0.7"/>
+<text x="543" y="240" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="18" fill="#f4efe1">preferences.md</text>
+<line x1="467" y1="264" x2="813" y2="264" stroke="#3a3a44" stroke-width="3"/>
+<circle cx="488" cy="296" r="9" fill="none" stroke="#c9a227" stroke-width="3.5"/>
+<rect x="497" y="294" width="26" height="4" rx="2" fill="#c9a227"/>
+<rect x="511" y="296" width="4" height="9" rx="1.5" fill="#c9a227"/>
+<rect x="518" y="296" width="4" height="7" rx="1.5" fill="#c9a227"/>
+<text x="543" y="302" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="18" fill="#f4efe1">credentials.json</text>
+<line x1="467" y1="326" x2="813" y2="326" stroke="#3a3a44" stroke-width="3"/>
+<path d="M478 341 h15 l5 6 h22 v28 h-42 z" fill="#23232d" stroke="#cfc8b4" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="543" y="364" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="18" fill="#f4efe1">backups/</text>
+<line x1="467" y1="388" x2="813" y2="388" stroke="#3a3a44" stroke-width="3"/>
+<text x="475" y="428" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#cfc8b4">Kept when the plugin is uninstalled</text>
+<rect x="854" y="92" width="386" height="358" rx="10" fill="#141418" stroke="#2a2a31"/>
+<text x="882" y="132" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="3" fill="#c9a227">THE PLUGIN'S DATA FOLDER</text>
+<text x="882" y="160" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="16" fill="#8a8578">~/.claude/plugins/data/</text>
+<text x="882" y="182" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="16" fill="#8a8578">subtitle-it-.../</text>
+<path d="M885 226 v16 a21 7 0 0 0 42 0 v-16" fill="#23232d" stroke="#c9a227" stroke-width="1.5"/>
+<ellipse cx="906" cy="226" rx="21" ry="7" fill="#2c2c38" stroke="#c9a227" stroke-width="1.5"/>
+<text x="950" y="240" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" fill="#f4efe1">One work folder per film</text>
+<line x1="874" y1="264" x2="1220" y2="264" stroke="#3a3a44" stroke-width="3"/>
+<path d="M886 298 v14 h40 v-14" fill="none" stroke="#cfc8b4" stroke-width="1.5" stroke-linejoin="round"/>
+<line x1="906" y1="278" x2="906" y2="300" stroke="#cfc8b4" stroke-width="2"/>
+<path d="M899 294 l7 8 l7 -8 z" fill="#cfc8b4"/>
+<text x="950" y="302" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" fill="#f4efe1">The download cache</text>
+<line x1="874" y1="326" x2="1220" y2="326" stroke="#3a3a44" stroke-width="3"/>
+<path d="M889 336 h18 l16 16 v28 h-34 z" fill="#23232d" stroke="#cfc8b4" stroke-width="1.5"/>
+<path d="M907 336 v16 h16" fill="none" stroke="#cfc8b4" stroke-width="1.5"/>
+<rect x="901" y="362" width="10" height="4" rx="2" fill="#cfc8b4" opacity="0.7"/>
+<rect x="901" y="374" width="-2" height="4" rx="2" fill="#cfc8b4" opacity="0.7"/>
+<text x="950" y="364" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" fill="#f4efe1">Each script's last result</text>
+<line x1="874" y1="388" x2="1220" y2="388" stroke="#3a3a44" stroke-width="3"/>
+<text x="882" y="428" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#f4efe1">Deleted when you uninstall the plugin</text>
+</svg>

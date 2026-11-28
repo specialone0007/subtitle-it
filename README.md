@@ -14,54 +14,39 @@
 
 <p align="center">
   <a href="#quick-start"><img src="docs/assets/btn-quick-start.svg" alt="Quick start" width="190"></a>
-  <a href="#how-a-run-goes"><img src="docs/assets/btn-how-a-run-goes.svg" alt="How a run goes" width="190"></a>
-  <a href="#cost-time-and-platforms"><img src="docs/assets/btn-cost-and-time.svg" alt="Cost and time" width="190"></a>
-  <a href="ARCHITECTURE.md"><img src="docs/assets/btn-architecture.svg" alt="Architecture: every step in detail" width="190"></a>
+  <a href="docs/reference/ARCHITECTURE.md"><img src="docs/assets/btn-architecture.svg" alt="Architecture: how a run works" width="190"></a>
+  <a href="docs/INDEX.md"><img src="docs/assets/btn-docs.svg" alt="All docs" width="190"></a>
+  <a href="CHANGELOG.md"><img src="docs/assets/btn-changelog.svg" alt="Changelog" width="190"></a>
 </p>
 
-A Claude Code plugin for people who want to watch a film that has no good
-Turkish subtitles. It reads the film's subtitles in any language and
+A Claude Code plugin that reads a film's subtitles in any language and
 writes natural Turkish ones. You type one command:
 
 ```
-/subtitle-it:translate Inception
+/subtitle-it:translate Harbour Lights
 ```
 
-About a quarter of an hour later, `Inception.srt` sits next to
-`Inception.mkv`, on the source file's own timings. It has exactly the
-video's name, so a TV playing the film from a USB stick picks it up. (Plain `/translate`
-also works when no other command uses that name.)
+When the run ends, `Harbour Lights.srt` sits next to
+`Harbour Lights.mkv`, under exactly the video's name.
 
 ![Same line, two translations. The English line "Well... you're coming, right?" becomes "Kuyu... geliyorsun, sağ?" word for word, and "Şey... geliyorsun, değil mi?" with the plugin](docs/assets/scene.svg)
 
 ## What you get
 
-- **Natural Turkish, never word for word.** Fillers and commands are translated
-  by meaning, the way people in the scene would talk.
-- **One voice for the whole film.** A short "film bible" fixes the names, the
-  terms and who says *sen* or *siz* to whom, before anyone translates a line.
-- **The original timings, easy to read.** Cues keep the source's times and
-  italics, with at most two short lines. Nothing is merged.
-- **Read at a glance.** Lines are reshaped into fewer, plainer words without
-  losing what is said, following the Netflix Turkish style guide. Only songs
-  that carry the story are translated (the `Songs` setting changes that).
-- **No hearing-impaired clutter.** Sound descriptions like `[door slams]` are
-  taken out. Set `Hearing-impaired tags` to `keep` to keep them.
-- **Title cards and signs.** On-screen text the English subtitles leave to
-  the picture is found in other languages' subtitles and in the picture
-  itself, and added. Cast and crew credits and logos are never added.
-- **No questions, no spoilers.** Once setup is done it runs to the end. The
-  one question it may ask is which film you mean when a name matches several
-  (Alien and Aliens). It does not discuss the plot in chat.
-- **An honest report.** What it could not settle for certain goes under
-  "Check after watching" in the film's `report.md`, with timestamps, next to
-  the run's time per step and its subagents' tokens.
-- **It learns from you.** Fix lines after watching, and it turns your edits
-  into rules for the next film.
-- **A short credit.** "İyi seyirler." opens the file and "Görüşmek üzere."
-  closes it, each over your name. Set `Credit` in your preferences, or `off`.
+![Eight film frames: natural Turkish, one voice for the whole film, two short lines cue for cue with the source, signs and title cards, no questions and no spoilers, an honest report with timestamps, it learns from the lines you fix, and your film stays on your machine](docs/assets/features.svg)
 
-[How a run works](ARCHITECTURE.md) has the exact rules behind each of these.
+After watching, fix lines in the file and run
+`/subtitle-it:learn Harbour Lights`. Fixes you repeat become rules.
+
+## The numbers
+
+![A run, by the numbers: about 32 minutes, about 12 dollars at API list prices on Opus (from 9 of the runs), about 1,600 cues, 0 questions asked. Measured over 38 runs of 28 films in November 2026, on Windows](docs/assets/ticket.svg)
+
+![Box office: 2,748 downloads of subtitles made with the plugin, across 23 films on 6 subtitle sites, counted on 27 November 2026](docs/assets/box-office.svg)
+
+On a Claude subscription a run uses your plan's usage, not dollars.
+[Numbers](docs/reference/NUMBERS.md) has every figure and how it was
+measured.
 
 ## Quick start
 
@@ -72,238 +57,94 @@ also works when no other command uses that name.)
    claude plugin install subtitle-it@subtitle-it
    ```
 
-   Claude Code loads plugins when a session starts, so start a new session
-   after installing; a session that is already open does not see the plugin.
-2. **Install uv**, which runs the scripts and installs their packages on first use:
-   - Windows: `winget install astral-sh.uv`
-   - macOS / Linux: `curl -LsSf https://astral.sh/uv/install.sh | sh`
-3. **Install ffmpeg and ffprobe** on PATH, which read subtitle tracks inside videos:
-   - Windows: `winget install Gyan.FFmpeg`
-   - macOS: `brew install ffmpeg` · Debian/Ubuntu: `sudo apt install ffmpeg`
-4. **Run it.** Start a new Claude Code session and run
-   `/subtitle-it:translate <film>`. The first time, it asks for the
-   folder that holds your films and saves it in `preferences.md`.
+2. **Install uv and ffmpeg:**
 
-That is enough for any film that has subtitles on disk. Two extras are
-optional. If a film needs one and its setup is not done, the plugin prints
-the setup command to run in your own terminal.
+   | System | Commands |
+   | --- | --- |
+   | Windows | `winget install astral-sh.uv` and `winget install Gyan.FFmpeg` |
+   | macOS | `curl -LsSf https://astral.sh/uv/install.sh \| sh` and `brew install ffmpeg` |
+   | Debian, Ubuntu | `curl -LsSf https://astral.sh/uv/install.sh \| sh` and `sudo apt install ffmpeg` |
 
-<details>
-<summary><b>OpenSubtitles</b>: for films without subtitles on disk</summary>
+3. **Run it.** Start a new Claude Code session and type
+   `/subtitle-it:translate <film>`.
 
-Create a free API key at <https://www.opensubtitles.com/consumers> and a
-free account. The first time a film needs it, the plugin prints a setup
-command with the full path to run in your own terminal; it asks for the key
-and login without showing them. From a clone of this repo the command is:
-
-```
-uv run scripts/opensubtitles.py setup --config ~/.config/subtitle-it
-```
-
-A key alone allows 5 downloads a day; with the free account login, 20.
-Downloads are cached.
-
-</details>
-
-<details>
-<summary><b>Audio hints</b>: tells the translators which voice speaks each line</summary>
-
-Create a free read token at <https://huggingface.co/settings/tokens>, accept
-the terms of <https://huggingface.co/pyannote/speaker-diarization-3.1> and
-<https://huggingface.co/pyannote/segmentation-3.0> with the same account,
-then run the setup command in your own terminal (the plugin prints it with
-the full path; it asks for the token without showing it):
-
-```
-uv run scripts/speakers.py setup --config ~/.config/subtitle-it
-```
-
-The first run downloads a few GB (PyTorch, pyannote and a Whisper model).
-With an NVIDIA GPU it takes a few minutes per film; on the CPU about as long
-as the film. When the subtitles are out of sync with the audio, it moves
-them to match and says so in the report.
-
-</details>
-
-<details>
-<summary><b>Speech-to-text</b>: the last resort, when no subtitle file exists anywhere</summary>
-
-It needs no setup and no token. Its first use downloads a few GB: PyTorch,
-unless the audio hints already did, plus a Whisper model of about 1.6 GB.
-With an NVIDIA GPU a film takes a few minutes, on the CPU about as long as
-the film or more.
-
-</details>
+[Setup](docs/getting-started/SETUP.md) has the optional extras and what
+to do when a step fails.
 
 ## How a run goes
 
 ![How a run goes: find the film, get subtitles, audio hints, film bible, translate, check, review, listen, deliver](docs/assets/run-strip.svg)
 
-The strip above is the short version. This is the whole run, in four acts.
-A dashed gold frame means the boxes inside it run at the same time.
+Thirteen steps, numbered 0 to 12, in four acts. Before a line is
+translated, the run writes the film's bible:
 
-![The whole run on one page, in four acts: find, understand, translate, finish. Blue is a script, green a local model on your machine, red is Claude](docs/assets/run-map.svg)
+![A page of a film bible for an invented film, Harbour Lights: who says sen or siz to whom, one Turkish word for each term, and a second reader who checks it without seeing the answers](docs/assets/film-bible.svg)
+
+![The cast: the scripts are plain Python, the local models listen to the audio on your machine, and Claude does the language work as nine kinds of agent](docs/assets/cast.svg)
 
 When a human-made Turkish subtitle already exists, the run polishes that
-file instead of translating from scratch, which uses less. It looks on
-your disk first, then on OpenSubtitles, which leaves out machine
-translations. It tries up to two files, a match for this exact video
-first, and uses the first one that fits the video's timings and covers at
-least 80% of the spoken lines. Lines that file lacks are translated.
-
-![The cast: the scripts are plain Python, the local models listen to the audio on your machine, and Claude does the language work as eight kinds of agent](docs/assets/cast.svg)
-
-[How a run works](ARCHITECTURE.md) explains every step in plain words: what it reads, what it
-writes, and why it is there.
-
-## Languages
-
-- **From:** any language. The plugin reads the film's subtitle file, or
-  writes one from the audio when none exists.
-- **Into:** Turkish.
-
-Turkish is the only target language for now; others may be added later.
-
-## What it needs
-
-- [Claude Code](https://code.claude.com/docs). A feature film takes about
-  one million new tokens plus about eight million cheaper cached reads. The
-  parallel translators use the largest share, about a quarter (they run at
-  medium reasoning effort), so a plan with room for that helps. Polishing an
-  existing Turkish file uses less.
-- uv and ffmpeg (Quick start above). OpenSubtitles and audio hints are optional.
-- Subtitles in a text format (SRT, ASS, WebVTT, or a text track inside the
-  video). Image subtitles (PGS, VobSub) are not read.
-
-You are responsible for having the right to use the films and subtitles you
-run it on. The plugin reads only the folders you give it and downloads from
-OpenSubtitles under your own account.
-
-## Cost, time and platforms
-
-![One run, by the numbers: about 17 minutes, about 8 dollars at API list prices on Opus, 1,838 cues, 0 questions asked. Measured once, on one 2-hour film on Windows](docs/assets/ticket.svg)
-
-Measured on one 2-hour film on Windows: about 17 minutes per run, and about
-$8 at API list prices with Opus. On a Claude subscription a run uses your
-plan's usage instead. Other films, models and machines will differ. Each
-run's `report.md` gives its own time per step and its subagents' tokens,
-and the work folder keeps them in `usage.json`.
-
-Full runs have only been tested on Windows. On macOS and Linux, CI runs the
-test suite, including one test that builds a short video and reads its
-subtitle track with the real ffmpeg; a full run there is untested. Without
-an NVIDIA GPU, audio hints and speech-to-text still work but take about as
-long as the film, or more for speech-to-text.
-
-## Where files go
-
-| Place | What is there |
-| --- | --- |
-| Next to the video | `<film>.srt`, with exactly the video's name and saved as UTF-8 with a BOM, so TVs find it and show ş, ğ and ı. A file already there under that name, such as an English `<film>.srt`, is moved to `backups/` first. Nothing else is written into your film folders. |
-| `~/.config/subtitle-it/`<br>(on Windows `C:\Users\<you>\.config\subtitle-it\`) | `preferences.md` (media folders, translator model, audio hints, hearing-impaired tags, songs, swearing, titles, credit, learned rules), `credentials.json` (OpenSubtitles and Hugging Face; only the scripts read it), and `backups/` (files a new subtitle replaced). Kept when the plugin is uninstalled. A settings folder from before the plugin was renamed is moved here, once, the first time it is needed. |
-| The plugin's data folder<br>(`~/.claude/plugins/data/subtitle-it-.../`) | One work folder per film with the bible, the delivered copy and a report, plus the download cache and `results/`, where each script saves its last JSON result. **Uninstalling the plugin deletes it.** |
-
-The skill reads the files in `results/` rather than the scripts' printed
-output, so a shell or tool that shortens command output does not get in the way.
+file instead of translating from scratch.
 
 ## What leaves your machine
 
-- **Subtitle text** goes to Claude as part of your Claude Code session.
-- **Frames** from the video go to Claude the same way, for a video input:
-  at most 300 still pictures, 960x540 at most, from the film's opening, its
-  last minutes and around a few on-screen texts. They are saved in the
-  film's work folder; the video itself never leaves.
-- **OpenSubtitles** receives your OpenSubtitles username and password when
-  the plugin logs in. A search sends the video's hash, the title or IMDb
-  id, the year when it is known, and the subtitle languages wanted.
-  The subtitle file itself comes from the https address OpenSubtitles
-  links to, which can be another host, and no key or token is sent with it.
-- **Web search** receives the film's title and year. The skill looks them
-  up once when it does not know them, and the bible writer and second
-  reader search for the cast and plot.
-- **Audio** never leaves. Audio hints and speech-to-text run locally.
-  Audio hints download the pyannote models from Hugging Face with your
-  Hugging Face token. The speech model is downloaded once from Hugging
-  Face; that download needs no token and sends none, unless `HF_TOKEN`
-  is set in your environment or you have logged in with the Hugging
-  Face command line tool: the Hugging Face library then sends that
-  token with it.
-- **Packages** are downloaded the first time each script runs: Python
-  packages from PyPI, and PyTorch from download.pytorch.org on Windows
-  and Linux. When no installed Python fits a script, uv may also download
-  a Python build.
-- **Credentials** are typed into your own terminal, never into the chat, and
-  kept in `credentials.json`. The OpenSubtitles key and login go only to
-  OpenSubtitles, and the Hugging Face token only to Hugging Face.
+![The video, the audio and your credentials file stay on your machine. Subtitle text and a capped number of still frames go to Claude, in your own session. Your film folder gets one new file, the subtitle](docs/assets/stays-home.svg)
 
-[SECURITY.md](SECURITY.md) has the details and how to report a problem.
+[Files and privacy](docs/reference/PRIVACY.md) lists everything that is
+sent, to whom, and when.
 
-## Learning from your fixes
+## Start here
 
-After watching, fix lines in the delivered `.srt` with any editor, then run
-`/subtitle-it:learn Inception`. It proposes
-general rules from your edits ("Always use 'Tamam' for 'OK'?") and saves
-only the ones you accept. Each new run also checks for edited files.
+1. **[Setup](docs/getting-started/SETUP.md)** - your first film.
+2. **[How a run works](docs/reference/ARCHITECTURE.md)** - every step on
+   one page.
+3. **[All docs](docs/INDEX.md)** - the index of every page.
+4. **[AGENTS.md](AGENTS.md)** - for contributors and coding agents.
 
-## Development
-
-To work on the plugin itself, load it from a clone for one session: in
-the repository folder, start Claude Code with `claude --plugin-dir .`.
-
-```
-uv run --group dev pytest
-uv run --group dev ruff check .
-uv run --group dev ruff format --check .
-```
-
-CI runs the same three commands on Linux, macOS and Windows, with ffmpeg
-installed. See [CONTRIBUTING.md](CONTRIBUTING.md) to send a change, and
-[CHANGELOG.md](CHANGELOG.md) for what changed in each version.
+## The small print
 
 <details>
-<summary><b>Layout</b>: what lives where in the repo</summary>
+<summary><b>What it needs</b></summary>
 
-```
-.claude-plugin/plugin.json      plugin manifest
-.claude-plugin/marketplace.json marketplace that lists the plugin
-skills/translate/SKILL.md       /subtitle-it:translate, the run (steps 0-12)
-skills/translate/setup.md       one-time setup, read only when a step needs it
-skills/translate/pack-tr.md     Turkish language rules, shared with learn
-skills/translate/preferences-template.md
-                                the first preferences file, shared with learn
-skills/learn/SKILL.md           /subtitle-it:learn, rules from your fixes
-agents/                         subagent types: bible writer, second reader, judge, voice mapper,
-                                translator, polish fixer, reviewer, listener, screen reader
-                                (instructions and allowed tools)
-scripts/srt.py                  parse, encodings, pairing by time, chunking
-scripts/sources.py              find films, extract tracks, validate sources
-scripts/opensubtitles.py        OpenSubtitles login, search, download
-scripts/prepare.py              build the work folder and chunks
-scripts/bible.py                questions, blind comparison and judging for the film bible; adds the voices
-scripts/polish.py               start from an existing Turkish subtitle: seed it, list cues to fix
-scripts/assemble.py             assemble, checks, review and listen parts, delivery
-scripts/learn.py                find user edits for learn mode
-scripts/compare.py              blind side-by-side comparison of two or three delivered files
-scripts/speakers.py             voices per cue from the audio, sync check
-scripts/transcribe.py           subtitles from the audio when no file exists, the last resort;
-                                the check of the timing file against the speech
-scripts/screen.py               read the picture with ffmpeg: the cut to black after the story,
-                                the frames for on-screen text and the readers' lines
-scripts/settings.py             find the settings folder; move the one from before the rename
-scripts/result.py               print each script's JSON result and save it to --result
-tests/                          pytest suite
-ARCHITECTURE.md                 how a run works, step by step
-docs/assets/                    the pictures in this file and in the architecture doc
-```
+- **[Claude Code](https://code.claude.com/docs),** on a plan with room
+  for a run.
+- **uv and ffmpeg,** from the quick start.
+- **Subtitles in a text format:** SRT, ASS, WebVTT or a text track inside
+  the video. Image subtitles (PGS, VobSub) are not read. With no subtitle
+  anywhere, it writes one from the audio.
+- **Windows, macOS or Linux.** Full runs have only been tested on
+  Windows. On macOS and Linux, CI runs the test suite, and a full run is
+  untested.
+
+It translates from any language, into Turkish only. You are responsible
+for having the right to use the films and subtitles you run it on.
+
+</details>
+
+<details>
+<summary><b>Working on the plugin</b></summary>
+
+| Folder | What is there |
+| --- | --- |
+| `skills/` | The two commands, `translate` and `learn`, and the Turkish language rules |
+| `agents/` | The nine agent types: their instructions and allowed tools |
+| `scripts/` | The Python scripts, one job each |
+| `tests/` | The pytest suite |
+| `docs/` | The docs and the pictures |
+
+Load the plugin from a clone with `claude --plugin-dir .`.
+[CONTRIBUTING.md](CONTRIBUTING.md) has the checks and how to send a
+change. [SECURITY.md](SECURITY.md) covers credentials and how to report
+a problem.
 
 </details>
 
 ## License
 
-Copyright 2026 Furkan Reha
+Apache-2.0, copyright 2026 Furkan Reha. See [LICENSE](LICENSE) and
+[NOTICE](NOTICE).
 
-Apache-2.0: the Apache License, version 2.0. See [LICENSE](LICENSE)
-and [NOTICE](NOTICE).
+<details>
+<summary><b>Third-party parts</b></summary>
 
 The plugin bundles no third-party code or models; the scripts download
 what they need when they first run.
@@ -311,7 +152,9 @@ what they need when they first run.
 - The pyannote speaker models are gated on Hugging Face and come under
   their own terms, which you accept there with your own account.
 - Whisper and faster-whisper, used for speech-to-text, are MIT-licensed.
-- ffmpeg is not bundled; you install it yourself (see Quick start).
+- ffmpeg is not bundled; you install it yourself.
+
+</details>
 
 ## Credits
 

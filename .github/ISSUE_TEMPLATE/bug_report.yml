@@ -25,7 +25,7 @@ body:
     id: command
     attributes:
       label: The command you ran
-      placeholder: /subtitle-it:translate Inception
+      placeholder: /subtitle-it:translate Harbour Lights
     validations:
       required: true
   - type: textarea

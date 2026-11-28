@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 520" width="1280" height="520" role="img" aria-labelledby="t d">
+<title id="t">What leaves your machine</title><desc id="d">Two rooms. The video, the audio and your credentials file stay on your machine: the audio models run there. Subtitle text and a capped number of still frames go to Claude, inside your own Claude Code session. Your film folder gets one new file, the subtitle. Subtitle searches and model downloads go to their own services, and the privacy page lists every one.</desc>
+<rect width="1280" height="520" fill="#0b0b0d"/>
+<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c1c25"/><stop offset="1" stop-color="#0f0f13"/></linearGradient></defs>
+<rect x="24" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="24" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="486" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="40" y="62" width="640" height="292" rx="10" fill="#141418" stroke="#c9a227" stroke-width="1.5"/>
+<rect x="760" y="62" width="480" height="292" rx="10" fill="#141418" stroke="#2a2a31"/>
+<text x="72" y="108" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="3" fill="#c9a227">STAYS ON YOUR MACHINE</text>
+<text x="792" y="108" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="3" fill="#8a8578">GOES TO CLAUDE, IN YOUR OWN SESSION</text>
+<line x1="692" y1="208" x2="738" y2="208" stroke="#8a8578" stroke-width="2.5"/>
+<path d="M736 199 l14 9 l-14 9 z" fill="#8a8578"/>
+<circle cx="150" cy="196" r="38" fill="#23232d" stroke="#c9a227" stroke-width="1.5"/>
+<circle cx="150" cy="196" r="6" fill="#c9a227"/>
+<circle cx="150" cy="175" r="8" fill="#0b0b0d"/>
+<circle cx="170" cy="190" r="8" fill="#0b0b0d"/>
+<circle cx="162" cy="213" r="8" fill="#0b0b0d"/>
+<circle cx="138" cy="213" r="8" fill="#0b0b0d"/>
+<circle cx="130" cy="190" r="8" fill="#0b0b0d"/>
+<text x="150" y="266" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">The video</text>
+<text x="150" y="293" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">never uploaded</text>
+<rect x="311" y="189.0" width="6" height="14" rx="3" fill="#c9a227"/>
+<rect x="321" y="179.0" width="6" height="34" rx="3" fill="#c9a227"/>
+<rect x="331" y="167.0" width="6" height="58" rx="3" fill="#c9a227"/>
+<rect x="341" y="183.0" width="6" height="26" rx="3" fill="#c9a227"/>
+<rect x="351" y="161.0" width="6" height="70" rx="3" fill="#c9a227"/>
+<rect x="361" y="176.0" width="6" height="40" rx="3" fill="#c9a227"/>
+<rect x="371" y="165.0" width="6" height="62" rx="3" fill="#c9a227"/>
+<rect x="381" y="185.0" width="6" height="22" rx="3" fill="#c9a227"/>
+<rect x="391" y="174.0" width="6" height="44" rx="3" fill="#c9a227"/>
+<rect x="401" y="188.0" width="6" height="16" rx="3" fill="#c9a227"/>
+<text x="360" y="266" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">The audio</text>
+<text x="360" y="293" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">the models listen here</text>
+<circle cx="546" cy="196" r="17" fill="none" stroke="#c9a227" stroke-width="5"/>
+<rect x="563" y="193" width="52" height="6" rx="3" fill="#c9a227"/>
+<rect x="594" y="196" width="6" height="15" rx="2" fill="#c9a227"/>
+<rect x="608" y="196" width="6" height="11" rx="2" fill="#c9a227"/>
+<text x="570" y="266" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">Your credentials file</text>
+<text x="570" y="293" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">read only by the scripts</text>
+<rect x="824" y="160" width="112" height="72" rx="6" fill="#23232d" stroke="#8a8578"/>
+<rect x="842" y="200" width="76" height="6" rx="3" fill="#f4efe1"/>
+<rect x="854" y="214" width="52" height="6" rx="3" fill="#f4efe1"/>
+<text x="880" y="266" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">Subtitle text</text>
+<text x="880" y="293" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">every run</text>
+<rect x="1048" y="154" width="100" height="62" rx="5" fill="#191920" stroke="#8a8578"/>
+<rect x="1060" y="164" width="100" height="62" rx="5" fill="#1e1e26" stroke="#8a8578"/>
+<rect x="1072" y="174" width="100" height="62" rx="5" fill="#23232d" stroke="#8a8578"/>
+<circle cx="1106" cy="200" r="9" fill="#4a4a58"/>
+<path d="M1086 235 q20 -30 40 0 z" fill="#4a4a58"/>
+<text x="1110" y="266" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">Still frames</text>
+<text x="1110" y="293" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">a capped number</text>
+<rect x="40" y="374" width="1200" height="58" rx="10" fill="#141418" stroke="#2a2a31"/>
+<text x="72" y="411" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" fill="#cfc8b4">Your film folder gets one new file:</text>
+<text x="424" y="411" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="21" fill="#f4efe1">Harbour Lights.srt</text>
+<text x="1208" y="410" text-anchor="end" font-family="Georgia, 'Times New Roman', Times, serif" font-size="16" font-style="italic" fill="#8a8578">Searches and downloads are listed on the privacy page.</text>
+</svg>

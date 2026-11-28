@@ -15,15 +15,15 @@ word now go to the fixer.
   grey 20 of 255. It marks a frame `same_as` the frame that opened its run
   when every tile of a 96x54 grid stays within 4 grey levels of it.
   Neither is sent to a reader; `collect` gives a dark frame no text and a
-  repeat its run's reading. On The Social Reckoning, 241 of 300 frames
+  repeat its run's reading. On that film, 241 of 300 frames
   were sent (21 dark, 38 repeats), and the readings came out the same.
 - The screen reader may answer `shows_entry` with a list when one card
   shows several entries. A single id or `null` still parses.
 - `term rendering` also checks name decisions on the cues each one cites,
   and the bible's own `"term" → "rendering"` lines in World, Glossary and
   Titles. It now needs every word of a rendering in any form, so
-  "Kıdemli Muhalefet Üyesi" fails where the bible says "Kıdemli Azınlık
-  Üyesi".
+  "Liman Meclisi Başkanı" fails where the bible says "Liman Kurulu
+  Başkanı".
 - A repeated line in a group the bible says is said word for word is a
   `bible repeat` warning. `polish.py flags` sends it to the polish fixer
   with the wording to match. Each repeat warning records the cue it should
@@ -38,7 +38,7 @@ Norwegian and Swedish files mark a sentence that runs on into the next
 cue with " -" at the end of one cue and "- " at the start of the next;
 the dash check took that "- " for a speaker, so closing cards in Turkish
 started with a dash and read like dialogue. Both now pass as they
-should. The Social Reckoning (2026) hit both: song cues 853 to 857 and
+should. One 2026 film hit both: song cues 853 to 857 and
 the closing cards 2091, 2094 and 2098.
 
 - The `italic tags` check lets a song cue be in italics where the source
@@ -63,7 +63,7 @@ the speech. The plugin now checks the timing file against the film's own
 speech when the other subtitle tracks hint that it is off, or when the
 file's timing is not certain (it is not a built-in track or an
 OpenSubtitles hash match), and moves it onto the speech before the
-translation starts. Disclosure Day (2026) was delivered 0.65 s late on
+translation starts. One 2026 film was delivered 0.65 s late on
 every line; this check finds it and fixes it.
 
 - `transcribe.py sync --video V --timing T --language xx` transcribes six
@@ -75,11 +75,10 @@ every line; this check finds it and fixes it.
   median, the offset per stretch, a verdict and `shift_ms`. It shifts
   only with 30 or more lines matched, half of them near the median, and
   no two stretches with 15 or more matches over 700 ms apart.
-- Measured: Disclosure Day's built-in English track, 579 ms late (raw
+- Measured: that film's built-in English track, 579 ms late (raw
   median gap 729 ms, 103 lines, stretches 398 to 670 ms; shift −580).
-  Two films whose tracks are in sync: Sinners (2025), raw gap 158 ms;
-  Project Hail Mary (2026), 164 ms; both in sync. Whisper's own
-  transcript of Disclosure Day against the same audio: 5 ms. The 150 ms
+  Two films whose tracks are in sync: raw gap 158 ms and 164 ms. Whisper's own
+  transcript of the late film against the same audio: 5 ms. The 150 ms
   lead comes from the two films in sync.
 - `prepare.py build` reports `on_screen.tracks_offset`: how many other
   tracks fit, how many put the timing file more than 300 ms off the same
@@ -90,7 +89,7 @@ every line; this check finds it and fixes it.
 - `speakers.py run --expect-offset-ms N` takes a best offset within
   300 ms of N that beats every offset away from it, even when it does not
   stand out from chance on its own, and sets `sync.agrees_with_tracks`.
-  On Disclosure Day its best offset, 700 ms, matched 58 speech starts
+  On the late film its best offset, 700 ms, matched 58 speech starts
   against 52 for the next and was thrown away. `sync.best_offset_ms` is
   now always reported.
 - The translate skill runs the check after step 2's first `build`, before
@@ -135,7 +134,7 @@ session lists the other subtitle tracks in.
   times, its id and the track list in `build.json` now come out the
   same however the tracks after the first are listed, and the build with
   `--screen` finds the ids `screen.py frames` saw.
-- Two runs of Resident Evil (2026) with 39 other tracks had listed them
+- Two runs of one 2026 film with 39 other tracks had listed them
   in number order and in name order. The old code gave 32 of the 53
   on-screen entries different text or times: the title card came from
   the Arabic track in one run and the Hebrew track in the other, and was
@@ -366,7 +365,7 @@ keeps the human file's wording unless a real check fails.
 
 Lines read the way Turkish people say them: a listener reads the finished
 Turkish as a viewer before delivery, and a fast line gets more time on
-screen instead of a stiffer wording. On a full rerun of The Odyssey the
+screen instead of a stiffer wording. On a full rerun of one 2026 film the
 listen step changed about 1 line in 42 and the meaning check made fewer
 errors than the delivered file; the delivered file, after about nine fix
 rounds, still read slightly better.
@@ -405,7 +404,7 @@ rounds, still read slightly better.
 - The translators run at medium effort again: low effort tied medium on
   meaning, but not on how natural the Turkish sounds.
 - A capitals speaker label followed directly by a tag
-  ("BARD:<i>Sing to me.</i>") is stripped.
+  ("HARTLEY:<i>Wait for me.</i>") is stripped.
 - A sen/siz reason line survives a later fix file that keeps the form but
   writes no reason, so `check` no longer warns on it. The usage report
   names step 10 "review in parts".
@@ -483,7 +482,7 @@ Fixes for warnings the checks raised on correct Turkish in a full run,
   choices a family question quotes ("abi" or "kardeş") are no longer
   read as source terms.
 - One word, several senses: decisions that quote a term with and without
-  an article ("the loft", "loft") count as one term, so either sense's
+  an article ("the bridge", "bridge") count as one term, so either sense's
   rendering passes. The run's three `term rendering` warnings on this were
   all correct Turkish.
 - The address check stays silent on a cue that is most likely the other
@@ -514,20 +513,20 @@ words the film did not write one way.
   reviewer take the run as one unit: the whole sentence first, then each
   part exactly once.
 - The bible lists slang and idioms with their meaning in the film
-  ("pigeon" for a sucker, "chasers", "the bottom of the church" for the
-  basement), and decides once who is older in each pair of siblings, with
+  ("lemon" for a bad car, "a rain check", "the back of the house" for the
+  kitchen), and decides once who is older in each pair of siblings, with
   one spelling ("abi", not "abi" and "ağabey").
 - One rendering per term: `term rendering` warns when a cue's source says
   a term the bible decided and the Turkish has none of its rendering;
   `term drift` warns on a second form of a word the film otherwise writes
   one way (abi/ağabey, celp/celpname).
 - Name suffixes follow how the name sounds: `name suffix` warns on
-  "Joey'in" (write "Joey'nin") and "John'nun" (write "John'un").
+  "Casey'in" (write "Casey'nin") and "John'nun" (write "John'un").
 - TDK spellings: `spelling` warns on common slips such as "sağol",
   "herşey", "bir çok", "yanlız" and "malesef".
 - The address-form check no longer warns when it may have the wrong
   speaker: a question and its answer heard as one voice, a two-speaker
-  cue, or a name spoken about rather than to ("you and Father Barry").
+  cue, or a name spoken about rather than to ("you and Captain Lund").
 - The run goes on as soon as an agent's output files are written and
   stop changing (`usage.py wait`), rather than waiting for the agent's
   completion notice, which can come many minutes later. A notice that
@@ -568,7 +567,7 @@ the subtitle reads.
 
 ## 0.7.0 (2026-11-14)
 
-Feedback from The Dog Stars: some scenes were too formal, background songs
+Feedback from one test film: some scenes were too formal, background songs
 were translated, and some lines were word for word and slow to read. The
 fixes follow the Netflix Turkish Timed Text Style Guide where it has a rule.
 
@@ -701,9 +700,9 @@ fixes follow the Netflix Turkish Timed Text Style Guide where it has a rule.
 
 - Hearing-impaired text is now taken out before any agent sees it.
   Sound descriptions in square brackets (`[door slams]`) and bracketed
-  names (`[Sandra] text`, `[1. Man] text`, `[Guard 2] text`) go from every
+  names (`[Mara] text`, `[1. Man] text`, `[Guard 2] text`) go from every
   file. Descriptions in parentheses (`(sighs)`) and labels in capitals
-  (`SANDRA:`) go only from a file that is hearing-impaired; elsewhere they
+  (`MARA:`) go only from a file that is hearing-impaired; elsewhere they
   stay, since plain files use them for dialogue. Even there a parenthesis
   that ends in ? or !, or holds a sentence with words on both sides, is
   kept, and capitals before a colon count as a label only when they look
