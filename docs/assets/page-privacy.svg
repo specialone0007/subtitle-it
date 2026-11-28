@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 220" width="1280" height="220" role="img" aria-labelledby="t d">
+<title id="t">Subtitle It: Files and privacy</title><desc id="d">Page header for the files and privacy reference.</desc>
+<rect width="1280" height="220" fill="#0b0b0d"/>
+<rect x="24" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="24" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="186" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="40" y="50" width="1200" height="120" rx="10" fill="#141418" stroke="#c9a227" stroke-width="1.5"/>
+<line x1="968" y1="58" x2="968" y2="162" stroke="#c9a227" stroke-width="1.5" stroke-dasharray="3 7" opacity="0.8"/>
+<text x="76" y="86" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="4" fill="#c9a227">REFERENCE</text>
+<text x="76" y="126" text-anchor="start" font-family="Georgia, 'Times New Roman', Times, serif" font-size="38" fill="#f4efe1">Files and privacy</text>
+<text x="76" y="154" text-anchor="start" font-family="Georgia, 'Times New Roman', Times, serif" font-size="19" font-style="italic" fill="#cfc8b4">What a run writes, and what leaves your machine</text>
+<text x="1104" y="106" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="18" letter-spacing="6" fill="#c9a227">SUBTITLE IT</text>
+<text x="1104" y="134" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="4" fill="#8a8578">THE DOCS</text>
+</svg>

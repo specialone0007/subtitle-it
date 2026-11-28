@@ -1,0 +1,19 @@
+{
+  "roots": ["docs", "README.md", "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md", "CHANGELOG.md"],
+  "centralIndex": "docs/INDEX.md",
+  "indexConvention": "sibling",
+  "frontDoor": "README.md",
+  "agentFile": "AGENTS.md",
+  "requiredDocs": {
+    "changelog": "CHANGELOG.md",
+    "contribute": "CONTRIBUTING.md",
+    "security": "SECURITY.md",
+    "purpose": "docs/explanation/OVERVIEW.md",
+    "onboarding": false,
+    "develop": false,
+    "testing": false,
+    "deploy": false,
+    "operate": false,
+    "integrations": false
+  }
+}

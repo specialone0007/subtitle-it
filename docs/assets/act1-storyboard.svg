@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 440" width="1280" height="440" role="img" aria-labelledby="t d">
+<title id="t">Act 1 in four frames</title><desc id="d">Four film frames, one for each part of act 1. Step 0, start: a script checks that uv and ffprobe are installed and reads your preferences. Step 1, find the film: it searches your media folders for the name you gave and finds Harbour Lights.mkv. Step 2, get subtitles: your disk first, then the subtitle site, then the film's own speech as the last resort. Step 2, build the work folder: sound tags such as [door slams] come out, and the film is cut into chunks of about 250 cues, each cut at the longest pause.</desc>
+<rect width="1280" height="440" fill="#0b0b0d"/>
+<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c1c25"/><stop offset="1" stop-color="#0f0f13"/></linearGradient></defs>
+<rect x="24" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="24" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="406" width="22" height="20" rx="4" fill="#1d1d22"/>
+<text x="640.0" y="70" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="4" fill="#c9a227">ACT 1  ·  THE STORYBOARD</text>
+<rect x="40" y="100" width="285" height="170" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<rect x="64" y="126" width="237" height="122" rx="8" fill="#101014" stroke="#2a2a31"/>
+<circle cx="82" cy="142" r="4" fill="#3a3a44"/>
+<circle cx="96" cy="142" r="4" fill="#3a3a44"/>
+<circle cx="110" cy="142" r="4" fill="#3a3a44"/>
+<path d="M84 170 l5 6 l10 -13" fill="none" stroke="#c9a227" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="114" y="178" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="18" fill="#f4efe1">uv</text>
+<path d="M84 198 l5 6 l10 -13" fill="none" stroke="#c9a227" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="114" y="206" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="18" fill="#f4efe1">ffprobe</text>
+<path d="M84 226 l5 6 l10 -13" fill="none" stroke="#c9a227" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="114" y="234" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#f4efe1">your preferences</text>
+<rect x="40" y="100" width="285" height="6" rx="3" fill="#4a90d9"/>
+<text x="42" y="302" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="3" fill="#4a90d9">STEP 0 · SKILL, SCRIPT</text>
+<text x="42" y="332" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">Start</text>
+<text x="42" y="358" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">Checks uv and ffprobe, and</text>
+<text x="42" y="381" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">reads your preferences.</text>
+<rect x="345" y="100" width="285" height="170" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<path d="M369 130 h16 l5 6 h21 v22 h-42 z" fill="#23232d" stroke="#c9a227" stroke-width="1.5"/>
+<text x="423" y="150" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" fill="#8a8578">your media folders</text>
+<rect x="381" y="172" width="150" height="8" rx="4" fill="#2c2c38"/>
+<rect x="369" y="188" width="237" height="30" rx="5" fill="#1f1f27" stroke="#c9a227" stroke-width="1.2"/>
+<text x="381" y="209" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="16" fill="#f4efe1">Harbour Lights.mkv</text>
+<circle cx="581" cy="201" r="8" fill="none" stroke="#c9a227" stroke-width="2.5"/>
+<line x1="587" y1="207" x2="595" y2="215" stroke="#c9a227" stroke-width="3" stroke-linecap="round"/>
+<rect x="381" y="230" width="120" height="8" rx="4" fill="#2c2c38"/>
+<rect x="381" y="248" width="172" height="8" rx="4" fill="#2c2c38"/>
+<rect x="345" y="100" width="285" height="6" rx="3" fill="#4a90d9"/>
+<text x="347" y="302" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="3" fill="#4a90d9">STEP 1 · SCRIPT</text>
+<text x="347" y="332" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">Find the film</text>
+<text x="347" y="358" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">Searches your media folders</text>
+<text x="347" y="381" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">for the name you gave.</text>
+<rect x="650" y="100" width="285" height="170" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<line x1="690" y1="144" x2="690" y2="220" stroke="#2a2a31" stroke-width="2"/>
+<circle cx="690" cy="144" r="14" fill="#0b0b0d" stroke="#4a90d9" stroke-width="1.5"/>
+<text x="690" y="150" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="18" fill="#f4efe1">1</text>
+<text x="718" y="150" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#f4efe1">On your disk</text>
+<circle cx="690" cy="182" r="14" fill="#0b0b0d" stroke="#4a90d9" stroke-width="1.5"/>
+<text x="690" y="188" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="18" fill="#f4efe1">2</text>
+<text x="718" y="188" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#f4efe1">The subtitle site</text>
+<circle cx="690" cy="220" r="14" fill="#0b0b0d" stroke="#3fb27f" stroke-width="1.5"/>
+<text x="690" y="226" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="18" fill="#f4efe1">3</text>
+<text x="718" y="226" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#f4efe1">The film's own speech</text>
+<text x="718" y="248" text-anchor="start" font-family="Georgia, 'Times New Roman', Times, serif" font-size="16" font-style="italic" fill="#8a8578">the last resort</text>
+<rect x="650" y="100" width="285" height="6" rx="3" fill="#4a90d9"/>
+<text x="652" y="302" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="3" fill="#4a90d9">STEP 2 · SCRIPT</text>
+<text x="652" y="332" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">Get subtitles</text>
+<text x="652" y="358" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">Your disk, then the subtitle</text>
+<text x="652" y="381" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">site, then the speech itself.</text>
+<rect x="955" y="100" width="285" height="170" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<text x="983" y="146" text-anchor="start" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="16" fill="#8a8578">[door slams]</text>
+<line x1="979" y1="141" x2="1103" y2="141" stroke="#cfc8b4" stroke-width="2"/>
+<text x="983" y="174" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" fill="#f4efe1">You came back.</text>
+<rect x="986" y="194" width="7" height="22" rx="2" fill="#4a4a58"/>
+<rect x="996" y="194" width="7" height="22" rx="2" fill="#4a4a58"/>
+<rect x="1006" y="194" width="7" height="22" rx="2" fill="#4a4a58"/>
+<rect x="1016" y="194" width="7" height="22" rx="2" fill="#4a4a58"/>
+<rect x="1026" y="194" width="7" height="22" rx="2" fill="#4a4a58"/>
+<rect x="1036" y="194" width="7" height="22" rx="2" fill="#4a4a58"/>
+<line x1="1056" y1="187" x2="1056" y2="223" stroke="#c9a227" stroke-width="2" stroke-dasharray="4 4"/>
+<rect x="1069" y="194" width="7" height="22" rx="2" fill="#4a4a58"/>
+<rect x="1079" y="194" width="7" height="22" rx="2" fill="#4a4a58"/>
+<rect x="1089" y="194" width="7" height="22" rx="2" fill="#4a4a58"/>
+<rect x="1099" y="194" width="7" height="22" rx="2" fill="#4a4a58"/>
+<rect x="1109" y="194" width="7" height="22" rx="2" fill="#4a4a58"/>
+<rect x="1119" y="194" width="7" height="22" rx="2" fill="#4a4a58"/>
+<line x1="1139" y1="187" x2="1139" y2="223" stroke="#c9a227" stroke-width="2" stroke-dasharray="4 4"/>
+<rect x="1152" y="194" width="7" height="22" rx="2" fill="#4a4a58"/>
+<rect x="1162" y="194" width="7" height="22" rx="2" fill="#4a4a58"/>
+<rect x="1172" y="194" width="7" height="22" rx="2" fill="#4a4a58"/>
+<rect x="1182" y="194" width="7" height="22" rx="2" fill="#4a4a58"/>
+<rect x="1192" y="194" width="7" height="22" rx="2" fill="#4a4a58"/>
+<rect x="1202" y="194" width="7" height="22" rx="2" fill="#4a4a58"/>
+<text x="1097.5" y="250" text-anchor="middle" font-family="Georgia, 'Times New Roman', Times, serif" font-size="16" font-style="italic" fill="#cfc8b4">cut at the longest pause</text>
+<rect x="955" y="100" width="285" height="6" rx="3" fill="#4a90d9"/>
+<text x="957" y="302" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" letter-spacing="3" fill="#4a90d9">STEP 2 · SCRIPT</text>
+<text x="957" y="332" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#f4efe1">Build the work folder</text>
+<text x="957" y="358" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">Sound tags come out. The film is</text>
+<text x="957" y="381" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">cut into chunks of about 250.</text>
+</svg>

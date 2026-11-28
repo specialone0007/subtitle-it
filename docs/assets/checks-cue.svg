@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 470" width="1280" height="470" role="img" aria-labelledby="t d">
+<title id="t">What the check looks at on every cue</title><desc id="d">One film frame with a two-line Turkish cue, and what the script assemble.py check looks at. Hard fails go back to the translator: every cue is there, with none missing, extra or empty; italics and dialogue dashes are the same as the source; nothing is left over, so no slash and, by default, no square brackets and no speaker label; the cue fits two lines of 42 characters. Warnings go to the reviewers: a reading speed above 17 characters a second; spelling, such as sağol for sağ ol; terms and repeated lines written one way all film long; and the bible's sen or siz for each pair.</desc>
+<rect width="1280" height="470" fill="#0b0b0d"/>
+<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c1c25"/><stop offset="1" stop-color="#0f0f13"/></linearGradient></defs>
+<rect x="24" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="14" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="24" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="72" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="120" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="168" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="216" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="264" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="312" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="360" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="408" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="456" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="504" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="552" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="600" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="648" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="696" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="744" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="792" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="840" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="888" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="936" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="984" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1032" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1080" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1128" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1176" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<rect x="1224" y="436" width="22" height="20" rx="4" fill="#1d1d22"/>
+<text x="640" y="84" text-anchor="middle" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="18" fill="#4a90d9">assemble.py check</text>
+<rect x="390" y="104" width="500" height="290" rx="6" fill="url(#sky)" stroke="#2a2a31"/>
+<g transform="translate(530 298) scale(1.45)"><circle cx="0" cy="-62" r="20" fill="#22222b"/><path d="M-42 0 q42 -68 84 0 z" fill="#22222b"/></g>
+<rect x="506.12" y="147" width="47.76" height="26" rx="13.0" fill="#0b0b0d" stroke="#cfc8b4" stroke-width="1.2"/>
+<text x="530" y="166" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#cfc8b4">Joe</text>
+<g transform="translate(694 298) scale(1.45)"><circle cx="0" cy="-62" r="20" fill="#22222b"/><path d="M-42 0 q42 -68 84 0 z" fill="#22222b"/></g>
+<rect x="630.44" y="147" width="127.12" height="26" rx="13.0" fill="#0b0b0d" stroke="#cfc8b4" stroke-width="1.2"/>
+<text x="694" y="166" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#cfc8b4">the Captain</text>
+<text x="866" y="158" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="17" fill="#cfc8b4">00:41:07</text>
+<line x1="792" y1="167" x2="792" y2="181" stroke="#c9a227" stroke-width="2"/>
+<text x="866" y="200" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace" font-size="17" fill="#cfc8b4">00:41:10</text>
+<rect x="391" y="298" width="498" height="95" fill="#0c0c10" opacity="0.85"/>
+<text x="640" y="338" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="24" fill="#f4efe1">- Siz bilirsiniz, Kaptan.</text>
+<text x="640" y="372" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="24" fill="#f4efe1">- Çatı katına çıkalım.</text>
+<rect x="390" y="104" width="500" height="6" rx="3" fill="#4a90d9"/>
+<text x="352" y="108" text-anchor="end" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="3" fill="#c9a227">HARD FAILS</text>
+<text x="352" y="132" text-anchor="end" font-family="Georgia, 'Times New Roman', Times, serif" font-size="17" font-style="italic" fill="#8a8578">go back to the translator</text>
+<text x="928" y="108" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" letter-spacing="3" fill="#c9a227">WARNINGS</text>
+<text x="928" y="132" text-anchor="start" font-family="Georgia, 'Times New Roman', Times, serif" font-size="17" font-style="italic" fill="#8a8578">go to the reviewers</text>
+<text x="352" y="178" text-anchor="end" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#f4efe1">Every cue is there</text>
+<text x="352" y="202" text-anchor="end" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">none missing, extra or empty</text>
+<line x1="362" y1="184" x2="390" y2="184" stroke="#8a8578" stroke-width="1.5"/>
+<circle cx="390" cy="184" r="4" fill="#c9a227"/>
+<text x="928" y="178" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#f4efe1">Reading speed</text>
+<text x="928" y="202" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">above 17 characters a second</text>
+<line x1="890" y1="184" x2="918" y2="184" stroke="#8a8578" stroke-width="1.5"/>
+<circle cx="890" cy="184" r="4" fill="#c9a227"/>
+<text x="352" y="240" text-anchor="end" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#f4efe1">Italics and dialogue dashes</text>
+<text x="352" y="264" text-anchor="end" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">the same as the source</text>
+<line x1="362" y1="246" x2="390" y2="246" stroke="#8a8578" stroke-width="1.5"/>
+<circle cx="390" cy="246" r="4" fill="#c9a227"/>
+<text x="928" y="240" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#f4efe1">Spelling</text>
+<text x="928" y="264" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">“sağol” for “sağ ol”</text>
+<line x1="890" y1="246" x2="918" y2="246" stroke="#8a8578" stroke-width="1.5"/>
+<circle cx="890" cy="246" r="4" fill="#c9a227"/>
+<text x="352" y="302" text-anchor="end" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#f4efe1">No leftovers</text>
+<text x="352" y="326" text-anchor="end" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">no “ / ”; by default no [ ] or speaker label</text>
+<line x1="362" y1="308" x2="390" y2="308" stroke="#8a8578" stroke-width="1.5"/>
+<circle cx="390" cy="308" r="4" fill="#c9a227"/>
+<text x="928" y="302" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#f4efe1">Terms and repeated lines</text>
+<text x="928" y="326" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">written one way, all film long</text>
+<line x1="890" y1="308" x2="918" y2="308" stroke="#8a8578" stroke-width="1.5"/>
+<circle cx="890" cy="308" r="4" fill="#c9a227"/>
+<text x="352" y="364" text-anchor="end" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#f4efe1">Layout</text>
+<text x="352" y="388" text-anchor="end" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">two lines of 42 characters</text>
+<line x1="362" y1="370" x2="390" y2="370" stroke="#8a8578" stroke-width="1.5"/>
+<circle cx="390" cy="370" r="4" fill="#c9a227"/>
+<text x="928" y="364" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#f4efe1">Sen or siz</text>
+<text x="928" y="388" text-anchor="start" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#cfc8b4">the bible's form for each pair</text>
+<line x1="890" y1="370" x2="918" y2="370" stroke="#8a8578" stroke-width="1.5"/>
+<circle cx="890" cy="370" r="4" fill="#c9a227"/>
+</svg>
