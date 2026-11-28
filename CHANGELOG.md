@@ -8,8 +8,11 @@ summary, with the exact rules folded below it. Runs behave as before:
 this release changes how no script or check behaves.
 
 - Every page under `docs/`, and the README, puts a picture and a short
-  summary first. The long rules sit in collapsed sections under the same
-  headings, so links to a section still work.
+  summary first. The long rules sit in collapsed sections below it.
+- The root `ARCHITECTURE.md` moved to `docs/reference/ARCHITECTURE.md`.
+  Its steps are split over four act pages under `docs/reference/run/`
+  with new headings, and the README has fewer sections, so an old link
+  to a section of either file no longer lands on it.
 - Examples and test text use an invented film, "Harbour Lights", with
   invented people and lines. This covers the agent briefs, the Turkish
   pack, script comments and the test fixtures.
