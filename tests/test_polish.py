@@ -227,10 +227,10 @@ def test_toned_down_spots_a_softened_line():
 def test_toned_down_ignores_words_that_only_look_crude():
     assert polish.toned_down(["Kokteyl ister misin?"], ["A cocktail?"]) is None
     assert polish.toned_down(["Bunu götürmem lazım."], ["I need to take this."]) is None
-    assert polish.toned_down(["Boks maçı."], ["Shitty boxing match."]) == "shit"
+    assert polish.toned_down(["Balık avı."], ["Shitty fishing trip."]) == "shit"
     assert polish.toned_down(["Hadi ama, yine mi?"], ["Oh shit, not again?"]) == "shit"
     assert polish.toned_down(["Kahrolası kapı."], ["Damn door."]) is None
-    assert polish.toned_down(["Kahramanlar hep geç kalır."], ["Heroes are always damn late."]) == "damn"
+    assert polish.toned_down(["Vapur hep geç kalır."], ["The ferry is always damn late."]) == "damn"
 
 
 def test_flags_lists_toned_down_and_misplaced_cues(tmp_path: Path):

@@ -649,7 +649,7 @@ class AddressBook:
         """The one character the line speaks to by name: a name set off by
         punctuation or the line's ends ("Nora, sit down.", "Sit down,
         Nora."). A name inside the sentence is spoken about, not to: in
-        "you and them mugs and Father Barry" the listener is someone else."""
+        "you and the crew and Captain Lund" the listener is someone else."""
         low = text.casefold()
         named = {n for rx, n in self._mention if n != speaker and any(_vocative(low, m) for m in rx.finditer(low))}
         return named.pop() if len(named) == 1 else None
@@ -884,7 +884,7 @@ TR_KIN = set().union(*KIN.values())
 
 def term_key(term: str) -> str:
     """A quoted source term as the check groups it: lower case, without a
-    leading article, so "the loft" and "loft" are one word."""
+    leading article, so "the bridge" and "bridge" are one word."""
     return ARTICLE_RE.sub("", term.strip().casefold())
 
 
@@ -995,8 +995,8 @@ def glossary_conflicts(work: Path, data: dict) -> list[dict]:
 
 APPLIES_RANGE_RE = re.compile(r"^\s*(\d+)\s*-\s*(\d+)\s*$")
 # Words in a term question that limit the decision to one sense of the
-# word: "when it means the birds", "as in ...", "in "your brother in
-# Christ"", or a sense in parentheses ("minutes" (of the meeting)).
+# word: "when it means the animal", "as in ...", "in "my brothers of the
+# crew"", or a sense in parentheses ("minutes" (of the meeting)).
 SENSE_RE = re.compile(r"\bwhen\b|\bmean(?:s|ing)?\b|\bas in\b|\bin Q\b|\bsense\b|\(", re.I)
 NUMBER_RE = re.compile(r"\b\d{1,5}\b")
 
@@ -1023,9 +1023,9 @@ def _rendering_and_exceptions(answer: str) -> tuple[str, set[int]]:
     """The rendering an answer gives, and the cues its notes exempt. Notes
     are what sits in parentheses and what follows the first ";" outside
     them; the rendering is the rest. Cue numbers in the notes are
-    exceptions: "Başbakan (the show name at cue 8 stays PM)", "muhbir; 1290
-    keeps the pun". A ";" inside parentheses is part of the note: "et
-    (odadaki et; oda eti)" renders "et"."""
+    exceptions: "Kaptan (the boat's name at cue 8 stays Skipper)", "muhbir; 1290
+    keeps the pun". A ";" inside parentheses is part of the note: "ağ
+    (güvertedeki ağ; güverte ağı)" renders "ağ"."""
     depth, main, notes = 0, [], []
     rest = ""
     for i, ch in enumerate(answer):
@@ -1042,8 +1042,8 @@ def _rendering_and_exceptions(answer: str) -> tuple[str, set[int]]:
 
 
 def _is_name(term: str) -> bool:
-    """Every word of the term starts with a capital: "PM", "Future Planning
-    Committee". A quoted example line ("You were totally possessed!") is
+    """Every word of the term starts with a capital: "PM", "Harbour Safety
+    Board". A quoted example line ("You were completely rattled!") is
     not a name."""
     words = re.findall(r"[^\W\d_][\w'-]*", term)
     return bool(words) and all(w[:1].isupper() for w in words)
@@ -1075,9 +1075,9 @@ def term_rules(work: Path) -> list[dict]:
     (`_evidence_scoped`), its evidence. `except` lists cues the
     answer's notes exempt. Name decisions are left out: "father" may be
     "Peder" in one cue and "baba" in another. A question that quotes
-    several terms ("canary" / "sing") pairs them with an answer split the
-    same way ("kanarya / ötmek"). An answer that names several renderings
-    by scene ("X for the birds, Y for the job") is left out: no single word
+    several terms ("rooster" / "crow") pairs them with an answer split the
+    same way ("horoz / ötmek"). An answer that names several renderings
+    by scene ("X for the ship, Y for the cards") is left out: no single word
     can be checked. Empty when there is no usable decisions.json."""
     if not (work / "decisions.json").exists():
         return []
@@ -1128,9 +1128,9 @@ def _decision_rules(d: dict, evidence_only: bool = False) -> list[dict]:
 
 def term_renderings(work: Path) -> dict[str, set[str]]:
     """Every Turkish rendering the bible gives each quoted source term, over
-    all its decisions and senses: {"shape-up": {"işçi seçimi"}}. Two
+    all its decisions and senses: {"check-in": {"giriş kaydı"}}. Two
     decisions on one term give it two renderings, also when one quotes it
-    with an article ("the loft") and the other without ("loft"). A family
+    with an article ("the bridge") and the other without ("bridge"). A family
     word ("brother") also takes every Turkish word the bible's family-word
     decisions give it ("abi" for one pair, "kardeş" for another). The
     `term rendering` check uses `check_rules`, which also knows which cues
@@ -1188,7 +1188,7 @@ def _bible_lines(work: Path) -> list[tuple[str, str]]:
 
 def _scene_line(rendering: str) -> bool:
     """A rendering that is a line of one scene, not a term: it ends a
-    sentence ("Kadın alkollü. Kokusunu alıyorum.") or runs long."""
+    sentence ("Gemi demirledi. Kaptan bekliyor.") or runs long."""
     return len(rendering.split()) > TEXT_RULE_WORDS or rendering.rstrip().endswith((".", "!", "?", "…"))
 
 
@@ -1198,7 +1198,7 @@ def _without_notes(s: str) -> str:
 
 def text_rules(work: Path, known: set[str]) -> list[dict]:
     """Rules, shaped as `term_rules` gives them, from bible.md lines that
-    give a source term its Turkish ('"insurrection" (2002) → "ayaklanma"')
+    give a source term its Turkish ('"blockade" (2002) → "abluka"')
     when no decision covers that term (its key is not in `known`). The
     bible writer puts most of these in decisions.json too; this catches
     the ones it left in the text. Cue numbers in parentheses after the
@@ -1259,9 +1259,9 @@ def check_rules(work: Path) -> list[dict]:
     names = [r for r in names if r["key"] not in known]
     known |= {r["key"] for r in names}
     out = rules + names + text_rules(work, known)
-    # One decision that gives forms of one word ("reshare" / "reshares" →
-    # "yeniden paylaşım / yeniden paylaşmak") accepts each form on any cue:
-    # the noun's cue may say "Yeniden paylaş." as a verb. bible.md lines all
+    # One decision that gives forms of one word ("reload" / "reloads" →
+    # "yeniden yükleme / yeniden yüklemek") accepts each form on any cue:
+    # the noun's cue may say "Yeniden yükle." as a verb. bible.md lines all
     # share one id, so they never merge.
     for r in out:
         for o in out:

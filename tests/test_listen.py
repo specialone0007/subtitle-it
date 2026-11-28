@@ -52,10 +52,10 @@ def _touch(path: Path, mtime: float) -> None:
 
 def test_listen_parts_cut_the_film_with_budget_group_and_echo(tmp_path: Path):
     english = [f"Line {i}." for i in range(1, 101)]
-    english[2] = english[79] = "Respect their offering."
-    english[9], english[10] = "When the hearing starts tomorrow", "you will tell them everything."
+    english[2] = english[79] = "Call the ship's doctor."
+    english[9], english[10] = "When the ferry leaves tomorrow", "you will tell them everything."
     turkish = [f"Satır {i}." for i in range(1, 101)]
-    turkish[2] = turkish[79] = "Adaklarına saygı gösterin."
+    turkish[2] = turkish[79] = "Gemi doktorunu çağırın."
     turkish[19] = "Bunu sana daha önce de söylemiştim, dinlemedin ama."  # 51 characters
     w = film(tmp_path, english, turkish)
     # The review shortened cue 20 into a stiff line; a rerun's old files go.
@@ -80,15 +80,15 @@ def test_listen_parts_cut_the_film_with_budget_group_and_echo(tmp_path: Path):
     # Not a polish run: no line is the human translator's.
     assert one[20]["human"] == "" and before["human"] == [] and got["human_cues"] == 0
     en = _rows(Path(got["parts"][0]["en_file"]))
-    assert en[10]["source"] == "When the hearing starts tomorrow"
+    assert en[10]["source"] == "When the ferry leaves tomorrow"
 
 
 # --- listengate -------------------------------------------------------------
 
 
-GATE_EN = ["Respect their offering.", "Hello there.", "Respect their offering.", "When the hearing starts tomorrow",
+GATE_EN = ["Call the ship's doctor.", "Hello there.", "Call the ship's doctor.", "When the ferry leaves tomorrow",
            "you will tell them everything.", "<i>It's cold.</i>", "Wait.", "Okay."]  # fmt: skip
-GATE_TR = ["Sunularına saygı gösterin.", "Merhaba.", "Sunularına saygı gösterin.", "Yarın duruşma başlayınca",
+GATE_TR = ["Gemi tabibini çağırın.", "Merhaba.", "Gemi tabibini çağırın.", "Yarın vapur kalkınca",
            "onlara her şeyi anlatacaksın.", "<i>Hava soğuk.</i>", "Dur.", "Tamam."]  # fmt: skip
 
 
@@ -97,9 +97,9 @@ def test_listen_gate_drops_each_edit_that_breaks_a_check_and_keeps_the_rest(tmp_
     assemble.listen_parts(w, size=50)
     _listen(
         w,
-        "1\nAdaklarına saygı gösterin.\n\n"  # its repeated line (cue 3) still says it the old way
+        "1\nGemi doktorunu çağırın.\n\n"  # its repeated line (cue 3) still says it the old way
         "2\nSelam.\n\n"
-        "5\nDuruşma başlayınca her şeyi anlat.\n\n"  # cue 4's part said twice
+        "5\nVapur kalkınca her şeyi anlat.\n\n"  # cue 4's part said twice
         "6\nHava soğuk.\n\n"  # lost the source's italics
         "7\nBekle bir saniye, sana söyleyeceğim çok önemli bir şey var.\n\n"  # 59 characters, budget 46
         "8\nTamam.\n\n"  # unchanged: not an edit
@@ -119,15 +119,15 @@ def test_listen_gate_drops_each_edit_that_breaks_a_check_and_keeps_the_rest(tmp_
     # The file now holds only the edit that passed, and the Turkish has it.
     assert (w / "out" / "fix_listen_01.txt").read_text(encoding="utf-8") == "2\nSelam.\n\n"
     texts, _ = assemble.load_translation(w)
-    assert texts[2] == ["Selam."] and texts[1] == ["Sunularına saygı gösterin."] and texts[6] == ["<i>Hava soğuk.</i>"]
+    assert texts[2] == ["Selam."] and texts[1] == ["Gemi tabibini çağırın."] and texts[6] == ["<i>Hava soğuk.</i>"]
 
 
 def test_listen_gate_drops_an_edit_that_breaks_a_bible_repeat(tmp_path: Path):
     w = film(tmp_path, GATE_EN, GATE_TR)
-    (w / "bible.md").write_text("## Tone notes\n- Repeated lines take identical Turkish: the offering (1, 3)\n", encoding="utf-8")
+    (w / "bible.md").write_text("## Tone notes\n- Repeated lines take identical Turkish: the doctor (1, 3)\n", encoding="utf-8")
     assemble.listen_parts(w, size=50)
     # The bible says cues 1 and 3 are said word for word: cue 1 alone may not move.
-    _listen(w, "1\nAdaklarına saygı gösterin.\n\n2\nSelam.\n\n")
+    _listen(w, "1\nGemi doktorunu çağırın.\n\n2\nSelam.\n\n")
 
     gate = assemble.listen_gate(w)
 
@@ -169,7 +169,7 @@ def test_run_checks_without_writing_checks_the_text_it_is_given(tmp_path: Path):
 def test_listen_check_lists_each_kept_edit_with_its_ties(tmp_path: Path):
     w = film(tmp_path, GATE_EN, GATE_TR)
     assemble.listen_parts(w, size=50)
-    _listen(w, "1\nAdaklarına saygı gösterin.\n\n3\nAdaklarına saygı gösterin.\n\n")
+    _listen(w, "1\nGemi doktorunu çağırın.\n\n3\nGemi doktorunu çağırın.\n\n")
     assert assemble.listen_gate(w)["kept_cues"] == [1, 3]
 
     got = assemble.listen_check(w)
@@ -179,9 +179,9 @@ def test_listen_check_lists_each_kept_edit_with_its_ties(tmp_path: Path):
     first = text.split("#1\n")[1].split("\n\n")[0].splitlines()
     assert first == [
         "speaker: ",
-        "src: Respect their offering.",
-        "before: Sunularına saygı gösterin.",
-        "after: Adaklarına saygı gösterin.",
+        "src: Call the ship's doctor.",
+        "before: Gemi tabibini çağırın.",
+        "after: Gemi doktorunu çağırın.",
         "next: 2: Merhaba.",
         "with: 3",
     ]
@@ -228,9 +228,9 @@ def polish_film(tmp_path: Path, english: list[str], human: list[str], unplaced: 
 
 def _polish_hundred(tmp_path: Path) -> Path:
     english = [f"Line {i}." for i in range(1, 101)]
-    english[9], english[10] = "When the hearing starts tomorrow", "you will tell them everything."
+    english[9], english[10] = "When the ferry leaves tomorrow", "you will tell them everything."
     human = [f"Satır {i}." for i in range(1, 101)]
-    human[9], human[10] = "Yarın duruşma başlayınca", "onlara her şeyi anlatacaksın."
+    human[9], human[10] = "Yarın vapur kalkınca", "onlara her şeyi anlatacaksın."
     w = polish_film(tmp_path, english, human, unplaced={5})
     # The fixer wrote the cue the human file missed; a reviewer changed
     # half of the sentence on cues 10-11, and cue 20.

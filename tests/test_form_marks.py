@@ -22,12 +22,12 @@ Plain line.
 
 3
 00:00:07,000 --> 00:00:09,000
-In 2021, using her documents, -
+In 1998 the old pier closed, -
 
 4
 00:00:09,500 --> 00:00:12,000
-- the Journal published
-the first of 17 articles.
+- and the ferry made
+its last crossing.
 
 5
 00:00:13,000 --> 00:00:15,000
@@ -46,8 +46,8 @@ I was-
 GOOD = (
     "1\n<i>♪ Seni iyi tanırım ♪</i>\n\n"
     "2\nDüz satır.\n\n"
-    "3\n2021'de, onun belgeleriyle...\n\n"
-    "4\n...gazete 17 makalenin\nilkini yayımladı.\n\n"
+    "3\n1998'de eski iskele kapandı...\n\n"
+    "4\n...ve vapur\nson seferini yaptı.\n\n"
     "5\nBen...\n\n"
     "6\n- Devam et.\n\n"
     "7\n- Neredesin?\n- Evdeyim.\n"
@@ -59,7 +59,7 @@ def work(tmp_path: Path) -> Path:
     (tmp_path / "da.srt").write_text(SRC, encoding="utf-8")
     w = tmp_path / "work"
     prepare.build(w, tmp_path / "da.srt", None, None)
-    # As in The Social Reckoning: the timing file shows the lyric plain,
+    # As in one 2026 film: the timing file shows the lyric plain,
     # and only the English track marks it with ♪.
     rows = json.loads((w / "cues.json").read_text(encoding="utf-8"))
     for r in rows:
@@ -104,7 +104,7 @@ def test_song_cue(row: dict, song: bool):
 
 def test_continuation_dash_is_not_a_speaker(work: Path):
     # A "- " on the card that carries the sentence on reads as dialogue.
-    hard = _hard(work, GOOD.replace("...gazete", "- gazete"))
+    hard = _hard(work, GOOD.replace("...ve vapur", "- ve vapur"))
     assert hard == {(4, "dialogue dashes")}
     # A cut-off word ("I was-") is no continuation: the next cue's dash stays.
     assert _hard(work, GOOD.replace("- Devam et.", "Devam et.")) == {(6, "dialogue dashes")}
@@ -120,8 +120,8 @@ def test_on_screen_card_with_two_speakers_keeps_its_dash_check(work: Path):
 @pytest.mark.parametrize(
     ("prev", "lines", "dashes"),
     [
-        (["Frances Haugens dokumenter, -"], ["- publicerede Wall Street Journal", "den første."], 0),
-        (["<i>over for parlamentet, -</i>"], ["<i>- og hun medvirkede</i>"], 0),
+        (["Den gamle mole lukkede, -"], ["- og færgen sejlede", "sin sidste tur."], 0),
+        (["<i>ved den gamle mole, -</i>"], ["<i>- og hun blev der</i>"], 0),
         (["I was-"], ["- Go on."], 1),
         (["Who's there?"], ["- Me.", "- And me."], 2),
         (["it runs on -"], ["- og så", "- Hvad?"], 1),
@@ -130,7 +130,7 @@ def test_on_screen_card_with_two_speakers_keeps_its_dash_check(work: Path):
         # speaker in a capital: both dashes are speakers.
         (["If you don't -"], ["- I won't.", "- Good."], 2),
         (["If you don't -"], ["- I won't."], 1),
-        (["dokumenter, -"], ["- 17 artikler om Facebook."], 0),
+        (["lukkede, -"], ["- 12 både i havnen."], 0),
     ],
 )
 def test_dialogue_dashes(prev, lines, dashes):
@@ -143,9 +143,9 @@ def test_match_form_keeps_song_italics_and_drops_continuation_dash():
         False,
     )
     assert polish.match_form(["Plain."], ["<i>Düz.</i>"]) == (["Düz."], True)
-    src = ["- publicerede Wall Street Journal", "den første af 17 artikler."]
-    out = polish.match_form(src, ["- gazete 17 makalenin", "ilkini yayımladı."], prev=["dokumenter, -"])
-    assert out == (["gazete 17 makalenin", "ilkini yayımladı."], True)
+    src = ["- og færgen sejlede", "sin sidste tur."]
+    out = polish.match_form(src, ["- ve vapur", "son seferini yaptı."], prev=["lukkede, -"])
+    assert out == (["ve vapur", "son seferini yaptı."], True)
 
 
 def test_seed_keeps_song_italics_and_drops_a_continuation_dash(work: Path, tmp_path: Path):
@@ -153,12 +153,12 @@ def test_seed_keeps_song_italics_and_drops_a_continuation_dash(work: Path, tmp_p
     tr.write_text(
         "1\n00:00:01,000 --> 00:00:03,000\n<i>♪ Seni iyi tanırım ♪</i>\n\n"
         "2\n00:00:03,500 --> 00:00:06,000\n<i>Düz satır.</i>\n\n"
-        "3\n00:00:07,000 --> 00:00:09,000\n2021'de, onun belgeleriyle...\n\n"
-        "4\n00:00:09,500 --> 00:00:12,000\n- gazete 17 makalenin\nilkini yayımladı.\n",
+        "3\n00:00:07,000 --> 00:00:09,000\n1998'de eski iskele kapandı...\n\n"
+        "4\n00:00:09,500 --> 00:00:12,000\n- ve vapur\nson seferini yaptı.\n",
         encoding="utf-8",
     )
     polish.seed(work, tr)
     texts, _ = assemble.load_translation(work)
     assert texts[1] == ["<i>♪ Seni iyi tanırım ♪</i>"]
     assert texts[2] == ["Düz satır."]
-    assert texts[4] == ["gazete 17 makalenin", "ilkini yayımladı."]
+    assert texts[4] == ["ve vapur", "son seferini yaptı."]

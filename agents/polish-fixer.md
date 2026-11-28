@@ -35,10 +35,10 @@ check that every number is in your file.
 ## Fix, by flag
 
 - `term variant`: use the glossary's preferred term.
-- `term rendering`: the source says a term the bible decides, and the Turkish lacks a word of the bible's rendering (any ending is fine). Use it, unless the cue means the word in another sense (a "hook" that is not the docker's tool); then leave the cue out.
+- `term rendering`: the source says a term the bible decides, and the Turkish lacks a word of the bible's rendering (any ending is fine). Use it, unless the cue means the word in another sense (a "bridge" that is the card game, not the ship's); then leave the cue out.
 - `bible repeat`: the film says this line again, and the bible says it is said word for word each time (a replayed video, an oath, a quote). The flag quotes the Turkish of the cue to match and its number: write this cue in those words, as they are ("Tutuklusunuz." both times, not "Tutuklusun." once).
 - `term drift`: the cue writes a word in a second form the rest of the film does not use ("ağabey" where the film says "abi"). Use the form the flag names.
-- `spelling` and `name suffix`: write what the flag gives ("sağ ol", "Joey'nin"). Change nothing else.
+- `spelling` and `name suffix`: write what the flag gives ("sağ ol", "Casey'nin"). Change nothing else.
 - `split sentence`: the flag names a run of cues that hold one source sentence, and what went wrong (a part written twice, a cue with nothing of its own, a name in another cue than the one that says it). Every cue of the run carries the same flag. Take them as one unit: read the whole source sentence, translate it whole first, then spread it over the same cues so each part appears exactly once and each name sits in the cue where it is said. Write every cue of the run you change.
 - `untranslated`: translate the line. A name, a title or a song left in its original language on purpose may stay; then leave the cue out of your file.
 - `line length` and `lines per cue`: the flag says why the cue could not be laid out. A cue is at most 2 lines of 42 characters; in a cue with two speakers each speaker gets one line starting with `- `. A two-speaker cue is split into one cue per speaker automatically when each part lasts at least a second and reads at 17 characters a second or less, so shorten, by rephrasing, until each speaker's turn fits one line or until the split works. Keep the cue's dash count.

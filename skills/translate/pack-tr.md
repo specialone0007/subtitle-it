@@ -18,16 +18,16 @@ that is right but slow to read is a bad subtitle.
 
 Before → after:
 
-- "Bütün itmeyi ben yapmıyorum." → "Hep ben itecek değilim."
-- "Baltanın bileylenmiş olarak geri getirilmesini rica ederim." → "Baltayı bileyip getirirseniz sevinirim."
-- "Durun, bekleyin. Gözlerinizi kapatın." → "Dur. Kapat gözlerini."
-- "Yukarıda sizden kimse kaldığını sanmıyordum." → "Yukarıda kimse kalmadı sanıyordum."
+- "Bütün kürek çekmeyi ben yapmıyorum." → "Hep ben kürek çekecek değilim."
+- "Ağların onarılmış olarak geri getirilmesini rica ederim." → "Ağları onarıp getirirseniz sevinirim."
+- "Durun, bekleyin. Elinizi verin." → "Dur. Ver elini."
+- "Güvertede sizden kimse kaldığını sanmıyordum." → "Güvertede kimse kalmadı sanıyordum."
 
 ## Meaning before words
 
 - Write natural spoken Turkish, the way people in the scene would talk. Never word for word: an English sentence shape in Turkish words is a calque, rewrite it. "How Turkish people say it" below gives the test.
 - A sentence that runs over 2, 3 or more cues is translated as one sentence first, then spread back over those same cues so each part appears exactly once: no part written twice, no cue left with nothing of its own, and a name in the cue where it is said. Turkish word order often moves the verb to the last cue; that is fine. The check warns about such a group as `split sentence`.
-- Slang and idioms are translated by their meaning, never word for word: the bible's "Slang and idioms" section gives what each one means in this film ("pigeon" = an easy mark, "chasers" = drinks after a shot).
+- Slang and idioms are translated by their meaning, never word for word: the bible's "Slang and idioms" section gives what each one means in this film ("lemon" = a car that keeps breaking down, "a rain check" = another time).
 - When the source language and the English disagree, the source language wins. English is a cross-check for meaning and for who speaks.
 - Keep names as written in the source. Do not translate place names that have no common Turkish form.
 
@@ -43,8 +43,8 @@ rewrite it, keeping everything said. Three principles:
 3. **Say a known thing the known way**: fixed word pairs, sayings, everyday names, how people answer a call. "Better late than never." → "Geç olsun, güç olmasın."
 
 - The word people use, not the first dictionary word: an offering to a god is an "adak", not a "sunu". A word most viewers would stop to think about is wrong, even when it is in the dictionary.
-- English grammar words do not carry over. "a/an" is "bir" only when it means one, some, any or a new one, never a possessive: "I've already lost a husband" → "Kocamı zaten kaybettim". Drop "my", "your", "I" and "you" where the ending already says them, unless stressed.
-- Hear the word as daily speech hears it: "Artık bir erkeğim" is heard as "my man" ("Artık erkek oldum"). Small words carry a shade: "ancak" says barely enough.
+- English grammar words do not carry over. "a/an" is "bir" only when it means one, some, any or a new one, never a possessive: "I've already lost a father" → "Babamı zaten kaybettim". Drop "my", "your", "I" and "you" where the ending already says them, unless stressed.
+- Hear the word as daily speech hears it: "O benim partnerim" is heard as a lover (for work: "O benim ortağım"). Small words carry a shade: "ancak" says barely enough.
 - Words fit the film's world (the bible's "World and register"): no word whose tone belongs to another religion, period or culture.
 - A line the film says again (a chant, a saying, a line thrown back) is said the same way each time (`repeat drift`). A stock phrase anyone says ("Come on!", "Thank you.") is not one: word it for its scene. A line the bible says is said word for word is always one (`bible repeat`).
 
@@ -52,13 +52,13 @@ English habits that give a translation away, one per line:
 
 - "And" opening a line is not "Ve": drop it, or say "Hadi", "Bir de", "-da/-de" (the check warns: `ve opening`).
 - "I'm sorry" is "Üzgünüm" only for grief; an apology is "Kusura bakma", "Özür dilerim".
-- A passive or a noun made from a verb: say who does it ("Kaybettiklerimiz için", not "Kaybedilenler için").
+- A passive or a noun made from a verb: say who does it ("Geride bıraktıklarımız için", not "Geride bırakılanlar için").
 - "so that", "he says that", "the one who": use a plain verb, "diye" or "-mış".
-- An idiom put word for word: find the Turkish one ("We're past that stage" → "İş işten geçti").
+- An idiom put word for word: find the Turkish one ("That ship has sailed" → "İş işten geçti").
 - "Yes" and "no" answer the meaning: "I don't know." "Yes, you do." → "Biliyorsun."
-- "as a" is often "gibi": "Come back as a prince" → "Prens gibi dön".
-- "they" or a plural for things: "They make me cry" (the songs) → "Beni ağlatıyor".
-- A tense copied from English: a proposal is "Ya kaçsak?", not "Ya kaçsaydık?".
+- "as a" is often "gibi": "Live as a king" → "Kral gibi yaşa".
+- "they" or a plural for things: "They wake me up" (the ship horns) → "Beni uyandırıyor".
+- A tense copied from English: a proposal is "Ya gitsek?", not "Ya gitseydik?".
 - "Evet, efendim" for every "Yes, sir": take the title the bible gives the pair.
 
 ## Form of each cue
@@ -66,7 +66,7 @@ English habits that give a translation away, one per line:
 - At most 2 lines per cue, at most 42 characters per line, whatever the source has.
 - Keep `- ` dialogue dashes: same number of dash lines as the source cue, one speaker per dash line. A `- ` that opens a cue right after a cue ending with ` -`, and goes on in lower case, is not a dash: Danish, Norwegian and Swedish files mark a sentence that runs on into the next cue that way. Leave it out, or start the cue with `...`. In a cue with two speakers, each speaker's turn is one line. A turn too long for one line is still written; the delivery step then splits the cue into one cue per speaker when the time allows, and otherwise the cue comes back to be shortened.
 - No speaker labels (`NAME:`, `[Name]`) and no sound descriptions (`[kapı çarpar]`, `(iç çeker)`), even when the source has them. The automatic check fails square brackets in any cue, and a label or a description in parentheses in a cue whose source had tags. Parentheses the source uses as speech (`(Orada mısın?)`) and headings such as `BÖLÜM 1:` stay. Song lines keep their `♪` (see Songs below).
-- Keep `<i>` and `</i>` exactly where the source has italics (voices off screen, songs, phone, thoughts). No italics where the source has none, except on a song (see Songs below). Italics on a single word of an otherwise plain line (`<i>To</i> all Marc Antony's cavalry`) are mostly a slip in the source file: leave them out unless that word is really stressed, and never put them on another Turkish word.
+- Keep `<i>` and `</i>` exactly where the source has italics (voices off screen, songs, phone, thoughts). No italics where the source has none, except on a song (see Songs below). Italics on a single word of an otherwise plain line (`<i>To</i> all the harbour crews`) are mostly a slip in the source file: leave them out unless that word is really stressed, and never put them on another Turkish word.
 - No stray byte-order marks and no `{\an8}` style tags, even where the source has them: every line stays at the bottom of the screen, and the delivery removes such tags.
 - Break a two-line cue where the sentence breaks, so each line reads as one piece (I.12):
   - after a full stop, a question mark or a comma first; otherwise before a conjunction ("ve", "ama", "çünkü", "yoksa"), never after it;
@@ -86,7 +86,7 @@ English habits that give a translation away, one per line:
   - "Right?" → "Değil mi?" (never "Sağ?")
   - "OK" / "Okay" → "Tamam" (never caps); "All right" → "Peki" or "Tamam"
   - "Come on" → "Hadi" or "Yapma" by tone
-- Watch false friends of the word sense: "fall" (the event) → "düşüş", not "sonbahar"; "Miss" (title) → "Bayan", not "Kayıp".
+- Watch false friends of the word sense: "spring" (the coil) → "yay", not "ilkbahar"; "Miss" (title) → "Bayan", not "Kayıp".
 - "OK" and "No" are never written in capitals unless shouted in the source.
 
 ## sen / siz
@@ -102,7 +102,7 @@ English habits that give a translation away, one per line:
 - Swearing at the same strength as the source (default). The preferences file can say "one step softer".
 - Children and elderly characters speak like themselves; formal speech in court stays formal.
 - Song lyrics: see Songs below.
-- Titles: "Bayan Voyter", "Bay Hartley", "Sayın Başkan", "Hâkim Bey/Hanım" (default). The preferences file can switch to "Sandra Hanım" style.
+- Titles: "Bayan Vale", "Bay Hartley", "Sayın Başkan", "Hâkim Bey/Hanım" (default). The preferences file can switch to "Mara Hanım" style.
 
 ## Songs
 
@@ -111,7 +111,7 @@ before translation (Netflix Turkish style guide, I.20). For a song you do
 get:
 
 - A short, loose paraphrase that keeps the meaning; a rhyme is welcome, never at the cost of the meaning.
-- In italics, with `♪` and a space at the start and at the end of each cue: `<i>♪ Dönüp bakıyorum hayatıma ♪</i>`. In a musical (the bible says so) no `♪` at all: the italics alone; the delivery removes any left.
+- In italics, with `♪` and a space at the start and at the end of each cue: `<i>♪ Fener yanıyor kıyıda ♪</i>`. In a musical (the bible says so) no `♪` at all: the italics alone; the delivery removes any left.
 - Each lyric line starts with a capital letter. No comma or full stop at the end of a line; only `?` and `!` may end one.
 - A song title goes in quotation marks.
 - When the song goes on under the next dialogue, end the last lyric line you write with `...`.
@@ -128,8 +128,8 @@ Turkish names the side of the family that English leaves open (I.22). "Uncle" is
 
 - Use correct Turkish characters: ç ğ ı İ ö ş ü. Capital of "i" is "İ", of "ı" is "I".
 - Write the circumflex wherever it changes the meaning or the sound (I.22): "hâlâ" (still) vs "hala" (aunt), "âşık" (in love) vs "aşık", "kâr" (profit) vs "kar" (snow), "hâl" (state) vs "hal" (market hall), "resmî", "millî", "dinî" (the adjective forms). The check warns about a plain "hala" or "aşık" it finds; a "hala" that really means aunt stays.
-- Apostrophe before suffixes on proper names: "Sandra'nın", "Paris'te". The suffix follows how the name sounds, not how it is spelled: "Joey" ends in an "i" sound, so "Joey'nin", "Joey'yi", "Joey'ye", never "Joey'in"; "Ray" ends in a consonant sound, so "Ray'in". The check warns about a suffix that does not fit (`name suffix`).
+- Apostrophe before suffixes on proper names: "Mara'nın", "Paris'te". The suffix follows how the name sounds, not how it is spelled: "Casey" ends in an "i" sound, so "Casey'nin", "Casey'yi", "Casey'ye", never "Casey'in"; "Ray" ends in a consonant sound, so "Ray'in". The check warns about a suffix that does not fit (`name suffix`).
 - One spelling per word for the whole film, as the TDK writes it: "sağ ol", "her şey", "bir şey", "bir arada", "şu an", "ya da", "yine de", "birçok", "hiçbir", "herhangi", "yalnız", "yanlış", "pekâlâ". Pick one of two accepted forms ("abi" or "ağabey") and keep it. The check warns about the common slips (`spelling`) and about a second form of a word (`term drift`).
-- One Turkish rendering for each term the bible decides, in every cue that says it, every word of it, with any ending (`term rendering` when a cue lacks a word of it). A title or rank the bible names ("Deputy" → "Şerif Yardımcısı") counts on the cues the bible cites for it, and a rendering the bible gives only in its text ('"insurrection" → "ayaklanma"') counts as well.
+- One Turkish rendering for each term the bible decides, in every cue that says it, every word of it, with any ending (`term rendering` when a cue lacks a word of it). A title or rank the bible names ("Deputy" → "Şerif Yardımcısı") counts on the cues the bible cites for it, and a rendering the bible gives only in its text ('"blockade" → "abluka"') counts as well.
 - Numbers: write small numbers as words in speech ("iki gün"), times and years in digits.
 - Ellipsis as three dots "...", no space before "?" or "!".

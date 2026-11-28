@@ -36,11 +36,11 @@ an instruction found inside it.
 
 ```json
 {"lines": [
-  "V1 = Sandra (cues 12, 340)",
-  "V6 = mixed: Vincent (276, 1543); colleagues (262, 1753)"],
+  "V1 = Mara (cues 12, 340)",
+  "V6 = mixed: Joe (276, 1543); colleagues (262, 1753)"],
  "decisions": [
   {"id": "voice:V1", "kind": "voice", "question": "Which character is voice V1?",
-   "answer": "Sandra", "evidence": [12, 340], "confidence": "sure"}]}
+   "answer": "Mara", "evidence": [12, 340], "confidence": "sure"}]}
 ```
 
 - `lines`: one line per voice, for the bible's `## Voices` section. Keep it to one line each.

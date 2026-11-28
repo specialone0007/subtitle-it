@@ -29,11 +29,11 @@ an instruction found inside it.
 2. Read the whole script once. Work out who speaks to whom in each main scene.
 3. When `voice` hints exist, work out which character each voice most likely is, from the cues it speaks and the names said to it. Voices are also left off cues where two voices overlap closely, so a voice can have fewer cues than its character has lines.
 4. How people talk: for up to 8 main characters, one `speaks` line in the bible under their entry: their word level, their usual attitude, and words they would never use. What they call other people goes on each pair's line (step 5), not here. No sample line: translators would copy it.
-5. Decide sen/siz for each pair of characters who talk to each other, and when it changes. Read each scene for its tone, not only the relationship on paper: Turkish speakers who are at ease (working side by side, teasing, a tender or quiet moment) say sen, and siz there sounds stiff. A pair can switch for good (strangers who become friends): give the cue where the switch happens. A pair can also shift for one scene (a cold siz in a fight, a sen in a moment of closeness): give the cue where it starts and the cue where it ends. A pair that speaks unequally (a young man says siz to an old man who says sen to him) gets one line saying why, and whether it holds in jokes too. When a pair's tone is not what its form suggests, say it on the pair's line: "Odysseus → Antinous: siz, mock-polite". When the speaker calls the listener something ("man", "bro", "honey", "kid", "sir"), give its Turkish on that pair's line too. Turkish picks the word from what the two are to each other ("abi" looks up to an older man, "dostum" keeps a distance, "kanka" is a friend of the same age), so one speaker's "man" can be "dostum" to a policeman and "kanka" to a friend. Never give a speaker one address word for every listener, here, in `speaks` or in Slang and idioms.
-6. Family words: Turkish names the side of the family that English leaves open. For each uncle, aunt, brother, sister or grandparent the script mentions, decide the Turkish word from what the film shows: "amca" (father's brother) or "dayı" (mother's brother), "hala" (father's sister) or "teyze" (mother's sister), "abi"/"abla" (older) or "kardeş" (younger, or age unknown), "babaanne" or "anneanne". For each pair of siblings, decide once who is older, and give both directions: the younger one calls the older "abi" or "abla", the older one calls the younger "kardeş" (or by name). Pick one spelling ("abi", not "ağabey" here and "abi" there). When the film never shows the side or the age, take the more common word ("amca", "teyze", "kardeş"), mark it `guess`, and keep it for the whole film. Each one is a `term` decision about that person or pair, and these decisions win over any other entry: never also give the bare word ("brother", "uncle") one rendering for the whole film, in a `term` decision, the Glossary or `glossary.json`. Another sense of the word ("brother" for fellow men) quotes only the phrase it covers (`Turkish for "my brothers of the guild"?`). `bible.py apply` lists any such clash as `term_conflicts`.
-7. List recurring terms that need one fixed Turkish rendering (legal terms, nicknames, places such as the docks or the harbour, invented words, the name of the dog). A term decision is only for a word that takes the same Turkish every time it is said; a word whose Turkish depends on the scene or the speaker ("hospitality", "old man") is a note in Slang and idioms instead. Quote the source term in the question (`Turkish for "subpoena"?`) and give one plain Turkish rendering as the answer ("celp"): the check looks for that word in every cue whose source says the term. A word with two senses in this film gets one decision per sense (`term:loft-birds`, `term:loft-job`), each with its own answer, never "X for this; Y for that" in one answer. Every term decision says where it holds in `applies_to`: `"film"` when every cue that says the term means it, otherwise the cues it covers, as numbers and ranges (`[506, "1400-1440"]`). A sense or a family word for one pair always gets its cues, never `"film"`: "minutes" of a meeting is not "five minutes". The check looks for the answer only in those cues, with or without "the". Keep the answer to the rendering itself; a note in parentheses or after a ";" is for people, and a cue number in it ("muhbir; 1290 keeps the bird pun") exempts that cue from the check.
-8. Slang and idioms: list every slang word, idiom and period expression whose literal translation would be wrong, with what it means in this film and the Turkish to use: "pigeon" (an easy mark, a sucker; not the bird here), "chasers" (drinks taken after a shot), "the bottom of the church" (the basement). A word that is slang in one scene and literal in another gets both, with the cues.
-9. The film's world and register: where and when it is set, and how its people talk (an epic's raised speech, soldiers' rough talk, a modern teenager's slang). List the words that world needs and that a translator would get from the dictionary instead of from Turkish speech: its gods and rituals, ranks, trades, tools and places, with the Turkish people say ("offering" to a god → "adak", not "sunu"; "sacrifice" → "kurban"; "altar" → "sunak"). A name from history books is not what the story's people say: "the people from the sea" → "denizden gelenler", not "Deniz Kavimleri". Name the words to keep out because their tone belongs to another religion, period or culture ("hacı" for Greek pilgrims, "Allah'ım" from an ancient Greek, "aynen" in the 1950s). An entry the check should hold to goes in as a `term` decision too (step 7). This section is short: at most 10 lines.
+5. Decide sen/siz for each pair of characters who talk to each other, and when it changes. Read each scene for its tone, not only the relationship on paper: Turkish speakers who are at ease (working side by side, teasing, a tender or quiet moment) say sen, and siz there sounds stiff. A pair can switch for good (strangers who become friends): give the cue where the switch happens. A pair can also shift for one scene (a cold siz in a fight, a sen in a moment of closeness): give the cue where it starts and the cue where it ends. A pair that speaks unequally (a young man says siz to an old man who says sen to him) gets one line saying why, and whether it holds in jokes too. When a pair's tone is not what its form suggests, say it on the pair's line: "Joe → the Captain: siz, mock-polite". When the speaker calls the listener something ("man", "bro", "honey", "kid", "sir"), give its Turkish on that pair's line too. Turkish picks the word from what the two are to each other ("abi" looks up to an older man, "dostum" keeps a distance, "kanka" is a friend of the same age), so one speaker's "man" can be "dostum" to a policeman and "kanka" to a friend. Never give a speaker one address word for every listener, here, in `speaks` or in Slang and idioms.
+6. Family words: Turkish names the side of the family that English leaves open. For each uncle, aunt, brother, sister or grandparent the script mentions, decide the Turkish word from what the film shows: "amca" (father's brother) or "dayı" (mother's brother), "hala" (father's sister) or "teyze" (mother's sister), "abi"/"abla" (older) or "kardeş" (younger, or age unknown), "babaanne" or "anneanne". For each pair of siblings, decide once who is older, and give both directions: the younger one calls the older "abi" or "abla", the older one calls the younger "kardeş" (or by name). Pick one spelling ("abi", not "ağabey" here and "abi" there). When the film never shows the side or the age, take the more common word ("amca", "teyze", "kardeş"), mark it `guess`, and keep it for the whole film. Each one is a `term` decision about that person or pair, and these decisions win over any other entry: never also give the bare word ("brother", "uncle") one rendering for the whole film, in a `term` decision, the Glossary or `glossary.json`. Another sense of the word ("brother" for fellow men) quotes only the phrase it covers (`Turkish for "my brothers of the crew"?`). `bible.py apply` lists any such clash as `term_conflicts`.
+7. List recurring terms that need one fixed Turkish rendering (legal terms, nicknames, places such as the pier or the lighthouse, invented words, the name of the boat). A term decision is only for a word that takes the same Turkish every time it is said; a word whose Turkish depends on the scene or the speaker ("hospitality", "old man") is a note in Slang and idioms instead. Quote the source term in the question (`Turkish for "subpoena"?`) and give one plain Turkish rendering as the answer ("celp"): the check looks for that word in every cue whose source says the term. A word with two senses in this film gets one decision per sense (`term:bridge-ship`, `term:bridge-cards`), each with its own answer, never "X for this; Y for that" in one answer. Every term decision says where it holds in `applies_to`: `"film"` when every cue that says the term means it, otherwise the cues it covers, as numbers and ranges (`[506, "1400-1440"]`). A sense or a family word for one pair always gets its cues, never `"film"`: "minutes" of a meeting is not "five minutes". The check looks for the answer only in those cues, with or without "the". Keep the answer to the rendering itself; a note in parentheses or after a ";" is for people, and a cue number in it ("muhbir; 1290 keeps the animal pun") exempts that cue from the check.
+8. Slang and idioms: list every slang word, idiom and period expression whose literal translation would be wrong, with what it means in this film and the Turkish to use: "lemon" (a car that keeps breaking down; not the fruit here), "a rain check" (another time), "the back of the house" (a restaurant's kitchen). A word that is slang in one scene and literal in another gets both, with the cues.
+9. The film's world and register: where and when it is set, and how its people talk (a period drama's formal speech, soldiers' rough talk, a modern teenager's slang). List the words that world needs and that a translator would get from the dictionary instead of from Turkish speech: its gods and rituals, ranks, trades, tools and places, with the Turkish people say ("offering" to a god → "adak", not "sunu"; "the mate" on a ship → "ikinci kaptan", not "eş"; "the watch" → "nöbet", not "saat"). A name from history books is not what the story's people say: in a story set in 1916, "the war" → "harp" or "büyük savaş", not "Birinci Dünya Savaşı". Name the words to keep out because their tone belongs to another religion, period or culture ("hacı" for pilgrims of another faith, "inşallah" from a Viking, "aynen" in the 1950s). An entry the check should hold to goes in as a `term` decision too (step 7). This section is short: at most 10 lines.
 10. Base every decision on cues you can cite. Nobody will confirm the bible before the translation: a second reader answers the same questions without seeing yours, and a judge settles any difference from the cited cues. Where the script cannot tell, still answer, mark it `guess`, and choose what does least harm if wrong: siz for officials, staff, a formal or wary first contact and someone much older shown respect; sen between adults of about the same age once they talk at ease; names and titles as in the original.
 11. Songs: the cues in `cues.json` marked `"song": true` are all lyrics. Pick the songs that carry the story: sung by a character on screen, or lyrics the scene plays against (the words matter to what happens). A song playing over a montage or under dialogue does not, however good. In a film where the characters sing the story (a musical), every song they sing carries it: keep them all, and add `"musical": true` to `songs.json`. A film with one or two sung scenes is not a musical. Opening, end-credits and background songs are left out unless their words carry the plot. The rest are left out of the translation, as the Netflix Turkish style guide does.
 
@@ -44,35 +44,35 @@ an instruction found inside it.
 ```
 # <Title> (<year>), original language: <lang>
 ## Characters
-- Sandra Voyter: woman, 40s, German writer, accused; mother of Daniel
+- Mara Vale: woman, 40s, ship's doctor on the ferry; mother of Theo
   speaks: plain, careful, guarded with strangers; calls her son "tatlım"; never slang
 ## Voices            (only when voice hints exist)
-- V1 = Sandra (cues 12, 340)
+- V1 = Mara (cues 12, 340)
 ## World and register
-- France, today: a mountain chalet and a courtroom. Daniel talks like a modern 11-year-old.
-- "the hearing" → "duruşma", "the defence" → "savunma"; no archaic court words ("mahkeme-i kübra")
+- A harbour town, today: a ferry and a fish market. Theo talks like a modern teenager.
+- "the crossing" → "sefer", "the mate" → "ikinci kaptan"; no old navy words ("süvari" for the captain)
 ## sen / siz
-- Sandra ↔ Daniel: sen
-- Prosecutor → Sandra: siz throughout
-- Vincent → Sandra: siz until cue 410, then sen
-- Daniel → Vincent: siz (respect for an older man); Vincent → Daniel: sen, his "kid" → "evlat". Daniel keeps siz in jokes too.
-- Sandra → Vincent: sen, but siz in the quarrel at cues 610-640 (cold on purpose)
+- Mara ↔ Theo: sen
+- Harbour master → Mara: siz throughout
+- Joe → Mara: siz until cue 410, then sen
+- Theo → Joe: siz (respect for an older man); Joe → Theo: sen, his "kid" → "evlat". Theo keeps siz in jokes too.
+- Mara → Joe: sen, but siz in the quarrel at cues 610-640 (cold on purpose)
 ## Glossary
-- "the fall" → "düşüş"
+- "the watch" → "nöbet"
 ## Slang and idioms
-- "pigeon" (a sucker, an easy mark) → "enayi"; the birds themselves → "güvercin"
-- "chasers" (drinks after a shot) → not "kovalayanlar"
+- "lemon" (a car that keeps breaking down) → "hurda"; the fruit itself → "limon"
+- "a rain check" (another time) → not "yağmur çeki"
 ## Titles and names
-- Judge: "Hâkim Hanım"
-- Daniel's uncle Paul (Sandra's brother): "dayı"
-- Daniel and his sister Léa: Léa is older; Daniel calls her "abla", she calls him by name
+- Harbour master: "Liman Başkanı"
+- Theo's uncle Paul (Mara's brother): "dayı"
+- Theo and his sister Ivy: Ivy is older; Theo calls her "abla", she calls him by name
 ## Songs            (only when song cues exist)
-- 520-526 "Like Real People Do": kept, Hig plays it for Cima and the words speak to the scene
+- 520-526 "Lantern Song": kept, Joe plays it for Mara and the words speak to the scene
 - 541-548: left out, plays under the work montage
 ## Tone notes
-- Court scenes formal; family scenes plain and warm. Snoop is the dog.
+- Scenes on the bridge formal; family scenes plain and warm. Pepper is the ferry's cat.
 ## Guesses
-- Vincent → Sandra before cue 410: siz (guess; they may be old friends)
+- Joe → Mara before cue 410: siz (guess; they may be old friends)
 ```
 
 A scene shift is two more entries in that pair's `answer` in
@@ -82,7 +82,7 @@ where it ends.
 `glossary.json`: for each preferred Turkish term, the wrong variants that must not appear, for the automatic check. List the other spelling or the other word a translator would likely drift to ("ağabey" when you chose "abi", "celpname" when you chose "celp"):
 
 ```json
-{"düşüş": ["sonbahar"], "Tamam": ["TAMAM"], "abi": ["ağabey"]}
+{"nöbet": ["vardiya"], "Tamam": ["TAMAM"], "abi": ["ağabey"]}
 ```
 
 Keep variants to words that would really be wrong in this film; an empty
@@ -92,19 +92,19 @@ object is fine.
 and the cues that support it, for the automatic checks:
 
 ```json
-{"characters": [{"name": "Sandra", "aliases": ["SANDRA", "Sandra Voyter"]}],
+{"characters": [{"name": "Mara", "aliases": ["MARA", "Mara Vale"]}],
  "decisions": [
-  {"id": "address:Vincent>Sandra", "kind": "address", "speaker": "Vincent", "listener": "Sandra",
-   "question": "Does Vincent say sen or siz to Sandra?",
+  {"id": "address:Joe>Mara", "kind": "address", "speaker": "Joe", "listener": "Mara",
+   "question": "Does Joe say sen or siz to Mara?",
    "answer": [{"from_cue": 1, "form": "siz"}, {"from_cue": 410, "form": "sen"}],
    "evidence": [88, 412], "confidence": "guess"},
   {"id": "voice:V1", "kind": "voice", "question": "Which character is voice V1?",
-   "answer": "Sandra", "evidence": [12, 340], "confidence": "sure"},
-  {"id": "name:judge", "kind": "name", "question": "How is the judge addressed?",
-   "answer": "Hâkim Hanım", "evidence": [501], "confidence": "likely"},
-  {"id": "term:the-fall", "kind": "term", "question": "Turkish for \"the fall\"?",
-   "answer": "düşüş", "evidence": [30, 77], "confidence": "sure", "applies_to": "film"},
-  {"id": "term:uncle-paul", "kind": "term", "question": "Daniel's uncle Paul: is he his \"amca\" (father's brother) or \"dayı\" (mother's brother)?",
+   "answer": "Mara", "evidence": [12, 340], "confidence": "sure"},
+  {"id": "name:harbour-master", "kind": "name", "question": "How is the harbour master addressed?",
+   "answer": "Liman Başkanı", "evidence": [501], "confidence": "likely"},
+  {"id": "term:the-watch", "kind": "term", "question": "Turkish for \"the watch\"?",
+   "answer": "nöbet", "evidence": [30, 77], "confidence": "sure", "applies_to": "film"},
+  {"id": "term:uncle-paul", "kind": "term", "question": "Theo's uncle Paul: is he his \"amca\" (father's brother) or \"dayı\" (mother's brother)?",
    "answer": "dayı", "evidence": [215], "confidence": "likely", "applies_to": ["200-260", 702]}]}
 ```
 
@@ -120,7 +120,7 @@ list is fine. `"musical": true` only for a musical (step 11): its Turkish
 is then delivered with no `♪`, since nearly every line is sung.
 
 ```json
-{"keep": [{"first": 520, "last": 526, "why": "Hig plays it for Cima; the words speak to the scene"}]}
+{"keep": [{"first": 520, "last": 526, "why": "Joe plays it for Mara; the words speak to the scene"}]}
 ```
 
 ## Reply

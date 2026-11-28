@@ -43,21 +43,21 @@ STORY = ((10_000, 12_000), (60_000, 62_500))
 CREDITS = _cards((70_000, 71_500, "DIRECTED BY X"), (73_000, 74_500, "WRITTEN BY Y"))
 
 
-def test_die_my_love_lands_on_the_cut_to_black_before_the_credits():
-    # The run's real times: the last spoken line ends at 01:51:05.958, the
-    # cake's "Mommy's home" is a cue from the picture until 01:51:22.458,
-    # the cut to black runs 01:52:29.5 to 01:52:38.25 and the credits start
-    # 0.7 s after it, a new card every 4.5 s.
-    cues = _cues((6_663_000, 6_665_958), (6_679_458, 6_682_458))
+def test_a_real_run_lands_on_the_cut_to_black_before_the_credits():
+    # Times from one test film, all moved by the same amount: the last spoken
+    # line ends at 01:31:05.958, a sign in the picture is a cue until
+    # 01:31:22.458, the cut to black runs 01:32:29.5 to 01:32:38.25 and the
+    # credits start 0.7 s after it, a new card every 4.5 s.
+    cues = _cues((5_463_000, 5_465_958), (5_479_458, 5_482_458))
     cards = _cards(
-        (6_758_958, 6_761_958, "DIRECTED BY / LYNNE RAMSAY"),
-        (6_763_458, 6_764_958, "SCREENPLAY BY / ENDA WALSH"),
-        (6_767_958, 6_769_458, "BASED ON THE BOOK BY / ARIANA HARWICZ"),
+        (5_558_958, 5_561_958, "DIRECTED BY / X"),
+        (5_563_458, 5_564_958, "SCREENPLAY BY / Y"),
+        (5_567_958, 5_569_458, "BASED ON THE BOOK BY / Z"),
     )
-    ends = Ends(((6_749_500, 6_758_250),), cards, 6_814_458)
-    assert _bye(cues, ends) == (6_749_500, 6_753_500, ON_BLACK)
-    # Without the picture the goodbye still never comes before the cake.
-    assert _bye(cues) == (6_685_458, 6_689_458, AFTER)
+    ends = Ends(((5_549_500, 5_558_250),), cards, 5_614_458)
+    assert _bye(cues, ends) == (5_549_500, 5_553_500, ON_BLACK)
+    # Without the picture the goodbye still never comes before the sign.
+    assert _bye(cues) == (5_485_458, 5_489_458, AFTER)
 
 
 def test_a_fade_inside_the_last_scene_is_not_used():

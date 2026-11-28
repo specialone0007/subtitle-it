@@ -552,7 +552,7 @@ def test_collect_sends_back_only_the_frame_read_for_a_run(tmp_path: Path):
 
 
 def test_a_card_a_track_split_in_two_names_both_entries(tmp_path: Path):
-    # The Social Reckoning: one closing card held for 6 s, which the Danish
+    # One 2026 film: one closing card held for 6 s, which the Danish
     # track splits into two lines, 4:1338 and 4:1339. The frame read for
     # the run lists both and its reader names both; every frame of the run
     # carries them, and the build sees both as story text.
@@ -560,9 +560,7 @@ def test_a_card_a_track_split_in_two_names_both_entries(tmp_path: Path):
     frames = [(6_274_000, ["4:1338"]), (6_275_500, ["4:1338", "4:1339"]), (6_277_000, ["4:1339"]), (6_278_500, ["4:1339"])]
     out = _marked_frames_file(w, frames, [None, 0, 0, 0])
     assert [e["id"] for e in _json(w / prepare.FRAMES_FILE)["frames"][0]["entries"]] == ["4:1338", "4:1339"]
-    Path(out).write_text(
-        _line(1, "In 2021, using Frances Haugen's trove", "closing text", True, ["4:1339", "4:1338"]), encoding="utf-8"
-    )
+    Path(out).write_text(_line(1, "In 1998 the old pier closed", "closing text", True, ["4:1339", "4:1338"]), encoding="utf-8")
     assert screen.collect(w)["missing"] == []
     [card] = _json(w / screen.READINGS_FILE)["readings"]
     assert card["shows_entry"] == ["4:1338", "4:1339"] and len(card["frames"]) == 4
@@ -713,10 +711,10 @@ def _next(r: dict, next_ms: int | None) -> dict:
 
 
 def test_a_picture_cue_stays_up_until_the_next_saved_frame():
-    # Die My Love: the cake on two frames 1.5 s apart, the next frame 1.5 s
-    # later. The cue lasts until that frame: 01:51:19.458 to 01:51:22.458.
-    cake = _next(_reading("Mommy's / home", 6_679_458, 6_680_958, kind="sign"), 6_682_458)
-    assert prepare.picture_shown_end(cake) == 6_682_458
+    # One test film: a sign on two frames 1.5 s apart, the next frame 1.5 s
+    # later. The cue lasts until that frame: 01:31:19.458 to 01:31:22.458.
+    sign = _next(_reading("Dad's / shop", 5_479_458, 5_480_958, kind="sign"), 5_482_458)
+    assert prepare.picture_shown_end(sign) == 5_482_458
     # Frames 1 s apart in the middle of the film: until the next one; one
     # frame alone still lasts 1.5 s.
     assert prepare.picture_shown_end(_next(_reading("X", 0, 2_000), 3_000)) == 3_000
@@ -735,8 +733,8 @@ def test_collect_joins_frames_whose_text_differs_only_in_case_or_punctuation(tmp
     times = [0, 1_500, 3_000, 4_500, 6_000, 7_500, 9_000, 10_500, 12_000, 13_500]
     outs = _frames_file(w, [(ms, []) for ms in times])
     lines = [
-        _line(1, "Mommy's / home", "sign", True),
-        _line(2, "mommy's home", "sign", True),
+        _line(1, "Dad's / shop", "sign", True),
+        _line(2, "dad's shop", "sign", True),
         _line(3),
         # Two story kinds are one text; wants_read when any frame says so.
         _line(4, "EXIT", "sign", False),
@@ -755,7 +753,7 @@ def test_collect_joins_frames_whose_text_differs_only_in_case_or_punctuation(tmp
     got = [(r["text"], r["kind"], r["wants_read"], r["story"], r["first_ms"], r["last_ms"], r["next_ms"]) for r in readings]
     assert got == [
         # On a tie, the first frame's text.
-        ("Mommy's / home", "sign", True, True, 0, 1_500, 3_000),
+        ("Dad's / shop", "sign", True, True, 0, 1_500, 3_000),
         ("EXIT", "caption", True, True, 4_500, 7_500, 9_000),
         ("EXIT", "credits", False, False, 9_000, 9_000, 10_500),
         ("OPEN", "sign", True, True, 10_500, 10_500, 12_000),

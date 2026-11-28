@@ -117,7 +117,7 @@ def test_voice_answers_agree_when_they_name_the_same_character(a, b):
         ("Sam", "Nora (talking Sam into the trip)"),
         ("bus driver", "Mabel, the woman driving the bus"),
         ("the guard", "The guard captain"),
-        ("Sam", "Samuel"),
+        ("Sam", "Samantha"),
         ("Sam", "Sam's mother"),
         ("Sam", "Sam’s mother"),
         ("Sam", "Leo (Sam's friend)"),

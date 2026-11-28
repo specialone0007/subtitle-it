@@ -42,7 +42,7 @@ def test_slug_result_is_an_object_with_a_bare_name(tmp_path: Path):
 def test_remember_command_writes_its_result_and_the_folder(tmp_path: Path):
     prefs = tmp_path / "preferences.md"
     prefs.write_text("# p\n\n## Media folders\n\n-\n", encoding="utf-8")
-    film = tmp_path / "Videos" / "Anatomy.of.a.Fall.2023.mkv"
+    film = tmp_path / "Videos" / "Harbour.Lights.2023.mkv"
     film.parent.mkdir()
     film.write_bytes(b"x")
     path = tmp_path / "remember.json"

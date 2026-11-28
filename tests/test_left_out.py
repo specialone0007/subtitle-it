@@ -27,7 +27,7 @@ import srt
         (["Ouch!"], False),
         (["Yeah."], False),
         (["Ohio."], False),
-        (["- Hmm?", "- Grand Junction, do you copy?"], False),
+        (["- Hmm?", "- Tower Two, do you copy?"], False),
         (["..."], False),
         ([], False),
     ],
@@ -47,19 +47,19 @@ def test_answer_sound(lines, answer):
 @pytest.mark.parametrize(
     ("lines", "lyric"),
     [
-        (["<i>♪ Lookin' back over my life ♪</i>"], True),
-        (["♪ Spent the most of it", "Tongue-tied ♪"], True),
+        (["<i>♪ Down by the water tonight ♪</i>"], True),
+        (["♪ Waiting for the", "Lantern light ♪"], True),
         (["# Old song line #"], True),
         (["♪ ♪"], False),
         (["- ♪ La la ♪", "- Turn it off!"], False),
-        # A lyric cut off by speech has no closing ♪ (Love Of Your Life).
-        (["<i>♪ All the things you do to me", "and everything you said...</i>"], True),
-        (["<i>♪ I'll meet you", "in forever's parking lot...</i>"], True),
+        # A lyric cut off by speech has no closing ♪ (seen in one test film).
+        (["<i>♪ Every lamp along the pier", "and every boat at rest...</i>"], True),
+        (["<i>♪ I'll wait here", "where the harbour ends...</i>"], True),
         (["♪ La la ♪", "Turn it off!"], False),
         (["- ♪ La la", "- Turn it off!"], False),
         # A ♪ at the end of a line closes the lyric the cue before opened.
-        (["and everything you said ♪", "Who sang that?"], False),
-        (["<i>and everything you said ♪</i>", "<i>♪ All the things", "you do to me</i>"], True),
+        (["and every boat at rest ♪", "Who sang that?"], False),
+        (["<i>and every boat at rest ♪</i>", "<i>♪ Every lamp", "along the pier</i>"], True),
         (["Turn it off!"], False),
     ],
 )
@@ -272,7 +272,7 @@ def test_italic_songs_finds_a_run_of_italic_lines_that_end_no_sentence():
             "<i>where the boats go</i>",
             "<i>will you wait for me?</i>",  # a sung question inside the song
             "<i>under the morning light</i>",
-            "<i>over the hills and far away</i>",
+            "<i>over the nets and out to sea</i>",
             "Who's singing?",
             "<i>I keep thinking of her.</i>",  # a voice-over afterwards
         ]
@@ -311,7 +311,7 @@ def test_build_marks_italic_songs_and_leaves_italic_speech_alone(tmp_path: Path)
         "<i>Down by the water</i>",
         "<i>where the boats go</i>",
         "<i>under the morning light</i>",
-        "<i>over the hills and far away</i>",
+        "<i>over the nets and out to sea</i>",
         "Who's singing?",
     ]
     src = tmp_path / "film.en.srt"

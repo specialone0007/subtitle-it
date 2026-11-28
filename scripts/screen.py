@@ -663,7 +663,7 @@ def _most(values: list) -> object:
 def join_readings(listed: list[dict], read: dict[str, dict]) -> list[dict]:
     """Neighbouring frames (next to each other in time order, NEIGHBOUR_MS
     apart at most) that show the same text become one reading (_join_key):
-    a reader writing "Mommy's home" on one frame and "mommy's home" on the
+    a reader writing "Dad's shop" on one frame and "dad's shop" on the
     next is one text. The reading takes the text and kind most of its frames
     give (the first frame's on a tie), and wants_read when any frame says so,
     since a card fading in can look like background on its first frame.

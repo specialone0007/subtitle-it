@@ -103,8 +103,8 @@ def dash_lines(lines: list[str]) -> int:
 
 # Danish, Norwegian and Swedish files show a sentence that runs on into
 # the next cue with " -" at the end of the cue, and "- " at the start of
-# the next one ("Frances Haugens dokumenter, -" / "- publicerede Wall
-# Street Journal"). That opening "-" is not a speaker's turn. A cut-off
+# the next one ("Den gamle mole lukkede, -" / "- og færgen
+# sejlede"). That opening "-" is not a speaker's turn. A cut-off
 # word ("I was-") has no space before its "-" and is not this mark, and
 # a cue that goes on in a capital ("If you don't -" / "- I won't.") is a
 # new speaker cutting in.
@@ -482,17 +482,17 @@ SQUARE_RE = re.compile(r"\[[^\]]*\]")
 PAREN_RE = re.compile(r"\([^)]*\)")
 # Tags and a dialogue dash in front of a line: "<i>- ".
 _LEAD_RE = re.compile(r"^(?P<tags>(?:\s*(?:<[^>]+>|\{\\[^}]*\}))*)\s*(?P<dash>-\s*)?")
-# A speaker label with a colon: "SANDRA:", "[SANDRA]:", "(SANDRA):",
-# "SANDRA (whispering):" or "[Sandra]:". Without brackets the name must be in
+# A speaker label with a colon: "MARA:", "[MARA]:", "(MARA):",
+# "MARA (whispering):" or "[Mara]:". Without brackets the name must be in
 # capitals, so "Rule one: never lie" stays dialogue. Capitals before a colon
 # are a label only when they look like a name: see _is_name. A tag may follow
-# the colon with no space: "BARD:<i>Sing to me.</i>".
+# the colon with no space: "HARTLEY:<i>Wait for me.</i>".
 _CAPS_LABEL_RE = re.compile(
     r"[\[(]?(?P<name>[A-ZÀ-ÝĞİŞ][A-ZÀ-ÝĞİŞ0-9 .'\-]{1,30}?)[\])]?(?:\s*\([^)]*\))?\s*:(?:\s+|$|(?=<|\{\\))"
 )
 _NAME = r"[A-ZÀ-ÝĞİŞ][\w'.\-]*(?:\s+[A-ZÀ-ÝĞİŞ][\w'.\-]*){0,2}"
-# A bracketed name in front of speech, with or without a colon: "[Sandra] Hi.",
-# "[1. Man] Hi.", "[Sandra]: Hi.". Each word starts with a capital; a bracket
+# A bracketed name in front of speech, with or without a colon: "[Mara] Hi.",
+# "[1. Man] Hi.", "[Mara]: Hi.". Each word starts with a capital; a bracket
 # in capitals with no colon ("[DOOR SLAMS] Hi.") is a sound.
 _BRACKET_LABEL_RE = re.compile(r"\[(?:\d+\.\s*)?(?P<name>" + _NAME + r"(?:\s+\d{1,2})?)\]\s*:?\s*")
 # Capitals before a colon that name no speaker: "OK: let's go.", "WARNING:
@@ -748,7 +748,7 @@ def paren_descriptions(line: str) -> list[str]:
 def _bracket_name(m: re.Match) -> str | None:
     words = m.group("name").split()
     # A bracket in capitals with no colon is a sound: "[IN SPANISH] Hola.",
-    # "[BANG] Get down!". "[SANDRA]: Hi." with its colon is still a label.
+    # "[BANG] Get down!". "[MARA]: Hi." with its colon is still a label.
     if ":" not in m.group(0) and not any(ch.islower() for ch in m.group("name")):
         return None
     if words[0].casefold() in SOUND_WORDS or any(w.casefold().endswith("ing") and len(w) > 5 for w in words):
@@ -769,9 +769,9 @@ def clean_line(line: str, hi: bool = True) -> Cleaned:
     whether the line's file is a hearing-impaired one.
 
     In every file: descriptions in square brackets anywhere in the line, a
-    bracketed name in front of speech ("[Sandra] Hi.", "[Guard 2] Hi.") and
+    bracketed name in front of speech ("[Mara] Hi.", "[Guard 2] Hi.") and
     music notes with no words. Only in a hearing-impaired file: a speaker
-    label in capitals ("- SANDRA: Hi." becomes "- Hi.") and descriptions in
+    label in capitals ("- MARA: Hi." becomes "- Hi.") and descriptions in
     parentheses that are not speech. In a plain file a label in capitals
     is still returned as the speaker hint, and its text stays. Capitals
     before a colon that do not look like a name ("OK:", "DAY 3:") are text
@@ -935,10 +935,10 @@ def is_lyric(lines: list[str]) -> bool:
     or in older files with a # opening or closing it. A line that opens
     with ♪ and does not close it marks the lines after it too, up to a
     line with a ♪ or the end of the cue: a lyric cut off by speech
-    ("♪ All the things you do to me / and everything you said...") has no
+    ("♪ Every lamp along the pier / and every boat at rest...") has no
     closing ♪. A ♪ at the end of a line closes the lyric, and a dialogue
     dash starts a new turn and ends it too. A cue that mixes a lyric with
-    speech is not one ("and everything you said ♪ / Who sang that?")."""
+    speech is not one ("and every boat at rest ♪ / Who sang that?")."""
     said = [strip_tags(ln).strip() for ln in lines]
     said = [ln for ln in said if re.search(r"\w", ln)]
     if not said:

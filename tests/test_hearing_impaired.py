@@ -19,11 +19,11 @@ import srt
         ("(door slams)", "", None),
         ("[Laughs] Yes.", "Yes.", None),
         ("Yes. (sighs)", "Yes.", None),
-        ("SANDRA: Who's there?", "Who's there?", "SANDRA"),
-        ("- SANDRA: Who's there?", "- Who's there?", "SANDRA"),
-        ("[Sandra] Who's there?", "Who's there?", "Sandra"),
+        ("MARA: Who's there?", "Who's there?", "MARA"),
+        ("- MARA: Who's there?", "- Who's there?", "MARA"),
+        ("[Mara] Who's there?", "Who's there?", "Mara"),
         ("[1. Man] Over here.", "Over here.", "Man"),
-        ("-[Sandra] Over here.", "- Over here.", "Sandra"),
+        ("-[Mara] Over here.", "- Over here.", "Mara"),
         ("<i>[Thunder]</i>", "", None),
         ("<i>[Thunder] Run!</i>", "<i>Run!</i>", None),
         ("- (gasps) Run!", "- Run!", None),
@@ -33,14 +33,14 @@ import srt
         ("[Exhales] Okay.", "Okay.", None),
         ("[IN SPANISH] Hola.", "Hola.", None),
         ("[BANG] Get down!", "Get down!", None),
-        ("[SANDRA]: Hi.", "Hi.", "SANDRA"),
-        ("BARD:<i>Sing to me.</i>", "<i>Sing to me.</i>", "BARD"),
-        ("- BARD:<i>Sing.</i>", "- <i>Sing.</i>", "BARD"),
+        ("[MARA]: Hi.", "Hi.", "MARA"),
+        ("HARTLEY:<i>Wait for me.</i>", "<i>Wait for me.</i>", "HARTLEY"),
+        ("- HARTLEY:<i>Wait.</i>", "- <i>Wait.</i>", "HARTLEY"),
         ("NOTE:<i>see</i>", "NOTE:<i>see</i>", None),
         ("- [Siren wailing] Move!", "- Move!", None),
         ("[rire] Quoi ?", "Quoi ?", None),
         ("Quoi ?", "Quoi ?", None),
-        ("♪ Coming back for me ♪", "♪ Coming back for me ♪", None),
+        ("♪ Sailing home to me ♪", "♪ Sailing home to me ♪", None),
         ("Rule one: never lie.", "Rule one: never lie.", None),
         ("10:30: meet me.", "10:30: meet me.", None),
         ("Who's there?", "Who's there?", None),
@@ -83,7 +83,7 @@ SPEECH_OR_TAG = [
     ("SON DAKİKA: Liman kapandı.", "SON DAKİKA: Liman kapandı.", "SON DAKİKA: Liman kapandı.", None),
     ("JOHN DAY: Hi.", "Hi.", "JOHN DAY: Hi.", "JOHN DAY"),
     ("ANNA MARIA LOUISE KAY: Hi.", "ANNA MARIA LOUISE KAY: Hi.", "ANNA MARIA LOUISE KAY: Hi.", None),
-    ("SANDRA: Who's there?", "Who's there?", "SANDRA: Who's there?", "SANDRA"),
+    ("MARA: Who's there?", "Who's there?", "MARA: Who's there?", "MARA"),
     ("- ŞULE: Merhaba.", "- Merhaba.", "- ŞULE: Merhaba.", "ŞULE"),
     ("MR. O'NEIL: Sit.", "Sit.", "MR. O'NEIL: Sit.", "MR. O'NEIL"),
     ("[Man 2] Hi.", "Hi.", "Hi.", "Man 2"),
@@ -105,8 +105,8 @@ def test_clean_line_follows_the_files_flag(line, hi_text, plain_text, label):
 
 
 def test_strip_hi_drops_sound_lines_and_an_orphan_dash():
-    lines, names, found = srt.strip_hi(["- [Door slams]", "- SANDRA: Who's there?"])
-    assert lines == ["Who's there?"] and names == ["SANDRA"] and found
+    lines, names, found = srt.strip_hi(["- [Door slams]", "- MARA: Who's there?"])
+    assert lines == ["Who's there?"] and names == ["MARA"] and found
     lines, _, found = srt.strip_hi(["- Who?", "- Me."])
     assert lines == ["- Who?", "- Me."] and not found
     assert srt.strip_hi(["[Thunder rumbling]", "(rain)"])[0] == []
@@ -156,14 +156,14 @@ def test_hearing_impaired_is_judged_by_the_share_of_tagged_cues():
 
 
 def test_is_sound_covers_bracketed_names_with_no_speech():
-    assert srt.is_sound(_cues(["[Sandra]"])[0])
-    assert not srt.is_sound(_cues(["[Sandra] Come."])[0])
+    assert srt.is_sound(_cues(["[Mara]"])[0])
+    assert not srt.is_sound(_cues(["[Mara] Come."])[0])
 
 
 FR = """1
 00:00:01,000 --> 00:00:03,000
 [Door slams]
-SANDRA: Viens.
+MARA: Viens.
 
 2
 00:00:03,500 --> 00:00:06,000
@@ -171,7 +171,7 @@ SANDRA: Viens.
 
 3
 00:00:07,000 --> 00:00:09,000
-[Daniel] Tu es là ?
+[Theo] Tu es là ?
 
 4
 00:00:10,000 --> 00:00:12,000
@@ -202,14 +202,14 @@ def test_build_removes_tags_and_labels_and_leaves_out_sound_only_cues(films: Pat
     assert [r["source"] for r in rows] == [["Viens."], [], ["Tu es là ?"], ["♪ La nuit tombe ♪"]]
     assert [r.get("sound_only", False) for r in rows] == [False, True, False, False]
     speakers = json.loads((w / "speakers.json").read_text(encoding="utf-8"))
-    assert speakers == {"1": {"label": "Sandra"}, "3": {"label": "Daniel"}}
+    assert speakers == {"1": {"label": "Mara"}, "3": {"label": "Theo"}}
     # The timing file keeps every cue's time; the text loses the tags.
     timing, _ = srt.parse(w / "timing.srt")
     assert [c.ts for c in timing] == [c.ts for c in srt.parse(films / "fr.srt")[0]]
     assert timing[0].lines == ["Viens."]
     prepare.chunks(w, target=250)
     chunk = (w / "chunks" / "chunk_01.txt").read_text(encoding="utf-8")
-    assert "#2 " not in chunk and "Door" not in chunk and "#3 00:00:07 [Daniel]" in chunk
+    assert "#2 " not in chunk and "Door" not in chunk and "#3 00:00:07 [Theo]" in chunk
 
 
 def test_build_keeps_everything_when_asked(films: Path):
@@ -217,7 +217,7 @@ def test_build_keeps_everything_when_asked(films: Path):
     out = prepare.build(w, films / "fr.srt", None, None, hi="keep")
     assert out["sound_only_cues_dropped"] == 0 and out["cues_with_tags_or_labels_removed"] == 0
     rows = json.loads((w / "cues.json").read_text(encoding="utf-8"))
-    assert rows[0]["source"] == ["[Door slams]", "SANDRA: Viens."] and not rows[1].get("sound_only")
+    assert rows[0]["source"] == ["[Door slams]", "MARA: Viens."] and not rows[1].get("sound_only")
 
 
 def test_build_refuses_an_unknown_mode(films: Path):
@@ -248,7 +248,7 @@ def test_check_delivers_without_the_sound_only_cue_and_maps_the_numbers(films: P
 
 def test_check_hard_fails_a_label_or_description_put_back(films: Path):
     w = built(films)
-    bad = "1\nSANDRA: Gel.\n\n3\n[Daniel] Orada mısın?\n\n4\n[Kapı çarpar]\n"
+    bad = "1\nMARA: Gel.\n\n3\n[Theo] Orada mısın?\n\n4\n[Kapı çarpar]\n"
     (w / "out" / "tr_01.txt").write_text(bad, encoding="utf-8")
     hard = {(x["cue"], x["check"]) for x in assemble.run_checks(w)["hard"]}
     assert {(1, "speaker label"), (3, "speaker label"), (4, "sound description")} <= hard
@@ -262,12 +262,12 @@ def test_check_reads_capitals_and_parentheses_as_text_where_the_source_had_no_ta
     # heading or a parenthesis in its Turkish is text; square brackets
     # never are.
     w = built(films)
-    for text in ("BÖLÜM 1: Gece", "Evet (iç çeker).", "(Orada mısın?)", "SANDRA: Gel."):
+    for text in ("BÖLÜM 1: Gece", "Evet (iç çeker).", "(Orada mısın?)", "MARA: Gel."):
         (w / "out" / "tr_01.txt").write_text(f"1\nGel.\n\n3\nOrada mısın?\n\n4\n{text}\n", encoding="utf-8")
         assert assemble.run_checks(w)["hard"] == [], text
     (w / "out" / "tr_01.txt").write_text("1\nGel.\n\n3\nOrada mısın?\n\n4\nEvet [iç çeker].\n", encoding="utf-8")
     assert [(x["cue"], x["check"]) for x in assemble.run_checks(w)["hard"]] == [(4, "sound description")]
-    (w / "out" / "tr_01.txt").write_text("1\nGel.\n\n3\nOrada mısın?\n\n4\n[Daniel] Gel.\n", encoding="utf-8")
+    (w / "out" / "tr_01.txt").write_text("1\nGel.\n\n3\nOrada mısın?\n\n4\n[Theo] Gel.\n", encoding="utf-8")
     assert [(x["cue"], x["check"]) for x in assemble.run_checks(w)["hard"]] == [(4, "speaker label")]
     (w / "out" / "tr_01.txt").write_text("1\nGel.\n\n3\nOrada mısın?\n\n4\n(iç çeker)\n", encoding="utf-8")
     assert assemble.run_checks(w)["hard"] == []
@@ -286,7 +286,7 @@ EXAMPLES = [
     "WARNING: HIGH VOLTAGE",
     "OK: let's go.",
     "AT 10: meet me",
-    "SANDRA: Come.",
+    "MARA: Come.",
     "[Guard 2] Stop.",
     "(sighs)",
     "[Door slams]",
@@ -296,7 +296,7 @@ EXAMPLES = [
 @pytest.mark.parametrize("flagged", [True, False])
 def test_build_cleans_each_file_by_its_own_flag(tmp_path: Path, flagged: bool):
     # Flagged: every filler cue has a tag. Plain: 4 tagged cues of 160
-    # (SANDRA:, [Guard 2], (sighs) and [Door slams]), under 3%.
+    # (MARA:, [Guard 2], (sighs) and [Door slams]), under 3%.
     filler = [f"[laughs] Line {i}." if flagged else f"Line {i}." for i in range(150)]
     (tmp_path / "en.srt").write_text(_srt(EXAMPLES + filler), encoding="utf-8")
     w = tmp_path / "work"
@@ -314,12 +314,12 @@ def test_build_cleans_each_file_by_its_own_flag(tmp_path: Path, flagged: bool):
     if flagged:
         rest = [["Come."], ["Stop."], [], []]
     else:
-        rest = [["SANDRA: Come."], ["Stop."], ["(sighs)"], []]
+        rest = [["MARA: Come."], ["Stop."], ["(sighs)"], []]
     assert [r["source"] for r in rows] == speech + rest
     assert [n for n, r in enumerate(rows, 1) if r.get("sound_only")] == ([9, 10] if flagged else [10])
     assert [n for n, r in enumerate(rows, 1) if r.get("tags_removed")] == ([7, 8, 9, 10] if flagged else [8, 10])
     speakers = json.loads((w / "speakers.json").read_text(encoding="utf-8"))
-    assert {n: s["label"] for n, s in speakers.items()} == {"7": "Sandra", "8": "Guard 2"}
+    assert {n: s["label"] for n, s in speakers.items()} == {"7": "Mara", "8": "Guard 2"}
 
 
 def test_check_warns_on_text_for_a_sound_only_cue(films: Path):
@@ -333,7 +333,7 @@ def test_check_warns_on_text_for_a_sound_only_cue(films: Path):
 TWO_LINE_SOUND = """1
 00:00:01,000 --> 00:00:03,000
 [Door slams]
-SANDRA: Viens.
+MARA: Viens.
 
 2
 00:00:03,500 --> 00:00:06,000
@@ -384,7 +384,7 @@ def test_check_rejects_turkish_for_a_sound_only_cue_an_older_build_kept(tmp_path
     lines = Path(assemble.review_parts(w)["parts"][0]["file"]).read_text(encoding="utf-8").splitlines()[2:]
     assert [ln.split("\t")[0] for ln in lines] == ["1", "3"]
     # A polish run seeds no Turkish into it.
-    turkish = TWO_LINE_SOUND.replace("SANDRA: Viens.", "SANDRA: Gel.")
+    turkish = TWO_LINE_SOUND.replace("MARA: Viens.", "MARA: Gel.")
     turkish = turkish.replace("[Woman calling out,\nindistinct]", "Toplanın millet!").replace("Tu es là ?", "Orada mısın?")
     (tmp_path / "tr.srt").write_text(turkish, encoding="utf-8")
     polish.seed(w, tmp_path / "tr.srt")
@@ -409,7 +409,7 @@ def test_build_leaves_out_a_cue_the_source_file_says_is_only_sounds(tmp_path: Pa
 
 def test_keep_mode_leaves_labels_alone(films: Path):
     w = built(films, hi="keep")
-    tr = "1\n[Kapı çarpar]\nSANDRA: Gel.\n\n2\n[Gök gürlüyor]\n\n3\n[Daniel] Orada mısın?\n\n4\n♪ Gece çöküyor ♪\n"
+    tr = "1\n[Kapı çarpar]\nMARA: Gel.\n\n2\n[Gök gürlüyor]\n\n3\n[Theo] Orada mısın?\n\n4\n♪ Gece çöküyor ♪\n"
     (w / "out" / "tr_01.txt").write_text(tr, encoding="utf-8")
     r = assemble.run_checks(w)
     assert r["hard_fail_count"] == 0, r["hard"]

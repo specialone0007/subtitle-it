@@ -24,8 +24,8 @@ import turkish
         ("Hayır.", "Bunu bir daha asla yapmayacağım.", False),
         ("Gel.", "Hemen.", False),
         ("Senin gibi biri", "buraya hiç gelmedi.", False),
-        ("Hepiniz daha iyi bir", "şey için çaresizsiniz.", True),
-        ("<i>♪ Öpüşelim", "Gerçek insanlar gibi ♪</i>", False),
+        ("Hepiniz daha sakin bir", "liman için bekliyorsunuz.", True),
+        ("<i>♪ Denize bak", "Fener yanıyor bu gece ♪</i>", False),
         ("Bu gerçekten çok güzel bir gündü.", "Değil mi?", False),
         ("Sadece bir.", "Peki, ikincisi nerede?", False),
     ],
@@ -71,7 +71,7 @@ def test_layout_rebreaks_two_lines_that_read_badly():
 
 
 def test_layout_keeps_song_lines_as_the_song_breaks_them():
-    lines = ["<i>♪ Öpüşelim", "Gerçek insanlar gibi ♪</i>"]
+    lines = ["<i>♪ Denize bak", "Fener yanıyor bu gece ♪</i>"]
     assert layout.plan(0, 3000, lines, 80)[0][0].lines == lines
 
 

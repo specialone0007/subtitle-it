@@ -8,25 +8,25 @@ import sources
 
 
 def test_find_matches_name_and_flags_extras(tmp_path: Path):
-    d = tmp_path / "Movies" / "Anatomy of a Fall (2023)"
+    d = tmp_path / "Movies" / "Harbour Lights (2023)"
     d.mkdir(parents=True)
-    (d / "Anatomy of a Fall (2023).mkv").write_bytes(b"x" * 2000)
-    (d / "Anatomy of a Fall Trailer.mp4").write_bytes(b"x" * 10)
+    (d / "Harbour Lights (2023).mkv").write_bytes(b"x" * 2000)
+    (d / "Harbour Lights Trailer.mp4").write_bytes(b"x" * 10)
     (d / "notes.txt").write_text("x")
     (tmp_path / "Other.Film.mkv").write_bytes(b"x")
-    out = sources.find("anatomy of a fall", [tmp_path])
+    out = sources.find("harbour lights", [tmp_path])
     hits = out["matches"]
-    assert [Path(h["path"]).name for h in hits] == ["Anatomy of a Fall (2023).mkv", "Anatomy of a Fall Trailer.mp4"]
+    assert [Path(h["path"]).name for h in hits] == ["Harbour Lights (2023).mkv", "Harbour Lights Trailer.mp4"]
     assert hits[1]["looks_like_extra"]
     assert out["missing_folders"] == []
 
 
 def test_find_names_folders_that_are_not_there(tmp_path: Path):
     gone = tmp_path / "unplugged"
-    (tmp_path / "Anatomy.of.a.Fall.2023.mkv").write_bytes(b"x")
-    out = sources.find("anatomy", [gone, tmp_path])
+    (tmp_path / "Harbour.Lights.2023.mkv").write_bytes(b"x")
+    out = sources.find("harbour", [gone, tmp_path])
     assert out["missing_folders"] == [str(gone)]
-    assert [Path(h["path"]).name for h in out["matches"]] == ["Anatomy.of.a.Fall.2023.mkv"]
+    assert [Path(h["path"]).name for h in out["matches"]] == ["Harbour.Lights.2023.mkv"]
 
 
 TEMPLATE = """# Subtitle It preferences
@@ -46,7 +46,7 @@ session
 def test_remember_fills_the_empty_bullet_with_the_parent_of_a_film_folder(tmp_path: Path):
     prefs = tmp_path / "preferences.md"
     prefs.write_text(TEMPLATE, encoding="utf-8")
-    film = tmp_path / "E" / "Films" / "The Quiet Hour (2019)" / "The.Quiet.Hour.2019.2160p.mkv"
+    film = tmp_path / "E" / "Films" / "Lantern Song (2019)" / "Lantern.Song.2019.2160p.mkv"
     film.parent.mkdir(parents=True)
     film.write_bytes(b"x")
     out = sources.remember(film, prefs)
@@ -61,7 +61,7 @@ def test_remember_adds_a_loose_film_folder_after_the_listed_ones(tmp_path: Path)
     films = tmp_path / "Films"
     films.mkdir()
     prefs.write_text(TEMPLATE.replace("\n-\n", f"\n- {films}\n"), encoding="utf-8")
-    film = tmp_path / "Videos" / "Anatomy.of.a.Fall.2023.mkv"
+    film = tmp_path / "Videos" / "Harbour.Lights.2023.mkv"
     film.parent.mkdir()
     film.write_bytes(b"x")
     out = sources.remember(film, prefs)
@@ -72,7 +72,7 @@ def test_remember_adds_a_loose_film_folder_after_the_listed_ones(tmp_path: Path)
 def test_remember_skips_a_film_already_inside_a_listed_folder(tmp_path: Path):
     prefs = tmp_path / "preferences.md"
     prefs.write_text(TEMPLATE.replace("\n-\n", f"\n- {tmp_path}\n"), encoding="utf-8")
-    film = tmp_path / "Anatomy of a Fall (2023)" / "Anatomy.of.a.Fall.2023.mkv"
+    film = tmp_path / "Harbour Lights (2023)" / "Harbour.Lights.2023.mkv"
     film.parent.mkdir()
     film.write_bytes(b"x")
     before = prefs.read_text(encoding="utf-8")
@@ -85,20 +85,20 @@ def test_a_media_folder_written_with_a_tilde_means_the_home_folder(monkeypatch, 
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     prefs = tmp_path / "preferences.md"
     prefs.write_text(TEMPLATE.replace("\n-\n", "\n- ~/Films\n"), encoding="utf-8")
-    film = tmp_path / "Films" / "Anatomy of a Fall (2023)" / "Anatomy.of.a.Fall.2023.mkv"
+    film = tmp_path / "Films" / "Harbour Lights (2023)" / "Harbour.Lights.2023.mkv"
     film.parent.mkdir(parents=True)
     film.write_bytes(b"x")
     before = prefs.read_text(encoding="utf-8")
     assert sources.remember(film, prefs) == {"added": None, "covered_by": "~/Films", "too_broad": None}
     assert prefs.read_text(encoding="utf-8") == before
-    out = sources.find("anatomy", [Path("~/Films")])
+    out = sources.find("harbour", [Path("~/Films")])
     assert out["missing_folders"] == [] and len(out["matches"]) == 1
 
 
 def test_remember_creates_the_section_when_preferences_lack_it(tmp_path: Path):
     prefs = tmp_path / "preferences.md"
     prefs.write_text("# Subtitle It preferences\n", encoding="utf-8")
-    film = tmp_path / "Videos" / "Anatomy.of.a.Fall.2023.mkv"
+    film = tmp_path / "Videos" / "Harbour.Lights.2023.mkv"
     film.parent.mkdir()
     film.write_bytes(b"x")
     out = sources.remember(film, prefs)
@@ -106,23 +106,23 @@ def test_remember_creates_the_section_when_preferences_lack_it(tmp_path: Path):
 
 
 def test_folder_to_remember_never_picks_a_drive_root_or_home(monkeypatch, tmp_path: Path):
-    film_dir = tmp_path / "Anatomy of a Fall (2023)"
+    film_dir = tmp_path / "Harbour Lights (2023)"
     film_dir.mkdir()
-    film = film_dir / "Anatomy.of.a.Fall.2023.mkv"
+    film = film_dir / "Harbour.Lights.2023.mkv"
     film.write_bytes(b"x")
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
     assert sources.folder_to_remember(film) == film_dir.resolve()
 
 
 def test_sidecar_language():
-    v = Path("Anatomy of a Fall.mkv")
-    assert sources.sidecar_language(Path("Anatomy of a Fall.en.srt"), v) == "en"
-    assert sources.sidecar_language(Path("Anatomy of a Fall.French.forced.srt"), v) == "fr"
-    assert sources.sidecar_language(Path("Anatomy of a Fall.srt"), v) == "und"
+    v = Path("Harbour Lights.mkv")
+    assert sources.sidecar_language(Path("Harbour Lights.en.srt"), v) == "en"
+    assert sources.sidecar_language(Path("Harbour Lights.French.forced.srt"), v) == "fr"
+    assert sources.sidecar_language(Path("Harbour Lights.srt"), v) == "und"
 
 
 def test_slug():
-    assert sources.slug("Anatomie d'une chute (2023)") == "anatomie-d-une-chute-2023"
+    assert sources.slug("Lueur d'un port (2023)") == "lueur-d-un-port-2023"
 
 
 def test_validate_flags_partial_file(tmp_path: Path):
@@ -405,7 +405,7 @@ def test_download_uses_cache_without_a_request(tmp_path: Path, monkeypatch):
 def test_remember_adds_nothing_for_a_loose_film_in_the_home_folder(monkeypatch, tmp_path: Path):
     prefs = tmp_path / "preferences.md"
     prefs.write_text(TEMPLATE, encoding="utf-8")
-    film = tmp_path / "Anatomy.of.a.Fall.2023.mkv"
+    film = tmp_path / "Harbour.Lights.2023.mkv"
     film.write_bytes(b"x")
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
     out = sources.remember(film, prefs)
@@ -418,7 +418,7 @@ def test_remember_adds_nothing_for_a_loose_film_at_a_drive_root(monkeypatch, tmp
     prefs.write_text(TEMPLATE, encoding="utf-8")
     root = Path(tmp_path.anchor)
     monkeypatch.setattr(sources, "folder_to_remember", lambda file: root)
-    out = sources.remember(tmp_path / "Anatomy.of.a.Fall.2023.mkv", prefs)
+    out = sources.remember(tmp_path / "Harbour.Lights.2023.mkv", prefs)
     assert out == {"added": None, "covered_by": None, "too_broad": str(root)}
     assert prefs.read_text(encoding="utf-8") == TEMPLATE
 

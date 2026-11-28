@@ -37,7 +37,7 @@ they disagree. Hearing-impaired speaker labels (`LENA:`, `[Lena]`) and
 sound descriptions (`[door slams]`) are already taken out of the text; a
 label you see in the hint was one of them. `[Lena · V3]` adds the voice heard in the audio. A cue
 with two dash lines gets one name per line, `?` where it is unknown:
-`[? / Daniel]`.
+`[? / Theo]`.
 
 `[on-screen text]` marks a line the timing file lacks: a title card, a
 sign or a dedication, found in tracks in other languages or read from
@@ -68,14 +68,14 @@ Artık bilmiyorum.
 
 - Every line passes the pack's "How Turkish people say it" test: said out loud by this character in this scene, it sounds like Turkish, not like a translation. Pick the word people use in the film's world (the bible's "World and register"), drop the English "a", "my" and "you" that Turkish endings already carry, and check what a word means in daily speech, not only in the dictionary. Write it as the bible's `speaks` note and the pair's tone say this person talks to this listener; the attitude of the English line is part of what is said.
 - Keep the same number of `- ` dash lines as the source cue. A `- ` that opens a cue right after one ending with ` -`, and goes on in lower case, only carries the sentence on: it is not a dash, so leave it out.
-- Keep `<i>` tags where the source has them, and put a song in italics even where the source has none (the pack's Songs rule). One exception: italics on a single word of a line that is otherwise plain (`<i>To</i> all Marc Antony's cavalry`) are mostly a slip in the source file. Leave them out unless that word is really stressed; never move them onto another Turkish word.
+- Keep `<i>` tags where the source has them, and put a song in italics even where the source has none (the pack's Songs rule). One exception: italics on a single word of a line that is otherwise plain (`<i>To</i> all the harbour crews`) are mostly a slip in the source file. Leave them out unless that word is really stressed; never move them onto another Turkish word.
 - At most 2 lines and 42 characters per line. Every line should read at a glance: follow the pack's "Readable in one glance". Shorten only by rephrasing or by dropping filler; never drop a clause, a question, a name or a second sentence to save characters or reading speed. A line that keeps the meaning and still reads fast is fine. Break a two-line cue where the sentence breaks, as the pack's "Form of each cue" says: never start the second line with "gibi", "diye", "de" or "mi", never leave one word alone on a line.
 - Family words ("amca" or "dayı", "teyze" or "hala", "abi" or "kardeş") as the bible gives them, and circumflexes where they change the meaning ("hâlâ", "âşık"): the pack's "Family words" and "Turkish writing".
 - A cue with two speakers: each speaker on one line, starting with `- `. When a speaker's turn cannot fit one line, write it anyway; a later step splits that cue into one cue per speaker, if the time allows.
 - Never write a speaker label (`LENA:`, `[Lena]`) or a sound description (`[kapı çarpar]`, `(iç çeker)`). Parentheses that are speech in the source (`(Are you there?)`) are translated with them. Song lines follow the pack's Songs section.
 - A sentence spanning several cues: translate the whole sentence first, then spread it over the same cues so each part appears exactly once. No part twice, no cue empty of its own part, and each name in the cue where it is said.
 - Slang and idioms by their meaning, as the bible's "Slang and idioms" section gives it, never word for word.
-- Names take the suffix their sound needs ("Joey'nin", not "Joey'in"), and words are spelled as the TDK writes them ("sağ ol", "her şey"): the pack's "Turkish writing".
+- Names take the suffix their sound needs ("Casey'nin", not "Casey'in"), and words are spelled as the TDK writes them ("sağ ol", "her şey"): the pack's "Turkish writing".
 - Write the file with UTF-8 encoding.
 - Check every cue before you write, then write the output file once, whole: the run goes on as soon as it is written and stays unchanged for a moment, so a second write may come too late to count.
 

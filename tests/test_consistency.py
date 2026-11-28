@@ -43,18 +43,18 @@ def test_spelling_slips(text, slips):
 @pytest.mark.parametrize(
     ("text", "slips"),
     [
-        ("Joey'in güvercinleri.", [("Joey'in", "Joey'nin")]),
-        ("Joey'e söyle.", [("Joey'e", "Joey'ye")]),
-        ("Charley'in arabası.", [("Charley'in", "Charley'nin")]),
+        ("Casey'in kitapları.", [("Casey'in", "Casey'nin")]),
+        ("Casey'e söyle.", [("Casey'e", "Casey'ye")]),
+        ("Riley'in arabası.", [("Riley'in", "Riley'nin")]),
         ("John'nun evi.", [("John'nun", "John'un")]),
         ("Ray'yi gördüm.", [("Ray'yi", "Ray'i")]),
-        ("Joey'nin güvercinleri, Joey'ye söyle.", []),
+        ("Casey'nin kitapları, Casey'ye söyle.", []),
         ("Ray'in evi, John'un arabası.", []),
-        ("Edie'nin abisi.", []),
+        ("Sophie'nin abisi.", []),
         ("Mike'ın arabası.", []),  # a final "e" may be silent: left alone
         ("FBI'ın adamı, D'yi bul.", []),  # letters and acronyms
-        ("Joey'ninki burada.", []),
-        ("Ahmet Bey'in evi, Terry Bey'e söyle.", []),  # the title "Bey" ends in a consonant
+        ("Casey'ninki burada.", []),
+        ("Ahmet Bey'in evi, Benny Bey'e söyle.", []),  # the title "Bey" ends in a consonant
     ],
 )
 def test_name_suffix_slips(text, slips):
@@ -62,7 +62,7 @@ def test_name_suffix_slips(text, slips):
 
 
 def test_ends_in_vowel_sound():
-    assert turkish.ends_in_vowel_sound("Joey") and turkish.ends_in_vowel_sound("Edie")
+    assert turkish.ends_in_vowel_sound("Casey") and turkish.ends_in_vowel_sound("Sophie")
     assert turkish.ends_in_vowel_sound("Ayla")
     assert turkish.ends_in_vowel_sound("Ray") is False and turkish.ends_in_vowel_sound("John") is False
     assert turkish.ends_in_vowel_sound("Mike") is None and turkish.ends_in_vowel_sound("Hugh") is None
@@ -91,13 +91,13 @@ def test_family_drift_is_quiet_with_one_form():
     ("text", "answer", "found"),
     [
         ("Celbi aldın mı?", "celp", True),
-        ("Kanarya gibi öttü.", "ötmek", True),
-        ("İşçi seçimine gel.", "işçi seçimi", True),
+        ("Horoz gibi öttü.", "ötmek", True),
+        ("Giriş kaydına gel.", "giriş kaydı", True),
         ("Celpname geldi.", "celp", True),
         ("Kâğıdı aldın mı?", "celp", False),
         ("Her şey yolunda.", "S ve D", True),  # no word to look for
         # The last word of a compound name loses its possessive ending to another one.
-        ("Sakagami Mahallesi'nde oturuyor.", "Mahallesi", True),
+        ("Fener Mahallesi'nde oturuyor.", "Mahallesi", True),
         ("Bu mahallelerin hepsi boş.", "Mahallesi", True),
         ("Kasaba boş.", "Mahallesi", False),
     ],
@@ -107,7 +107,7 @@ def test_has_rendering(text, answer, found):
 
 
 def term_decisions(*decisions: dict) -> dict:
-    return {"characters": [{"name": "Terry", "aliases": ["TERRY"]}], "decisions": list(decisions)}
+    return {"characters": [{"name": "Benny", "aliases": ["BENNY"]}], "decisions": list(decisions)}
 
 
 def term(id: str, question: str, answer: str, kind: str = "term") -> dict:
@@ -117,30 +117,30 @@ def term(id: str, question: str, answer: str, kind: str = "term") -> dict:
 def test_term_renderings_read_quoted_terms_and_skip_scene_answers(tmp_path: Path):
     data = term_decisions(
         term("term:subpoena", 'Turkish for "subpoena"?', "celp"),
-        term("term:canary", 'Turkish for "canary" / "sing"?', "kanarya / ötmek"),
-        term("term:loft", 'Turkish for "loft"?', "kümes for the birds; çatı for the room"),
-        term("term:shape-up", 'Turkish for "shape-up"?', "işçi seçimi (sabah)"),
+        term("term:rooster", 'Turkish for "rooster" / "crow"?', "horoz / ötmek"),
+        term("term:bridge", 'Turkish for "bridge"?', "köprüüstü for the ship; briç for the cards"),
+        term("term:check-in", 'Turkish for "check-in"?', "giriş kaydı (sabah)"),
         term("name:father", 'How is "Father" said?', "Peder", kind="name"),
     )
     (tmp_path / "decisions.json").write_text(json.dumps(data), encoding="utf-8")
     assert bible.term_renderings(tmp_path) == {
         "subpoena": {"celp"},
-        "canary": {"kanarya"},
-        "sing": {"ötmek"},
-        "shape-up": {"işçi seçimi"},
+        "rooster": {"horoz"},
+        "crow": {"ötmek"},
+        "check-in": {"giriş kaydı"},
     }
 
 
 def test_term_renderings_join_the_senses_of_one_word_with_or_without_an_article(tmp_path: Path):
     data = term_decisions(
-        term("term:attic-birds", 'Turkish for "attic" when it is where the birds sleep?', "kümes"),
-        term("term:attic-job", 'Turkish for "the attic" when it is the easy job in the warehouse?', "depo"),
+        term("term:bridge-ship", 'Turkish for "bridge" when it is where the captain stands?', "köprüüstü"),
+        term("term:bridge-cards", 'Turkish for "the bridge" when it is the card game?', "briç"),
         term("term:hold", 'Turkish for "the hold" of a ship?', "ambar"),
     )
     (tmp_path / "decisions.json").write_text(json.dumps(data), encoding="utf-8")
     assert bible.term_renderings(tmp_path) == {
-        "attic": {"kümes", "depo"},
-        "the attic": {"kümes", "depo"},
+        "bridge": {"köprüüstü", "briç"},
+        "the bridge": {"köprüüstü", "briç"},
         # Only the quoted form is looked for: "hold on" is not the ship's hold.
         "the hold": {"ambar"},
     }
@@ -150,11 +150,11 @@ def test_term_renderings_join_the_senses_of_one_word_with_or_without_an_article(
     ("answer", "rendering", "exceptions"),
     [
         ("celp", "celp", set()),
-        ("muhbir; 1290 keeps the bird pun", "muhbir", {1290}),
-        ("Başbakan (the show name at cue 8 stays PM)", "Başbakan", {8}),
+        ("muhbir; 1290 keeps the pun", "muhbir", {1290}),
+        ("Kaptan (the boat's name at cue 8 stays Skipper)", "Kaptan", {8}),
         # A ";" inside parentheses belongs to the note.
-        ('et (odadaki et; "room meat": oda eti)', "et", set()),
-        ("göktaşı (meteor crater: göktaşı krateri)", "göktaşı", set()),
+        ('ağ (güvertedeki ağ; "deck net": güverte ağı)', "ağ", set()),
+        ("fener (lighthouse keeper: fener bekçisi)", "fener", set()),
     ],
 )
 def test_rendering_and_exceptions_read_the_notes_apart(answer, rendering, exceptions):
@@ -185,20 +185,18 @@ def test_term_rules_without_applies_to_keep_one_sense_to_its_evidence(tmp_path: 
     got = rules_by_term(
         tmp_path,
         scoped("term:minutes", 'Turkish for "minutes" (of the meeting)?', "tutanak", [506, 508]),
-        scoped(
-            "term:pigeon", 'Turkish for "pigeon" when it is slang for an informer?', "muhbir; 1290 keeps the pun", [221, 1290]
-        ),
-        scoped("term:possessed", 'Turkish for "possessed" in "You were totally possessed!"?', "cin çarpmış", [73]),
-        scoped("term:fall", 'Turkish for "the fall"?', "düşüş", [30]),
-        scoped("term:committee", 'Turkish for "Future Planning Committee" (the meetings)?', "Gelecek Planlama Komitesi", [9]),
+        scoped("term:rat", 'Turkish for "rat" when it is slang for an informer?', "muhbir; 1290 keeps the pun", [221, 1290]),
+        scoped("term:rattled", 'Turkish for "rattled" in "You were completely rattled!"?', "allak bullak", [73]),
+        scoped("term:watch", 'Turkish for "the watch"?', "nöbet", [30]),
+        scoped("term:board", 'Turkish for "Harbour Safety Board" (the meetings)?', "Liman Güvenlik Kurulu", [9]),
     )
     assert got["minutes"]["cues"] == {506, 508}
-    assert (got["pigeon"]["cues"], got["pigeon"]["except"]) == ({221, 1290}, {1290})
+    assert (got["rat"]["cues"], got["rat"]["except"]) == ({221, 1290}, {1290})
     # A quoted example line is no name: the decision still covers one sense.
-    assert got["possessed"]["cues"] == {73}
-    assert got["the fall"]["cues"] is None
+    assert got["rattled"]["cues"] == {73}
+    assert got["the watch"]["cues"] is None
     # A name holds for the whole film, whatever the question adds.
-    assert got["future planning committee"]["cues"] is None
+    assert got["harbour safety board"]["cues"] is None
 
 
 def test_term_rules_keep_a_pair_decision_to_its_evidence(tmp_path: Path):
@@ -231,13 +229,13 @@ def test_a_good_applies_to_passes(value):
 
 
 def test_check_follows_the_cues_each_sense_covers(tmp_path: Path):
-    english = ["Read me the minutes.", "Give me five minutes.", "He's a pigeon.", "Feed the pigeon.", "A pigeon for a pigeon!"]
-    tr = ["Bana süreyi oku.", "Bana beş dakika ver.", "O bir ispiyoncu.", "Kuşu besle.", "Güvercine güvercin!"]
+    english = ["Read me the minutes.", "Give me five minutes.", "He's a rat.", "Feed the rat.", "A rat for a rat!"]
+    tr = ["Bana süreyi oku.", "Bana beş dakika ver.", "O bir ispiyoncu.", "Hayvanı besle.", "Sıçana sıçan!"]
     w = make_work(tmp_path, english, tr)
     data = term_decisions(
         scoped("term:minutes", 'Turkish for "minutes" (of the meeting)?', "tutanak", [1]),
-        scoped("term:pigeon-bird", 'Turkish for "pigeon" when it means the birds?', "güvercin", [4]),
-        scoped("term:pigeon-informer", 'Turkish for "pigeon" when it means an informer?', "muhbir; 5 keeps the pun", [3, 5]),
+        scoped("term:rat-animal", 'Turkish for "rat" when it means the animal?', "sıçan", [4]),
+        scoped("term:rat-informer", 'Turkish for "rat" when it means an informer?', "muhbir; 5 keeps the pun", [3, 5]),
     )
     (w / "decisions.json").write_text(json.dumps(data), encoding="utf-8")
     # Cue 2's "minutes" is time, outside the meeting sense; cue 5 is exempt.
@@ -246,8 +244,8 @@ def test_check_follows_the_cues_each_sense_covers(tmp_path: Path):
 
 def test_check_finds_a_term_in_the_next_cue_of_a_sentence_that_runs_on(tmp_path: Path):
     # Turkish puts the verb last, so the term may move to the next cue.
-    english = ["They will serve you a subpoena", "before the hearing starts.", "Another subpoena."]
-    tr = ["Duruşma başlamadan önce", "sana celp tebliğ edecekler.", "Bir kâğıt daha."]
+    english = ["They will serve you a subpoena", "before the ferry leaves.", "Another subpoena."]
+    tr = ["Vapur kalkmadan önce", "sana celp tebliğ edecekler.", "Bir kâğıt daha."]
     w = make_work(tmp_path, english, tr)
     data = term_decisions(term("term:subpoena", 'Turkish for "subpoena"?', "celp"))
     (w / "decisions.json").write_text(json.dumps(data), encoding="utf-8")
@@ -342,9 +340,9 @@ def warned(w: Path, kind: str) -> dict[int, str]:
 
 
 def test_check_warns_on_spelling_and_name_suffix(tmp_path: Path):
-    w = make_work(tmp_path, ["Thanks, I know everything.", "Joey's birds."], ["Sağol, herşeyi biliyorum.", "Joey'in kuşları."])
+    w = make_work(tmp_path, ["Thanks, I know everything.", "Casey's keys."], ["Sağol, herşeyi biliyorum.", "Casey'in anahtarı."])
     assert sorted(warned(w, "spelling")) == [1] and "her şeyi" in warned(w, "spelling")[1]
-    assert warned(w, "name suffix") == {2: '"Joey\'in": the name ends in another sound when said; write "Joey\'nin"'}
+    assert warned(w, "name suffix") == {2: '"Casey\'in": the name ends in another sound when said; write "Casey\'nin"'}
 
 
 def test_check_warns_when_a_term_lacks_the_bible_rendering_and_on_drift(tmp_path: Path):
@@ -361,28 +359,28 @@ def test_check_warns_when_a_term_lacks_the_bible_rendering_and_on_drift(tmp_path
 
 
 def test_check_warns_when_a_repeated_line_is_said_another_way(tmp_path: Path):
-    english = ["Respect their offering.", "Hello there.", "<i>Respect their offering.</i>"]
-    tr = ["Sunularına saygı gösterin.", "Merhaba.", "<i>Adaklarına saygı gösterin.</i>"]
+    english = ["Call the ship's doctor.", "Hello there.", "<i>Call the ship's doctor.</i>"]
+    tr = ["Gemi tabibini çağırın.", "Merhaba.", "<i>Gemi doktorunu çağırın.</i>"]
     w = make_work(tmp_path, english, tr)
     got = warned(w, "repeat drift")
     # One wording to match, the earliest on a tie, and only the other cue
     # is named: two reviewers told to match each other could swap.
     # The Turkish to match comes first: the note is cut for the reviewer.
     assert list(got) == [3]
-    assert got[3].startswith('"Sunularına saygı gösterin." at cue 1: same source line, say it this way here too')
+    assert got[3].startswith('"Gemi tabibini çağırın." at cue 1: same source line, say it this way here too')
 
 
 def test_repeat_drift_names_the_cues_off_the_wording_most_cues_use(tmp_path: Path):
-    english = ["Chasing the setting sun.", "Row.", "Chasing the setting sun.", "Pull.", "Chasing the setting sun."]
-    tr = ["Batan güneşi kovalayarak.", "Kürek.", "Batan güneşin peşinde.", "Çekin.", "Batan güneşin peşinde."]
+    english = ["Home before the tide.", "Heave.", "Home before the tide.", "Haul.", "Home before the tide."]
+    tr = ["Gelgitten önce eve.", "Asıl.", "Sular çekilmeden eve.", "Çekin.", "Sular çekilmeden eve."]
     w = make_work(tmp_path, english, tr)
     got = warned(w, "repeat drift")
-    assert list(got) == [1] and got[1].startswith('"Batan güneşin peşinde." at cue 3')
+    assert list(got) == [1] and got[1].startswith('"Sular çekilmeden eve." at cue 3')
 
 
 def test_repeat_drift_is_quiet_on_the_same_words_and_one_word_lines(tmp_path: Path):
-    english = ["No, no, no.", "Chasing the sun.", "No!", "Wait.", "<i>Chasing the sun.</i>", "No more! No more!", "No more."]
-    tr = ["Hayır, hayır.", "Güneşin peşinde.", "Hayır!", "Dur.", "<i>güneşin peşinde...</i>", "Yeter! Yeter!", "Yeter."]
+    english = ["No, no, no.", "Before the tide.", "No!", "Wait.", "<i>Before the tide.</i>", "No more! No more!", "No more."]
+    tr = ["Hayır, hayır.", "Gelgitten önce.", "Hayır!", "Dur.", "<i>gelgitten önce...</i>", "Yeter! Yeter!", "Yeter."]
     w = make_work(tmp_path, english, tr)
     # One word said again ("No"), and the same words with other case,
     # punctuation, italics or a word said twice, are not drift.
@@ -390,9 +388,9 @@ def test_repeat_drift_is_quiet_on_the_same_words_and_one_word_lines(tmp_path: Pa
 
 
 def test_repeat_drift_keeps_apart_a_line_that_runs_on(tmp_path: Path):
-    # "Past the sirens" that goes on into the next cue is another sentence.
-    english = ["Past the sirens.", "Row hard.", "Past the sirens", "you reach the rocks."]
-    tr = ["Sirenleri geç.", "Sıkı kürek çekin.", "Sirenleri geçince", "kayalara varırsın."]
+    # "Past the lighthouse" that goes on into the next cue is another sentence.
+    english = ["Past the lighthouse.", "Hold the course.", "Past the lighthouse", "you reach the pier."]
+    tr = ["Feneri geç.", "Rotayı koru.", "Feneri geçince", "iskeleye varırsın."]
     w = make_work(tmp_path, english, tr)
     assert warned(w, "repeat drift") == {}
 
@@ -403,13 +401,13 @@ def test_repeat_drift_keeps_apart_a_line_that_runs_on(tmp_path: Path):
 @pytest.mark.parametrize(
     ("text", "answer", "found"),
     [
-        ("Sayın Kıdemli Muhalefet Üyesi", "Sayın Kıdemli Azınlık Üyesi", False),
-        ("Sayın Kıdemli Azınlık Üyesine sorayım.", "Sayın Kıdemli Azınlık Üyesi", True),
+        ("Sayın Liman Meclisi Başkanı", "Sayın Liman Kurulu Başkanı", False),
+        ("Sayın Liman Kurulu Başkanına sorayım.", "Sayın Liman Kurulu Başkanı", True),
         # A plural rendering holds for one of them, with any ending.
-        ("Birden fazla risk vektörüne giren gruplar.", "risk vektörleri", True),
-        ("Risk kategorisine giren gruplar.", "risk vektörleri", False),
-        ("Zincirleme MSI'ı kısarsak", "zincirleme MSI", True),
-        ("Alt aşamadaki MSI'ı kısarsak", "zincirleme MSI", False),
+        ("Birden fazla balıkçı teknesine binen ekipler.", "balıkçı tekneleri", True),
+        ("Balıkçı gemisine binen ekipler.", "balıkçı tekneleri", False),
+        ("Kıyı ötesi HSB'yi kısarsak", "kıyı ötesi HSB", True),
+        ("Açık denizdeki HSB'yi kısarsak", "kıyı ötesi HSB", False),
     ],
 )
 def test_has_rendering_with_every_word(text, answer, found):
@@ -418,13 +416,13 @@ def test_has_rendering_with_every_word(text, answer, found):
 
 BIBLE = """# Film (2026), original language: English
 ## World and register
-- Hearing words: "witness" → "tanık"; "insurrection" (5) → "ayaklanma".
+- Harbour words: "witness" → "tanık"; "blockade" (5) → "abluka".
 ## Glossary
-- "downstream MSI" → "alt aşama MSI"; "Signal 1" (3) → "Kadın alkollü. Kokusunu alıyorum."
+- "offshore HSB" → "açık deniz HSB"; "Code 4" (3) → "Gemi demirledi. Kaptan bekliyor."
 ## Slang and idioms
-- "beat" → "muhabirlik alanı"
+- "tab" → "hesap"
 ## Titles and names
-- "Madam Ranking Member" → "Sayın Kıdemli Azınlık Üyesi"
+- "Madam Board Chair" → "Sayın Liman Kurulu Başkanı"
 ## Tone notes
 - Repeated lines take identical Turkish: the video (1-2, 7-8); "Who does this?" (3, 9).
 - "kerosene" → "gazyağı"
@@ -434,7 +432,7 @@ BIBLE = """# Film (2026), original language: English
 def test_check_rules_add_name_decisions_and_the_bibles_own_renderings(tmp_path: Path):
     (tmp_path / "bible.md").write_text(BIBLE, encoding="utf-8")
     data = term_decisions(
-        scoped("term:downstream", 'Turkish for "downstream MSI"?', "zincirleme MSI", [4], applies_to="film"),
+        scoped("term:offshore", 'Turkish for "offshore HSB"?', "kıyı ötesi HSB", [4], applies_to="film"),
         scoped("name:deputy", 'How is the rank "Deputy" rendered?', "Şerif Yardımcısı", [1, 2], kind="name"),
     )
     (tmp_path / "decisions.json").write_text(json.dumps(data), encoding="utf-8")
@@ -442,21 +440,21 @@ def test_check_rules_add_name_decisions_and_the_bibles_own_renderings(tmp_path: 
     # A name decision holds on the cues it cites: "her deputy" elsewhere is another sense.
     assert got["deputy"]["cues"] == {1, 2} and got["deputy"]["renderings"] == {"Şerif Yardımcısı"}
     # The decision wins over the bible's text for the same term.
-    assert got["downstream msi"]["renderings"] == {"zincirleme MSI"}
-    assert got["insurrection"]["cues"] == {5} and got["insurrection"]["renderings"] == {"ayaklanma"}
+    assert got["offshore hsb"]["renderings"] == {"kıyı ötesi HSB"}
+    assert got["blockade"]["cues"] == {5} and got["blockade"]["renderings"] == {"abluka"}
     assert got["witness"]["cues"] is None
-    assert got["madam ranking member"]["renderings"] == {"Sayın Kıdemli Azınlık Üyesi"}
+    assert got["madam board chair"]["renderings"] == {"Sayın Liman Kurulu Başkanı"}
     # Slang, tone notes and a scene's whole line are no terms to look for.
-    assert not {"beat", "kerosene", "signal 1"} & set(got)
+    assert not {"tab", "kerosene", "code 4"} & set(got)
     # The term listing the family-word check reads stays as it was.
     assert "deputy" not in bible.term_renderings(tmp_path)
 
 
 def test_check_rules_let_one_decision_take_either_form_of_a_word(tmp_path: Path):
-    data = term_decisions(term("term:reshare", 'Turkish for "reshare" / "reshares"?', "yeniden paylaşım / yeniden paylaşmak"))
+    data = term_decisions(term("term:reload", 'Turkish for "reload" / "reloads"?', "yeniden yükleme / yeniden yüklemek"))
     (tmp_path / "decisions.json").write_text(json.dumps(data), encoding="utf-8")
     got = {r["term"]: r["renderings"] for r in bible.check_rules(tmp_path)}
-    assert got["reshare"] == got["reshares"] == {"yeniden paylaşım", "yeniden paylaşmak"}
+    assert got["reload"] == got["reloads"] == {"yeniden yükleme", "yeniden yüklemek"}
 
 
 def test_check_rules_keep_a_one_word_title_with_no_cues_out(tmp_path: Path):
@@ -477,20 +475,20 @@ def test_check_rules_keep_bible_terms_that_start_alike_apart(tmp_path: Path):
 
 def test_check_flags_a_bible_term_on_every_cue_that_says_it(tmp_path: Path):
     english = [
-        "I'm Deputy Otumbo.",
-        "And this is Deputy Diaz.",
-        "Madam Ranking Member.",
-        "My bureau chief and her deputy.",
-        "Insurrection or no insurrection.",
-        "Madam Ranking Member, thank you.",
+        "I'm Deputy Hartley.",
+        "And this is Deputy Lund.",
+        "Madam Board Chair.",
+        "My station chief and her deputy.",
+        "Blockade or no blockade.",
+        "Madam Board Chair, thank you.",
     ]
     tr = [
-        "Ben polis memuru Otumbo.",
-        "Bu da Şerif Yardımcısı Diaz.",
-        "Sayın Kıdemli Muhalefet Üyesi.",
-        "Büro şefim ve yardımcısı.",
-        "Kalkışma olsun ya da olmasın.",
-        "Sayın Kıdemli Azınlık Üyesi, teşekkürler.",
+        "Ben polis memuru Hartley.",
+        "Bu da Şerif Yardımcısı Lund.",
+        "Sayın Liman Meclisi Başkanı.",
+        "İstasyon şefim ve yardımcısı.",
+        "Kuşatma olsun ya da olmasın.",
+        "Sayın Liman Kurulu Başkanı, teşekkürler.",
     ]
     w = make_work(tmp_path, english, tr)
     (w / "bible.md").write_text(BIBLE, encoding="utf-8")
@@ -499,30 +497,30 @@ def test_check_flags_a_bible_term_on_every_cue_that_says_it(tmp_path: Path):
     got = warned(w, "term rendering")
     # Cue 4's "her deputy" is not the rank; cue 6 has every word of the rendering.
     assert sorted(got) == [1, 3, 5]
-    assert got[5] == "'insurrection' is 'ayaklanma' in the bible; this cue has no form of it"
+    assert got[5] == "'blockade' is 'abluka' in the bible; this cue has no form of it"
 
 
 def test_polish_flags_send_bible_terms_to_the_fixer(tmp_path: Path):
-    english = ["Hello.", "Sit down.", "Wait.", "Go on.", "Insurrection or no insurrection."]
-    w = make_work(tmp_path, english, ["Merhaba.", "Otur.", "Bekle.", "Devam et.", "Kalkışma olsun ya da olmasın."])
+    english = ["Hello.", "Sit down.", "Wait.", "Go on.", "Blockade or no blockade."]
+    w = make_work(tmp_path, english, ["Merhaba.", "Otur.", "Bekle.", "Devam et.", "Kuşatma olsun ya da olmasın."])
     (w / "bible.md").write_text(BIBLE, encoding="utf-8")
     out = polish.flags(w)
     assert out["by_check"].get("term rendering") == 1
-    assert "flag: term rendering: 'insurrection' is 'ayaklanma'" in (w / polish.FLAG_FILE).read_text(encoding="utf-8")
+    assert "flag: term rendering: 'blockade' is 'abluka'" in (w / polish.FLAG_FILE).read_text(encoding="utf-8")
 
 
 # --- a line the bible says is said word for word ---------------------------
 
 
 def test_same_word_groups_read_each_item_of_a_bible_line(tmp_path: Path):
-    extra = '- "Ish" (12, 14) → "Sayılır" both times; "Wuss" (20) → "korkak"\n'
+    extra = '- "Sort of" (12, 14) → "Sayılır" both times; "Softie" (20) → "korkak"\n'
     (tmp_path / "bible.md").write_text(BIBLE + extra, encoding="utf-8")
     assert bible.same_word_groups(tmp_path) == [{1, 2, 7, 8}, {3, 9}, {12, 14}]
 
 
 def test_same_word_groups_skip_looser_words(tmp_path: Path):
     # An address note over a long range is no repeated line.
-    note = "## sen / siz\n- Vincent says sen to Sandra every time they are alone (410-800); same way at 900-950\n"
+    note = "## sen / siz\n- Joe says sen to Mara every time they are alone (410-800); same way at 900-950\n"
     (tmp_path / "bible.md").write_text(note, encoding="utf-8")
     assert bible.same_word_groups(tmp_path) == []
 
@@ -567,7 +565,7 @@ def test_polish_sends_a_bible_repeat_to_the_fixer_and_both_sides_to_the_reviewer
 
 
 def test_sentence_groups_follow_the_punctuation(tmp_path: Path):
-    english = ["I went down to the docks", "and I saw him there.", "Hello.", "If you go", "to the roof", "♪ la la", "Fine.",
+    english = ["I went down to the market", "and I saw him there.", "Hello.", "If you go", "to the roof", "♪ la la", "Fine.",
                "- Wait... / - What?", "Nothing."]  # fmt: skip
     w = make_work(tmp_path, english, ["x"] * len(english))
     timing, _ = srt.parse(w / "timing.srt")
@@ -579,18 +577,18 @@ def test_sentence_groups_follow_the_punctuation(tmp_path: Path):
 
 
 def test_split_sentence_flags_a_part_written_twice(tmp_path: Path):
-    english = ["When the hearing starts tomorrow", "you will tell them everything."]
-    tr = ["Yarın duruşma başlayınca her şeyi anlatacaksın.", "Duruşma başlayınca her şeyi anlatacaksın."]
+    english = ["When the ferry leaves tomorrow", "you will tell them everything."]
+    tr = ["Yarın vapur kalkınca her şeyi anlatacaksın.", "Vapur kalkınca her şeyi anlatacaksın."]
     w = make_work(tmp_path, english, tr)
     got = warned(w, "split sentence")
     assert sorted(got) == [1, 2]
-    assert '"duruşma başlayınca" is in cue 1 and cue 2' in got[1]
+    assert '"vapur kalkınca" is in cue 1 and cue 2' in got[1]
     assert got[1].endswith("so each part appears exactly once")
 
 
 def test_split_sentence_flags_an_empty_part_and_a_moved_name(tmp_path: Path):
-    english = ["I told the whole story to everyone at the bar", "and then Terry", "walked out."]
-    tr = ["Barda herkese bütün hikâyeyi Terry anlattım", "<i></i>-", "sonra da çıkıp gitti."]
+    english = ["I told the whole story to everyone at the bar", "and then Benny", "walked out."]
+    tr = ["Barda herkese bütün hikâyeyi Benny anlattım", "<i></i>-", "sonra da çıkıp gitti."]
     w = make_work(tmp_path, english, tr)
     problems = assemble.split_sentence_problems(
         [1, 2, 3],
@@ -598,18 +596,18 @@ def test_split_sentence_flags_an_empty_part_and_a_moved_name(tmp_path: Path):
         {r["n"]: r for r in json.loads((w / "cues.json").read_text(encoding="utf-8"))},
     )
     assert "cue 2 has no words for its part" in problems
-    assert '"Terry" is said in cue 2 but written in cue 1' in problems
+    assert '"Benny" is said in cue 2 but written in cue 1' in problems
 
 
 def test_split_sentence_is_quiet_when_each_part_is_once(tmp_path: Path):
-    english = ["When the hearing starts tomorrow", "you will tell them everything."]
-    w = make_work(tmp_path, english, ["Yarın duruşma başlayınca", "onlara her şeyi anlatacaksın."])
+    english = ["When the ferry leaves tomorrow", "you will tell them everything."]
+    w = make_work(tmp_path, english, ["Yarın vapur kalkınca", "onlara her şeyi anlatacaksın."])
     assert warned(w, "split sentence") == {}
 
 
 def test_split_sentence_allows_a_repeat_the_source_repeats_too(tmp_path: Path):
-    english = ["The pigeons on the roof", "and the pigeons in the loft are mine."]
-    w = make_work(tmp_path, english, ["Damdaki güvercinler", "ve kümesteki güvercinler benim."])
+    english = ["The boxes on the roof", "and the boxes in the cellar are mine."]
+    w = make_work(tmp_path, english, ["Damdaki kutular", "ve kilerdeki kutular benim."])
     assert warned(w, "split sentence") == {}
 
 
@@ -626,13 +624,13 @@ def address_work(tmp_path: Path, lines: list[str], speakers: dict) -> tuple[Path
     (tmp_path / "cues.json").write_text(json.dumps(rows), encoding="utf-8")
     (tmp_path / "speakers.json").write_text(json.dumps(speakers), encoding="utf-8")
     data = {
-        "characters": [{"name": "Terry", "aliases": ["TERRY"]}, {"name": "Edie", "aliases": ["EDIE"]}],
+        "characters": [{"name": "Benny", "aliases": ["BENNY"]}, {"name": "Sophie", "aliases": ["SOPHIE"]}],
         "decisions": [
-            {"id": "address:Terry>Edie", "kind": "address", "speaker": "Terry", "listener": "Edie", "question": "?",
+            {"id": "address:Benny>Sophie", "kind": "address", "speaker": "Benny", "listener": "Sophie", "question": "?",
              "answer": [{"from_cue": 1, "form": "siz"}], "evidence": [1], "confidence": "sure"},
-            {"id": "address:Edie>Terry", "kind": "address", "speaker": "Edie", "listener": "Terry", "question": "?",
+            {"id": "address:Sophie>Benny", "kind": "address", "speaker": "Sophie", "listener": "Benny", "question": "?",
              "answer": [{"from_cue": 1, "form": "sen"}], "evidence": [1], "confidence": "sure"},
-            {"id": "voice:V9", "kind": "voice", "question": "?", "answer": "Terry", "evidence": [1], "confidence": "likely"},
+            {"id": "voice:V9", "kind": "voice", "question": "?", "answer": "Benny", "evidence": [1], "confidence": "likely"},
         ],
     }  # fmt: skip
     (tmp_path / "decisions.json").write_text(json.dumps(data), encoding="utf-8")
@@ -641,54 +639,54 @@ def address_work(tmp_path: Path, lines: list[str], speakers: dict) -> tuple[Path
 
 def test_a_question_and_its_answer_with_one_voice_are_unsure(tmp_path: Path):
     lines = ["Are you going to the dance?", "No, I can't.", "Why not?"]
-    w, rows = address_work(tmp_path, lines, {"1": {"voice": "V9"}, "2": {"voice": "V9"}, "3": {"voice": "V9", "label": "Terry"}})
+    w, rows = address_work(tmp_path, lines, {"1": {"voice": "V9"}, "2": {"voice": "V9"}, "3": {"voice": "V9", "label": "Benny"}})
     assert bible.unsure_turns(rows, json.loads((w / "speakers.json").read_text(encoding="utf-8"))) == {1, 2}
-    # Cue 2 is Edie's answer heard as Terry's voice: sen there is no warning.
+    # Cue 2 is Sophie's answer heard as Benny's voice: sen there is no warning.
     texts = {1: ["Dansa gidiyor musun?"], 2: ["Hayır, gidemem. Sen?"]}
     assert bible.address_warnings(w, texts, rows) == []
 
 
 def test_a_name_spoken_about_is_not_the_listener(tmp_path: Path):
-    w, rows = address_work(tmp_path, ["You and Edie and the rest of them."], {"1": {"voice": "V9"}})
-    reading = bible.address_readings(w, {1: ["Sen, Edie ve diğerleri."]}, rows)[0]
-    assert reading["speaker"] == "Terry" and reading["listener"] is None
+    w, rows = address_work(tmp_path, ["You and Sophie and the rest of them."], {"1": {"voice": "V9"}})
+    reading = bible.address_readings(w, {1: ["Sen, Sophie ve diğerleri."]}, rows)[0]
+    assert reading["speaker"] == "Benny" and reading["listener"] is None
 
 
 def test_the_other_sides_turn_heard_as_one_voice_is_no_warning(tmp_path: Path):
-    # Terry says siz to Edie and she says sen to him. One voice holds the
-    # whole exchange: cue 2 is Edie's reply, though the audio gave it Terry.
-    lines = ["Edie, I have come to warn you.", "What for? I told you to stay away.", "Please listen to me."]
+    # Benny says siz to Sophie and she says sen to him. One voice holds the
+    # whole exchange: cue 2 is Sophie's reply, though the audio gave it Benny.
+    lines = ["Sophie, I have come to warn you.", "What for? I told you to stay away.", "Please listen to me."]
     speakers = {"1": {"voice": "V9"}, "2": {"voice": "V9"}, "3": {"voice": "V9"}}
     w, rows = address_work(tmp_path, lines, speakers)
-    texts = {1: ["Edie, sizi uyarmaya geldim."], 2: ["Ne için? Sana uzak dur dedim."], 3: ["Lütfen beni dinleyin."]}
+    texts = {1: ["Sophie, sizi uyarmaya geldim."], 2: ["Ne için? Sana uzak dur dedim."], 3: ["Lütfen beni dinleyin."]}
     assert bible.address_warnings(w, texts, rows) == []
     assert bible.address_readings(w, texts, rows)[1]["speaker"] is None
 
 
 def test_a_slip_by_a_known_voice_still_warns(tmp_path: Path):
-    lines = ["Edie, I have come to warn you.", "What for? I told you to stay away."]
-    texts = {1: ["Edie, sizi uyarmaya geldim."], 2: ["Ne için? Sana uzak dur dedim."]}
-    # The cue next to it has another voice, so cue 2 is Terry's own line.
+    lines = ["Sophie, I have come to warn you.", "What for? I told you to stay away."]
+    texts = {1: ["Sophie, sizi uyarmaya geldim."], 2: ["Ne için? Sana uzak dur dedim."]}
+    # The cue next to it has another voice, so cue 2 is Benny's own line.
     w, rows = address_work(tmp_path, lines, {"1": {"voice": "V2"}, "2": {"voice": "V9"}})
     assert [x["cue"] for x in bible.address_warnings(w, texts, rows)] == [2]
     # A speaker named by a label is known whatever the voices say.
-    (w / "speakers.json").write_text(json.dumps({"1": {"voice": "V9"}, "2": {"voice": "V9", "label": "Terry"}}), encoding="utf-8")
+    (w / "speakers.json").write_text(json.dumps({"1": {"voice": "V9"}, "2": {"voice": "V9", "label": "Benny"}}), encoding="utf-8")
     assert [x["cue"] for x in bible.address_warnings(w, texts, rows)] == [2]
 
 
 def test_the_next_cue_alone_sharing_the_voice_is_enough(tmp_path: Path):
-    lines = ["Edie, I have come to warn you.", "What for? I told you to stay away.", "Please listen to me."]
+    lines = ["Sophie, I have come to warn you.", "What for? I told you to stay away.", "Please listen to me."]
     w, rows = address_work(tmp_path, lines, {"1": {"voice": "V2"}, "2": {"voice": "V9"}, "3": {"voice": "V9"}})
-    texts = {1: ["Edie, sizi uyarmaya geldim."], 2: ["Ne için? Sana uzak dur dedim."], 3: ["Lütfen beni dinleyin."]}
+    texts = {1: ["Sophie, sizi uyarmaya geldim."], 2: ["Ne için? Sana uzak dur dedim."], 3: ["Lütfen beni dinleyin."]}
     assert bible.address_warnings(w, texts, rows) == []
 
 
 def test_a_cue_that_names_its_listener_still_warns(tmp_path: Path):
-    lines = ["Edie, I have come to warn you.", "Sit down, Edie."]
+    lines = ["Sophie, I have come to warn you.", "Sit down, Sophie."]
     w, rows = address_work(tmp_path, lines, {"1": {"voice": "V9"}, "2": {"voice": "V9"}})
-    texts = {1: ["Edie, sizi uyarmaya geldim."], 2: ["Otur, Edie, sen de dinle."]}
+    texts = {1: ["Sophie, sizi uyarmaya geldim."], 2: ["Otur, Sophie, sen de dinle."]}
     assert [(x["cue"], x["detail"]) for x in bible.address_warnings(w, texts, rows)] == [
-        (2, "Terry → Edie: bible says siz, Turkish uses sen")
+        (2, "Benny → Sophie: bible says siz, Turkish uses sen")
     ]
 
 
@@ -700,13 +698,13 @@ def test_the_other_side_must_be_in_the_scene(tmp_path: Path):
 
 
 def test_a_two_speaker_cue_has_no_speaker(tmp_path: Path):
-    w, rows = address_work(tmp_path, ["- Edie, sit down. - You sit down."], {"1": {"voice": "V9"}})
-    rows[1]["timing_lines"] = rows[1]["source"] = ["- Edie, sit down.", "- You sit down."]
-    assert bible.address_readings(w, {1: ["- Edie, sen otur.", "- Sen otur."]}, rows)[0]["speaker"] is None
+    w, rows = address_work(tmp_path, ["- Sophie, sit down. - You sit down."], {"1": {"voice": "V9"}})
+    rows[1]["timing_lines"] = rows[1]["source"] = ["- Sophie, sit down.", "- You sit down."]
+    assert bible.address_readings(w, {1: ["- Sophie, sen otur.", "- Sen otur."]}, rows)[0]["speaker"] is None
 
 
 def scene_work(tmp_path: Path, lines: list[str], speakers: dict, gap_ms: int = 1000) -> tuple[Path, dict]:
-    """Terry says sen to Edie and siz to Father Barry; nobody is named in
+    """Benny says sen to Sophie and siz to Captain Lund; nobody is named in
     the lines, so only the scene can tell whom he speaks to."""
     w, rows = address_work(tmp_path, lines, speakers)
     for i, r in enumerate(sorted(rows.values(), key=lambda r: r["n"])):
@@ -714,52 +712,52 @@ def scene_work(tmp_path: Path, lines: list[str], speakers: dict, gap_ms: int = 1
         r["end"] = r["start"] + 2000
     (w / "cues.json").write_text(json.dumps(list(rows.values())), encoding="utf-8")
     data = json.loads((w / "decisions.json").read_text(encoding="utf-8"))
-    data["characters"].append({"name": "Father Barry", "aliases": ["BARRY"]})
-    data["decisions"] = [d for d in data["decisions"] if d["id"] != "address:Terry>Edie"] + [
-        {"id": "address:Terry>Edie", "kind": "address", "speaker": "Terry", "listener": "Edie", "question": "?",
+    data["characters"].append({"name": "Captain Lund", "aliases": ["LUND"]})
+    data["decisions"] = [d for d in data["decisions"] if d["id"] != "address:Benny>Sophie"] + [
+        {"id": "address:Benny>Sophie", "kind": "address", "speaker": "Benny", "listener": "Sophie", "question": "?",
          "answer": [{"from_cue": 1, "form": "sen"}], "evidence": [1], "confidence": "sure"},
-        {"id": "address:Terry>Father Barry", "kind": "address", "speaker": "Terry", "listener": "Father Barry",
+        {"id": "address:Benny>Captain Lund", "kind": "address", "speaker": "Benny", "listener": "Captain Lund",
          "question": "?", "answer": [{"from_cue": 1, "form": "siz"}], "evidence": [1], "confidence": "sure"},
-        {"id": "voice:V4", "kind": "voice", "question": "?", "answer": "Father Barry", "evidence": [1], "confidence": "likely"},
+        {"id": "voice:V4", "kind": "voice", "question": "?", "answer": "Captain Lund", "evidence": [1], "confidence": "likely"},
     ]  # fmt: skip
     (w / "decisions.json").write_text(json.dumps(data), encoding="utf-8")
     return w, rows
 
 
 def test_the_only_other_speaker_in_the_scene_is_the_listener(tmp_path: Path):
-    lines = ["Will you come down to the docks tonight?", "I will think about it.", "You have to tell them."]
+    lines = ["Will you come down to the pier tonight?", "I will think about it.", "You have to tell them."]
     w, rows = scene_work(tmp_path, lines, {"1": {"voice": "V4"}, "2": {"voice": "V9"}, "3": {"voice": "V4"}})
     texts = {2: ["Düşüneceğim, sen merak etme."]}
     assert [(x["cue"], x["detail"]) for x in bible.address_warnings(w, texts, rows)] == [
-        (2, "Terry → Father Barry (the only other speaker in the scene): bible says siz, Turkish uses sen")
+        (2, "Benny → Captain Lund (the only other speaker in the scene): bible says siz, Turkish uses sen")
     ]
 
 
 def test_no_listener_guess_with_two_others_or_across_a_pause(tmp_path: Path):
-    lines = ["Will you come down?", "I will think about it.", "Come on, Terry."]
+    lines = ["Will you come down?", "I will think about it.", "Come on, Benny."]
     texts = {2: ["Düşüneceğim, sen merak etme."]}
-    # Edie and Father Barry both speak here: the listener stays unknown.
-    speakers = {"1": {"voice": "V4"}, "2": {"voice": "V9"}, "3": {"label": "Edie"}}
+    # Sophie and Captain Lund both speak here: the listener stays unknown.
+    speakers = {"1": {"voice": "V4"}, "2": {"voice": "V9"}, "3": {"label": "Sophie"}}
     w, rows = scene_work(tmp_path, lines, speakers)
     assert bible.address_warnings(w, texts, rows) == []
     assert bible.address_readings(w, texts, rows)[0]["listener"] is None
-    # Father Barry speaks in the scene but not right before or after.
+    # Captain Lund speaks in the scene but not right before or after.
     lines4 = ["Will you come down?", "Then what?", "I will think about it.", "Fine."]
     speakers = {"1": {"voice": "V4"}, "3": {"voice": "V9"}}
     w, rows = scene_work(tmp_path, lines4, speakers)
     assert bible.address_warnings(w, {3: ["Düşüneceğim, sen merak etme."]}, rows) == []
-    # Father Barry alone, but after a pause of 12 seconds: another scene.
+    # Captain Lund alone, but after a pause of 12 seconds: another scene.
     w, rows = scene_work(tmp_path, lines, {"1": {"voice": "V4"}, "2": {"voice": "V9"}}, gap_ms=12_000)
     assert bible.address_warnings(w, texts, rows) == []
 
 
 def test_a_guessed_listener_lets_siz_through_as_plural(tmp_path: Path):
-    # Terry says sen to Edie; siz to her may be to the whole group.
+    # Benny says sen to Sophie; siz to her may be to the whole group.
     lines = ["Are you coming?", "I will come, you go ahead.", "All right."]
-    w, rows = scene_work(tmp_path, lines, {"1": {"label": "Edie"}, "2": {"voice": "V9"}, "3": {"label": "Edie"}})
+    w, rows = scene_work(tmp_path, lines, {"1": {"label": "Sophie"}, "2": {"voice": "V9"}, "3": {"label": "Sophie"}})
     texts = {2: ["Gelirim, siz önden gidin."]}
     reading = bible.address_readings(w, texts, rows)[0]
-    assert reading["listener"] == "Edie" and reading["guessed"] and reading["expected"] == "sen"
+    assert reading["listener"] == "Sophie" and reading["guessed"] and reading["expected"] == "sen"
     assert bible.address_warnings(w, texts, rows) == []
 
 

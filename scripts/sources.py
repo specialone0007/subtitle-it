@@ -4,7 +4,7 @@
 # ///
 """Find the film and its candidate source subtitles on disk.
 
-    uv run sources.py find     --query "Anatomy of a Fall" --dirs D1 [D2 ...]
+    uv run sources.py find     --query "Harbour Lights" --dirs D1 [D2 ...]
     uv run sources.py local    --video V --work W
     uv run sources.py validate --file F [--duration-ms N]
     uv run sources.py remember --file V --prefs CONFIG/preferences.md
@@ -185,9 +185,9 @@ def _too_broad(folder: Path) -> bool:
 def folder_to_remember(file: Path) -> Path:
     """The folder to add for a film found outside the media folders.
 
-    A film in its own folder ("The Quiet Hour (2019)/The.Quiet.Hour.2019.mkv")
+    A film in its own folder ("Lantern Song (2019)/Lantern.Song.2019.mkv")
     gives that folder's parent, where the next film probably sits too. A film
-    loose in a folder ("Films/Anatomy.of.a.Fall.2023.mkv") gives that folder.
+    loose in a folder ("Films/Harbour.Lights.2023.mkv") gives that folder.
     """
     film_dir = file.resolve().parent
     title = [w for w in norm(film_dir.name).split() if not re.fullmatch(r"(19|20)\d\d", w)]

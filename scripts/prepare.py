@@ -17,7 +17,7 @@ cross-check, speaker label) and W/speakers.json (labels found in the text).
 run again while an agent reads them: each file is replaced whole.
 
 Hearing-impaired files describe sounds ("[door slams]") and name speakers
-("SANDRA:", "[Sandra] Hi."). With `--hi remove`, the default, `build` takes
+("MARA:", "[Mara] Hi."). With `--hi remove`, the default, `build` takes
 both out of every text before any agent sees it: the labels become speaker
 hints in speakers.json, and a cue left with no words is marked
 `sound_only` in cues.json, gets no chunk line and is not delivered.
@@ -109,7 +109,7 @@ import result  # noqa: E402
 import srt  # noqa: E402
 
 # Labels that name no one in particular: kept out of the hints. The label
-# forms themselves ("SANDRA:", "[Sandra] Hi.") are read by srt.clean_line.
+# forms themselves ("MARA:", "[Mara] Hi.") are read by srt.clean_line.
 NOT_NAMES = {"MAN", "WOMAN", "BOTH", "ALL", "MUSIC", "LAUGHS", "SIGHS", "NARRATOR", "CROWD", "VOICE", "TV", "RADIO"}
 HI_MODES = ("remove", "keep")
 
@@ -135,7 +135,7 @@ CREDIT_RE = re.compile(
 )
 # With many other languages, a line counts as story text only when most of
 # them show it: text the film wants read is subtitled by nearly every track,
-# a shop sign in the background by some. In Love of Your Life (31 other
+# a shop sign in the background by some. In one test film (31 other
 # languages) the 18 story texts were shown by 27 to 31 of them and the 19
 # background signs and credits by 5 to 21, so three quarters splits them.
 # Below SHARE_FROM other languages a share says little and two still prove.
@@ -287,7 +287,7 @@ def is_story(kind: str | None, wants_read: bool) -> bool:
 
 def fold_text(text: str) -> str:
     """Text as compared for sameness: case, punctuation, line breaks and
-    spacing folded away, so "Mommy's / home" and "mommy's home" match."""
+    spacing folded away, so "Dad's / shop" and "dad's shop" match."""
     return " ".join(re.sub(r"[\W_]", " ", text.casefold()).split())
 
 
@@ -450,7 +450,7 @@ def on_screen(
         for c, covered in zip(cues, srt._coverage(cues, timing) if cues and timing else []):
             if c.end <= c.start:
                 continue
-            # Read as a hearing-impaired line: "POLYBUS: Hmm..." is a sound.
+            # Read as a hearing-impaired line: "HARTLEY: Hmm..." is a sound.
             # Sounds, bare sounds and lyrics marked with ♪ are never text
             # on screen.
             said = srt.strip_hi(c.lines, True)[0]

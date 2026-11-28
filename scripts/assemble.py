@@ -105,7 +105,7 @@ LINE_JOIN_RE = re.compile(r"(?:^|\s)/(?:\s|$)")
 
 def word_italics(lines: list[str]) -> bool:
     """The cue's italics sit on single words only, with plain words beside
-    them: `<i>To</i> all Marc Antony's cavalry`, `We've gotten <i>off</i>
+    them: `<i>To</i> all the harbour crews`, `We've gotten <i>off</i>
     to a bad start`. That is mostly a slip in the source file, and at best
     stress on one word, which Turkish puts on another word or none. So a
     Turkish cue without them is fine, and one with them only gets a
@@ -482,7 +482,7 @@ def split_sentence_problems(group: list[int], texts: dict[int, list[str]], rows:
 
 # A source line of one word ("No, no, no.", "Go!") is said again with
 # another meaning too often to ask for one wording. Two words already
-# carry a chant ("...a thought...") or a callback ("A gift.").
+# carry a chant ("...and haul...") or a callback ("Fair winds.").
 REPEAT_MIN_WORDS = 2
 
 
@@ -496,7 +496,7 @@ def _repeat_key(row: dict) -> tuple | None:
     it runs on into the next cue, when it has enough words to be a line the
     film says again on purpose (a chant, a saying, a callback). The text
     the agents translate, not the English cross-check: a hearing-impaired
-    file may keep a label there ("BARD:<i>...")."""
+    file may keep a label there ("HARTLEY:<i>...")."""
     lines = [srt.strip_tags(ln).strip() for ln in (row.get("source") or row.get("en") or row.get("timing_lines") or [])]
     words = _distinct([w.casefold() for w in turkish.WORD_RE.findall(" ".join(lines))])
     return (words, _runs_on(lines)) if len(words) >= REPEAT_MIN_WORDS else None
@@ -700,15 +700,15 @@ def run_checks(work: Path, texts: dict[int, list[str]] | None = None, write: boo
             near.append(order[i + 1])
         text = " ".join(" ".join(drafted[m]) for m in near)
         # A decision that cites this cue for a term said here settles it:
-        # "Hold your hats, brothers" has its own decision on that cue.
+        # "Hold fast, brothers" has its own decision on that cue.
         cited = set().union(*(r["renderings"] for r in heard if n in r["evidence"]))
         for term in sorted({r["term"] for r in heard}):
             applies = [r for r in heard if r["term"] == term and (r["cues"] is None or n in r["cues"]) and n not in r["except"]]
             if not applies:
                 continue
             answers = set().union(*(r["renderings"] for r in applies))
-            # Every word of a rendering: "Kıdemli Muhalefet Üyesi" is not
-            # the bible's "Kıdemli Azınlık Üyesi".
+            # Every word of a rendering: "Liman Meclisi Başkanı" is not
+            # the bible's "Liman Kurulu Başkanı".
             if not any(turkish.has_rendering(text, a, every=True) for a in answers | cited):
                 w(n, "term rendering", f"'{term}' is '{' or '.join(sorted(answers))}' in the bible; this cue has no form of it")
     bible_words = " ".join(a for answers in renderings.values() for a in answers)

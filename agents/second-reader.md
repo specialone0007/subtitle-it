@@ -45,11 +45,11 @@ Or the file your task names in a `Write to:` line.
 
 ```json
 {"answers": [
-  {"id": "address:Vincent>Sandra", "answer": [{"from_cue": 1, "form": "sen"}], "evidence": [88, 90], "confidence": "likely"},
-  {"id": "voice:V1", "answer": "Sandra", "evidence": [12, 13], "confidence": "sure"}],
+  {"id": "address:Joe>Mara", "answer": [{"from_cue": 1, "form": "sen"}], "evidence": [88, 90], "confidence": "likely"},
+  {"id": "voice:V1", "answer": "Mara", "evidence": [12, 13], "confidence": "sure"}],
  "extra": [
-  {"id": "address:Daniel>Marge", "kind": "address", "speaker": "Daniel", "listener": "Marge",
-   "question": "Does Daniel say sen or siz to Marge?",
+  {"id": "address:Theo>Ruth", "kind": "address", "speaker": "Theo", "listener": "Ruth",
+   "question": "Does Theo say sen or siz to Ruth?",
    "answer": [{"from_cue": 1, "form": "siz"}], "evidence": [700], "confidence": "likely"}]}
 ```
 

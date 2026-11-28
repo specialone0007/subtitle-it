@@ -271,7 +271,7 @@ SYNC_PEAK_GAP_MS = 1000
 # amount (`prepare.py build`, `on_screen.tracks_offset`), a best offset
 # within SYNC_EXPECT_MS of theirs that still beats every offset away from
 # it is taken, though it does not stand out from chance on its own. On
-# Disclosure Day (2026) the true offset, about 700 ms, matched 58 speech
+# one 2026 film the true offset, about 700 ms, matched 58 speech
 # starts, the best other one 52 and chance 34; eight tracks put the file
 # 650 to 900 ms late. The tracks never decide alone: the audio must point
 # the same way.

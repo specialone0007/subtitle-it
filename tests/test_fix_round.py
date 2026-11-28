@@ -12,8 +12,8 @@ import prepare
 
 EN = """1
 00:00:01,000 --> 00:00:03,000
-<i>To</i> all Marc Antony's cavalry,
-Caesar's left wing and right arm.
+<i>To</i> all the harbour crews,
+the night shift and the day shift.
 
 2
 00:00:03,500 --> 00:00:06,000
@@ -33,7 +33,7 @@ Plain line.
 """
 
 GOOD = (
-    "1\nMarc Antonius'un tüm süvarilerine,\nSezar'ın sol kanadı ve sağ kolu.\n\n"
+    "1\nBütün liman ekiplerine,\ngece ve gündüz vardiyasına.\n\n"
     "2\nKötü bir başlangıç yaptık.\n\n"
     "3\n<i>Uzaktan bir ses.</i>\n\n"
     "4\n<i>İki kelime</i> burada.\n\n"
@@ -57,9 +57,9 @@ def _checks(r: dict, kind: str) -> set[tuple[int, str]]:
 @pytest.mark.parametrize(
     ("lines", "stray"),
     [
-        (["<i>To</i> all Marc Antony's cavalry,", "Caesar's left wing."], True),
+        (["<i>To</i> all the harbour crews,", "the night shift."], True),
         (["We've gotten <i>off</i> to a bad start."], True),
-        (["<i>To</i> drain the marshes.", "<i>To</i> free Rome."], True),
+        (["<i>To</i> clear the channel.", "<i>To</i> open the port."], True),
         (["<i>A voice from far away.</i>"], False),
         (["<i>Two words</i> here."], False),
         (["<i>Alone</i>"], False),

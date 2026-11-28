@@ -18,15 +18,15 @@ session
 ## Audio hints
 
 Find who speaks each line from the film's audio (needs a free Hugging Face
-token; see the README). One of: yes, no, auto. `auto` runs them when an
+token; see the setup guide). One of: yes, no, auto. `auto` runs them when an
 NVIDIA GPU is found; without one they take about as long as the film.
 
 auto
 
 ## Hearing-impaired tags
 
-Sound descriptions (`[door slams]`) and speaker labels (`SANDRA:`,
-`[Sandra]`) from a hearing-impaired source file. `remove` takes them out
+Sound descriptions (`[door slams]`) and speaker labels (`MARA:`,
+`[Mara]`) from a hearing-impaired source file. `remove` takes them out
 of the text and of the Turkish, and leaves out cues that are only sounds.
 Square brackets go from every file; parentheses and labels in capitals
 only from a file that is hearing-impaired.

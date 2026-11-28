@@ -182,10 +182,9 @@ SYNC_MAX_IN_SYNC_MS = 300
 SYNC_WINDOW_MIN_MATCHES = 15
 SYNC_MAX_DRIFT_MS = 700
 # Whisper's word starts come a little before a subtitle that starts with
-# the voice. On two films whose timing tracks are in sync, Sinners (2025)
-# and Project Hail Mary (2026), the median gap was 158 and 164 ms. This
-# much is taken off the median gap before it is judged, so the shift is a
-# little under the raw gap.
+# the voice. On two films whose timing tracks are in sync, the median
+# gap was 158 and 164 ms. This much is taken off the median gap before it
+# is judged, so the shift is a little under the raw gap.
 WHISPER_LEAD_MS = 150
 WORD_RE = re.compile(r"[^\W_]+(?:'[^\W_]+)*")
 

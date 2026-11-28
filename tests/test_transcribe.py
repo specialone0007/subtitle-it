@@ -207,7 +207,7 @@ def test_tokens_ignore_case_punctuation_and_curly_apostrophes():
 
 
 def test_cue_words_leave_out_sounds_labels_tags_and_songs():
-    assert transcribe.cue_words(_cue(1, 0, "[door slams]\nSANDRA: <i>Who is it?</i>")) == ["who", "is", "it"]
+    assert transcribe.cue_words(_cue(1, 0, "[door slams]\nMARA: <i>Who is it?</i>")) == ["who", "is", "it"]
     assert transcribe.cue_words(_cue(2, 0, "♪ Who is it ♪")) == []
 
 

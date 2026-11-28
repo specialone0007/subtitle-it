@@ -15,7 +15,7 @@ import srt
 
 FR = """1
 00:00:01,000 --> 00:00:03,000
-SANDRA: Viens.
+MARA: Viens.
 
 2
 00:00:03,500 --> 00:00:06,000
@@ -33,7 +33,7 @@ D'accord.
 
 EN = """1
 00:00:01,100 --> 00:00:02,900
-SANDRA: Come.
+MARA: Come.
 
 2
 00:00:03,600 --> 00:00:05,900
@@ -68,9 +68,9 @@ def test_build_pairs_english_and_finds_speaker(work: Path):
     assert rows[0]["source"] == ["Viens."]
     assert rows[0]["en"] == ["Come."]
     speakers = json.loads((work / "speakers.json").read_text(encoding="utf-8"))
-    assert speakers["1"]["label"] == "Sandra"
+    assert speakers["1"]["label"] == "Mara"
     chunk = (work / "chunks" / "chunk_01.txt").read_text(encoding="utf-8")
-    assert "#1 00:00:01 [Sandra]" in chunk and "src: - Ça va ? / - Oui." in chunk
+    assert "#1 00:00:01 [Mara]" in chunk and "src: - Ça va ? / - Oui." in chunk
 
 
 def test_check_passes_and_writes_draft(work: Path):
@@ -96,7 +96,7 @@ def test_check_hard_fails_and_warnings(work: Path):
 
 
 def test_a_listing_slash_in_the_turkish_is_a_hard_fail(work: Path):
-    # Love Of Your Life: the listener wrote "var ya… / Oysa" back, the
+    # One test film: the listener wrote "var ya… / Oysa" back, the
     # " / " its listing puts between a cue's lines.
     leak = GOOD.replace("<i>Hava soğuk.</i>", "<i>Hava / soğuk.</i>").replace("Gel.", "Gel /")
     (work / "out" / "tr_01.txt").write_text(leak, encoding="utf-8")
@@ -145,8 +145,8 @@ def test_a_musical_is_delivered_without_music_notes(work: Path):
     ("lines", "bare"),
     [
         (
-            ["<i>♪ Çok eskidendi</i>", "<i>Düşündüğünüzden de eski ♪</i>"],
-            ["<i>Çok eskidendi</i>", "<i>Düşündüğünüzden de eski</i>"],
+            ["<i>♪ Kıyıda bir ışık</i>", "<i>Sandığınızdan da yakın ♪</i>"],
+            ["<i>Kıyıda bir ışık</i>", "<i>Sandığınızdan da yakın</i>"],
         ),
         (["♪ ♪", "- Kapat şunu!"], ["- Kapat şunu!"]),
         (["- ♪ La la ♪", "- Kapat!"], ["- La la", "- Kapat!"]),
@@ -193,7 +193,7 @@ def test_review_parts_hold_each_cue_once_with_its_notes(work: Path):
     assert lines[:3] == [
         "n\tspeaker\tsource\ten\tturkish\tnotes",
         "# --- your part: cues 1-4 ---",
-        "1\tSandra\tViens.\tCome.\tGel.\t",
+        "1\tMara\tViens.\tCome.\tGel.\t",
     ]
     assert lines[4].endswith("\ttranslator: unsure who asks")
     # Cue 4, the last, is shown half a second longer: over 2.5 s the
@@ -584,7 +584,7 @@ def test_deliver_refuses_edits_after_check(work: Path, tmp_path: Path):
 
 
 def test_rebuild_with_another_timing_file_drops_old_speaker_labels(work: Path, tmp_path: Path):
-    assert json.loads((work / "speakers.json").read_text(encoding="utf-8")) == {"1": {"label": "Sandra"}}
+    assert json.loads((work / "speakers.json").read_text(encoding="utf-8")) == {"1": {"label": "Mara"}}
     other = "1\n00:00:00,500 --> 00:00:01,000\nMusique.\n\n2\n00:00:01,000 --> 00:00:03,000\nMARC: Viens.\n"
     (tmp_path / "other.srt").write_text(other, encoding="utf-8")
     prepare.build(work, tmp_path / "other.srt", None, None)
@@ -593,14 +593,14 @@ def test_rebuild_with_another_timing_file_drops_old_speaker_labels(work: Path, t
 
 def test_check_warns_on_the_other_address_form(work: Path):
     decisions = {
-        "characters": [{"name": "Sandra", "aliases": []}],
+        "characters": [{"name": "Mara", "aliases": []}],
         "decisions": [
             {
-                "id": "address:Sandra>Daniel",
+                "id": "address:Mara>Theo",
                 "kind": "address",
-                "speaker": "Sandra",
-                "listener": "Daniel",
-                "question": "Does Sandra say sen or siz to Daniel?",
+                "speaker": "Mara",
+                "listener": "Theo",
+                "question": "Does Mara say sen or siz to Theo?",
                 "answer": [{"from_cue": 1, "form": "siz"}],
                 "evidence": [1],
                 "confidence": "sure",

@@ -107,7 +107,7 @@ Arguments: $ARGUMENTS
 
 - A path to a video or `.srt` that exists: use it. When it is a video, also run `sources.py remember --file '<path>' --prefs 'CONFIG/preferences.md'`. When its `added` or `too_broad` is a folder, see "Media folders" in `${CLAUDE_SKILL_DIR}/setup.md`.
 - Otherwise run `sources.py find --query '<name>' --dirs <media folders from preferences>`. No media folders yet: this is setup, see "Media folders" in `setup.md`.
-- Several `matches`: keep the ones whose `kind` is `video` and that do not `looks_like_extra`. When they all sit in one folder, or their file names give the same title once the year, resolution and other tags in the file name are left out, they are copies of one film: take the first (the biggest) and name it in one line. Otherwise they are different films (Alien and Aliens): list them and ask which one, the one question a run may ask, since translating the wrong film would put the file next to the wrong video. No such match: stop and ask for the path. When `missing_folders` is not empty, name those folders in the same message, for example "D:\Films was not there to search; is the drive connected?", since the film may be on it.
+- Several `matches`: keep the ones whose `kind` is `video` and that do not `looks_like_extra`. When they all sit in one folder, or their file names give the same title once the year, resolution and other tags in the file name are left out, they are copies of one film: take the first (the biggest) and name it in one line. Otherwise they are different films (Harbour Lights and Harbour Lights 2): list them and ask which one, the one question a run may ask, since translating the wrong film would put the file next to the wrong video. No such match: stop and ask for the path. When `missing_folders` is not empty, name those folders in the same message, for example "D:\Films was not there to search; is the drive connected?", since the film may be on it.
 
 Set SLUG to the `slug` field of `sources.py slug '<film title>'` and WORK to `${CLAUDE_PLUGIN_DATA}/films/SLUG`.
 
@@ -242,8 +242,8 @@ subtitle file. In this order:
    line in the report. A `download` of null needs nothing.
 2. `prepare.py build` as above, with `--timing-language <the timing file's language>` added.
 3. The timing file against the speech. A timing file can sit a constant
-   amount off the film's speech, even a built-in track (Disclosure Day,
-   2026: 0.65 s late on every line). Check it when the timing file did not
+   amount off the film's speech, even a built-in track (one 2026
+   film: 0.65 s late on every line). Check it when the timing file did not
    come from the audio, its language is the one the film is spoken in, and
    either its confidence is not "certain" or `build`'s
    `on_screen.tracks_offset.check_audio` is true (at least three other
@@ -304,7 +304,7 @@ wait for it. Start the audio step in the background, write the bible from
 the text meanwhile, and start checking it as soon as it is written. The
 voices join the bible, and get checked, once the audio step is done.
 
-`build` already took speaker labels (`SANDRA:`) from the text. Audio
+`build` already took speaker labels (`MARA:`) from the text. Audio
 hints add a `voice` (V1, V2, ...) to each spoken cue, which helps match
 voices to characters. Run them when the input is a video and
 `Audio hints` in the preferences is `yes`, or is `auto` and `nvidia-smi`

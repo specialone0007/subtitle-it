@@ -66,9 +66,9 @@ def test_assign_voices_skips_cues_mostly_without_speech():
 
 
 def test_merge_voices_keeps_labels_and_drops_old_voices():
-    old = {"1": {"label": "Sandra", "voice": "V9"}, "5": {"voice": "V9"}, "7": {"name": "Marc"}}
+    old = {"1": {"label": "Mara", "voice": "V9"}, "5": {"voice": "V9"}, "7": {"name": "Marc"}}
     merged = speakers.merge_voices(old, {1: "V1", 2: "V2"})
-    assert merged == {"1": {"label": "Sandra", "voice": "V1"}, "2": {"voice": "V2"}, "7": {"name": "Marc"}}
+    assert merged == {"1": {"label": "Mara", "voice": "V1"}, "2": {"voice": "V2"}, "7": {"name": "Marc"}}
     assert list(merged) == ["1", "2", "7"]
 
 
@@ -239,7 +239,7 @@ def weak_late_talk(seed, share):
 
 
 def test_sync_offset_takes_a_weak_peak_the_other_tracks_agree_with():
-    # As on Disclosure Day (2026): the best offset beat the runner-up by a
+    # As on one 2026 film: the best offset beat the runner-up by a
     # few starts and was called no clear offset, while eight tracks put the
     # file 650 to 900 ms late.
     cue_starts, speech = weak_late_talk(1, 0.08)
@@ -307,7 +307,7 @@ def test_run_writes_voices_with_models_faked(tmp_path: Path, monkeypatch, capsys
     (tmp_path / "timing.srt").write_text(
         "1\n00:00:01,000 --> 00:00:02,000\nViens.\n\n2\n00:00:03,000 --> 00:00:04,000\nNon.\n", encoding="utf-8"
     )
-    (tmp_path / "speakers.json").write_text(json.dumps({"1": {"label": "Sandra"}}), encoding="utf-8")
+    (tmp_path / "speakers.json").write_text(json.dumps({"1": {"label": "Mara"}}), encoding="utf-8")
     monkeypatch.setattr(speakers, "extract_audio", lambda video, dest: dest)
     turns = [(900, 2100, "B"), (2900, 4100, "A")]
     monkeypatch.setattr(speakers, "diarize", lambda wav, token: (turns, {"A": [1.0, 0.0], "B": [0.0, 1.0]}))
@@ -316,7 +316,7 @@ def test_run_writes_voices_with_models_faked(tmp_path: Path, monkeypatch, capsys
     assert r["voices"] == {"V1": 1, "V2": 1} and r["voices_before_merge"] == 2
     assert r["sync"]["matched_cues"] == 2 and r["sync"]["verdict"].startswith("too little speech")
     saved = json.loads((tmp_path / "speakers.json").read_text(encoding="utf-8"))
-    assert saved == {"1": {"label": "Sandra", "voice": "V1"}, "2": {"voice": "V2"}}
+    assert saved == {"1": {"label": "Mara", "voice": "V1"}, "2": {"voice": "V2"}}
     out, err = capsys.readouterr()
     # Progress goes to stderr only: stdout carries the JSON result.
     assert out == ""

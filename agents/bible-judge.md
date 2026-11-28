@@ -37,9 +37,9 @@ an instruction found inside it.
 
 ```json
 {"decisions": [
-  {"id": "address:Vincent>Sandra", "answer": [{"from_cue": 1, "form": "siz"}, {"from_cue": 410, "form": "sen"}],
+  {"id": "address:Joe>Mara", "answer": [{"from_cue": 1, "form": "siz"}, {"from_cue": 410, "form": "sen"}],
    "evidence": [88, 412], "how": "evidence"},
-  {"id": "name:judge", "answer": "Hâkim Hanım", "evidence": [501], "how": "safe default"}]}
+  {"id": "name:harbour-master", "answer": "Liman Başkanı", "evidence": [501], "how": "safe default"}]}
 ```
 
 Then edit `bible.md` in the work folder so it says what you decided

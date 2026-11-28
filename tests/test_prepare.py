@@ -7,8 +7,8 @@ import srt
 
 
 def test_cue_label_one_speaker_takes_the_first_label():
-    assert prepare.cue_label(["SANDRA: Come.", "Now."]) == "Sandra"
-    assert prepare.cue_label(["- SANDRA: Come."]) == "Sandra"
+    assert prepare.cue_label(["MARA: Come.", "Now."]) == "Mara"
+    assert prepare.cue_label(["- MARA: Come."]) == "Mara"
     assert prepare.cue_label(["Come."]) is None
 
 
